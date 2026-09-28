@@ -1,0 +1,628 @@
+package com.autoris.asrbenchmark
+
+import android.app.Application
+import android.content.Context
+import android.os.SystemClock
+import android.util.Log
+import com.autoris.asrbenchmark.storage.BenchmarkSyncClient
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.autoris.asrbenchmark.asr.ASREngine
+import com.autoris.asrbenchmark.asr.ASRModelType
+import com.autoris.asrbenchmark.asr.ModelManager
+import com.autoris.asrbenchmark.asr.ModelStatus
+import com.autoris.asrbenchmark.asr.Zipformer150MOfflineEngine
+import com.autoris.asrbenchmark.asr.Zipformer30MStreamingEngine
+import com.autoris.asrbenchmark.audio.AudioCaptureState
+import com.autoris.asrbenchmark.audio.AudioRecorderManager
+import com.autoris.asrbenchmark.audio.WavWriter
+import com.autoris.asrbenchmark.benchmark.AccuracyEvaluator
+import com.autoris.asrbenchmark.benchmark.BenchmarkSession
+import com.autoris.asrbenchmark.benchmark.EvaluationReport
+import com.autoris.asrbenchmark.benchmark.MedicalTestSentence
+import com.autoris.asrbenchmark.benchmark.MedicalTestSet
+import com.autoris.asrbenchmark.benchmark.SystemMonitor
+import com.autoris.asrbenchmark.benchmark.SystemStats
+import com.autoris.asrbenchmark.normalizer.MedicalTextNormalizer
+import com.autoris.asrbenchmark.normalizer.NormalizedResult
+import com.autoris.asrbenchmark.storage.BenchmarkDatabase
+import com.autoris.asrbenchmark.storage.BenchmarkExporter
+import com.autoris.asrbenchmark.vad.VadConfig
+import com.autoris.asrbenchmark.vad.VadState
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
+data class UiBenchmarkMetrics(
+    val audioDurationSec: Float = 0.0f,
+    val firstPartialMs: Long = 0L,
+    val finalLatencyMs: Long = 0L,
+    val processingMs: Long = 0L,
+    val rtf: Float = 0.0f,
+    val ramPeakMb: Int = 0,
+    val ramAvgMb: Int = 0,
+    val batteryPercent: Int = 0,
+    val batteryTemp: Float = 0.0f
+)
+
+class MainViewModel(application: Application) : AndroidViewModel(application) {
+
+    companion object {
+        private const val TAG = "MainViewModel"
+    }
+
+    private val db = BenchmarkDatabase(application)
+    private val systemMonitor = SystemMonitor(application)
+    private val prefs = getApplication<Application>().getSharedPreferences("asr_benchmark_prefs", Context.MODE_PRIVATE)
+
+    // ASR Model Selection & Engine
+    private val _selectedModelType = MutableStateFlow(
+        ASRModelType.fromId(prefs.getString("selected_model_type", ASRModelType.ZIPFORMER_150M_OFFLINE.id) ?: ASRModelType.ZIPFORMER_150M_OFFLINE.id)
+    )
+    val selectedModelType: StateFlow<ASRModelType> = _selectedModelType.asStateFlow()
+
+    var vadConfig: VadConfig = VadConfig()
+    private var asrEngine: ASREngine = createEngine(_selectedModelType.value)
+
+    private fun createEngine(type: ASRModelType): ASREngine {
+        return when (type) {
+            ASRModelType.ZIPFORMER_30M_STREAMING -> Zipformer30MStreamingEngine(getApplication(), vadConfig, numThreads = 2)
+            ASRModelType.ZIPFORMER_150M_OFFLINE -> Zipformer150MOfflineEngine(getApplication(), numThreads = 4)
+        }
+    }
+
+    private val _modelStatus = MutableStateFlow(ModelManager.getModelStatus(application, _selectedModelType.value))
+    val modelStatus: StateFlow<ModelStatus> = _modelStatus.asStateFlow()
+
+    private val _isModelInitializing = MutableStateFlow(false)
+    val isModelInitializing: StateFlow<Boolean> = _isModelInitializing.asStateFlow()
+
+    private val _downloadProgress = MutableStateFlow<String?>(null)
+    val downloadProgress: StateFlow<String?> = _downloadProgress.asStateFlow()
+
+    // Test selection
+    private val _selectedTestSentence = MutableStateFlow<MedicalTestSentence?>(null)
+    val selectedTestSentence: StateFlow<MedicalTestSentence?> = _selectedTestSentence.asStateFlow()
+
+    // Realtime transcription state
+    private val _livePartial = MutableStateFlow("")
+    val livePartial: StateFlow<String> = _livePartial.asStateFlow()
+
+    private val _finalTranscript = MutableStateFlow("")
+    val finalTranscript: StateFlow<String> = _finalTranscript.asStateFlow()
+
+    private val _normalizedResult = MutableStateFlow<NormalizedResult?>(null)
+    val normalizedResult: StateFlow<NormalizedResult?> = _normalizedResult.asStateFlow()
+
+    private val _evaluationReport = MutableStateFlow<EvaluationReport?>(null)
+    val evaluationReport: StateFlow<EvaluationReport?> = _evaluationReport.asStateFlow()
+
+    // Benchmark Metrics
+    private val _metrics = MutableStateFlow(UiBenchmarkMetrics())
+    val metrics: StateFlow<UiBenchmarkMetrics> = _metrics.asStateFlow()
+
+    private val _systemStats = MutableStateFlow(systemMonitor.pollStats())
+    val systemStats: StateFlow<SystemStats> = _systemStats.asStateFlow()
+
+    // Recording status & audio capture
+    private val _captureState = MutableStateFlow(AudioCaptureState())
+    val captureState: StateFlow<AudioCaptureState> = _captureState.asStateFlow()
+
+    private val _isSaveAudioEnabled = MutableStateFlow(false)
+    val isSaveAudioEnabled: StateFlow<Boolean> = _isSaveAudioEnabled.asStateFlow()
+
+    private val _statusMessage = MutableStateFlow("Sẵn sàng")
+    val statusMessage: StateFlow<String> = _statusMessage.asStateFlow()
+
+    // History
+    private val _historySessions = MutableStateFlow<List<BenchmarkSession>>(emptyList())
+    val historySessions: StateFlow<List<BenchmarkSession>> = _historySessions.asStateFlow()
+
+    // Sync to Local PC Server
+    private val _serverUrl = MutableStateFlow(prefs.getString("server_url", "http://192.168.50.100:8080") ?: "http://192.168.50.100:8080")
+    val serverUrl: StateFlow<String> = _serverUrl.asStateFlow()
+
+    private val _isAutoSyncEnabled = MutableStateFlow(prefs.getBoolean("auto_sync_server", true))
+    val isAutoSyncEnabled: StateFlow<Boolean> = _isAutoSyncEnabled.asStateFlow()
+
+    private val _isSyncing = MutableStateFlow(false)
+    val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
+
+    private val _serverStatus = MutableStateFlow<String?>("Chưa kết nối")
+    val serverStatus: StateFlow<String?> = _serverStatus.asStateFlow()
+
+    // Timings
+    private var stopRequestedTimeNs: Long = 0L
+
+    private var audioRecorderManager: AudioRecorderManager? = null
+    private var statsJob: Job? = null
+
+    init {
+        initEngine()
+        startStatsPolling()
+        loadHistory()
+    }
+
+    private fun startStatsPolling() {
+        statsJob?.cancel()
+        statsJob = viewModelScope.launch(Dispatchers.Default) {
+            while (isActive) {
+                _systemStats.value = systemMonitor.pollStats()
+                delay(1000)
+            }
+        }
+    }
+
+    fun initEngine() {
+        viewModelScope.launch {
+            _isModelInitializing.value = true
+            val currentType = _selectedModelType.value
+            _statusMessage.value = "Đang kiểm tra ${currentType.displayName}..."
+
+            val ready = ModelManager.ensureModelReady(getApplication(), currentType) { step, cur, tot ->
+                _statusMessage.value = step
+            }
+
+            _modelStatus.value = ModelManager.getModelStatus(getApplication(), currentType)
+
+            if (ready) {
+                _statusMessage.value = "Đang nạp ${currentType.displayName}..."
+                val ok = withContext(Dispatchers.Default) {
+                    try {
+                        asrEngine.release()
+                        asrEngine = createEngine(currentType)
+                        asrEngine.init()
+                    } catch (t: Throwable) {
+                        Log.e(TAG, "Fatal error initializing engine for $currentType", t)
+                        false
+                    }
+                }
+                if (ok) {
+                    _statusMessage.value = "Sẵn sàng (${currentType.paramCount})"
+                } else {
+                    _statusMessage.value = "Khởi tạo ASR Engine thất bại"
+                }
+            } else {
+                _statusMessage.value = "Chưa có model ${currentType.displayName}. Vui lòng tải về máy."
+            }
+            _isModelInitializing.value = false
+        }
+    }
+
+    fun selectModel(type: ASRModelType) {
+        if (_selectedModelType.value == type && asrEngine.isReady) return
+        _selectedModelType.value = type
+        prefs.edit().putString("selected_model_type", type.id).apply()
+        resetTest()
+        initEngine()
+    }
+
+    fun downloadModel() {
+        viewModelScope.launch {
+            _isModelInitializing.value = true
+            val currentType = _selectedModelType.value
+            _downloadProgress.value = "Bắt đầu tải ${currentType.displayName}..."
+            val result = ModelManager.downloadModel(
+                getApplication(),
+                currentType,
+                serverBaseUrl = _serverUrl.value
+            ) { fileName, cur, tot, pct ->
+                val mbCur = cur / (1024f * 1024f)
+                val mbTot = tot / (1024f * 1024f)
+                _downloadProgress.value = "Đang tải $fileName: $pct% (${String.format(Locale.ROOT, "%.1f/%.1f MB", mbCur, mbTot)})"
+            }
+
+            if (result.isSuccess) {
+                _downloadProgress.value = null
+                _modelStatus.value = ModelManager.getModelStatus(getApplication(), currentType)
+                initEngine()
+            } else {
+                _downloadProgress.value = "Lỗi tải model: ${result.exceptionOrNull()?.message}"
+                _isModelInitializing.value = false
+            }
+        }
+    }
+
+    private var lastSavedAudioPath: String? = null
+
+    fun updateVadConfig(trailing1: Float? = null, trailing2: Float? = null) {
+        vadConfig = vadConfig.copy(
+            rule1MinTrailingSilence = trailing1 ?: vadConfig.rule1MinTrailingSilence,
+            rule2MinTrailingSilence = trailing2 ?: vadConfig.rule2MinTrailingSilence
+        )
+    }
+
+    fun setSaveAudioEnabled(enabled: Boolean) {
+        _isSaveAudioEnabled.value = enabled
+        audioRecorderManager?.isSaveAudioEnabled = enabled
+    }
+
+    fun selectTestSentence(sentence: MedicalTestSentence?) {
+        _selectedTestSentence.value = sentence
+        resetTest()
+    }
+
+    fun toggleRecording() {
+        if (_captureState.value.isRecording) {
+            stopRecording()
+        } else {
+            startRecording()
+        }
+    }
+
+    fun startRecording() {
+        if (!_modelStatus.value.isReady) {
+            _statusMessage.value = "Model chưa sẵn sàng!"
+            return
+        }
+
+        // Reset display
+        _livePartial.value = ""
+        _finalTranscript.value = ""
+        _normalizedResult.value = null
+        _evaluationReport.value = null
+        _metrics.value = UiBenchmarkMetrics()
+
+        val manager = AudioRecorderManager(
+            asrEngine = asrEngine,
+            vadConfig = vadConfig,
+            onPartialResult = { partial, firstLatencyMs ->
+                viewModelScope.launch(Dispatchers.Main) {
+                    _livePartial.value = partial
+                    _finalTranscript.value = partial
+                    val norm = MedicalTextNormalizer.process(partial)
+                    _normalizedResult.value = norm
+
+                    val ref = _selectedTestSentence.value
+                    if (ref != null) {
+                        val eval = AccuracyEvaluator.evaluate(
+                            reference = ref.referenceText,
+                            hypothesis = norm.normalizedSuggestion.ifBlank { partial },
+                            testSentence = ref
+                        )
+                        _evaluationReport.value = eval
+                    }
+
+                    if (_metrics.value.firstPartialMs == 0L && firstLatencyMs > 0L) {
+                        _metrics.value = _metrics.value.copy(firstPartialMs = firstLatencyMs)
+                    }
+                }
+            },
+            onError = { errMsg ->
+                viewModelScope.launch(Dispatchers.Main) {
+                    _statusMessage.value = "Lỗi: $errMsg"
+                }
+            }
+        ).apply {
+            isSaveAudioEnabled = _isSaveAudioEnabled.value
+        }
+        audioRecorderManager = manager
+
+        val started = manager.startRecording(viewModelScope)
+        if (started) {
+            _statusMessage.value = "Đang thu âm liên tục..."
+            viewModelScope.launch {
+                manager.state.collect { state ->
+                    _captureState.value = state
+                    if (state.isRecording) {
+                        _metrics.value = _metrics.value.copy(audioDurationSec = state.audioDurationSec)
+                    }
+                }
+            }
+        }
+    }
+
+    fun stopRecording() {
+        stopRequestedTimeNs = SystemClock.elapsedRealtimeNanos()
+        _statusMessage.value = "Đang chốt kết quả và lưu..."
+        val manager = audioRecorderManager ?: return
+        viewModelScope.launch(Dispatchers.Default) {
+            val finalText = manager.stopRecording()
+            val duration = _captureState.value.audioDurationSec
+            withContext(Dispatchers.Main) {
+                finalizeResult(finalText, _metrics.value.processingMs, duration)
+            }
+        }
+    }
+
+    private fun finalizeResult(finalText: String, totalProcMs: Long, audioDurationSec: Float) {
+        val finalArrivalNs = SystemClock.elapsedRealtimeNanos()
+        val finalLatency = if (stopRequestedTimeNs > 0L) {
+            (finalArrivalNs - stopRequestedTimeNs) / 1_000_000
+        } else {
+            maxOf(totalProcMs, 150L)
+        }
+
+        _finalTranscript.value = finalText
+
+        // Compute RTF
+        val procSec = totalProcMs / 1000f
+        val rtf = if (audioDurationSec > 0.05f) procSec / audioDurationSec else 0.0f
+
+        val stats = systemMonitor.pollStats()
+        val updatedMetrics = _metrics.value.copy(
+            audioDurationSec = audioDurationSec,
+            finalLatencyMs = finalLatency,
+            processingMs = totalProcMs,
+            rtf = rtf,
+            ramPeakMb = systemMonitor.getPeakRamMb(),
+            ramAvgMb = systemMonitor.getAverageRamMb(),
+            batteryPercent = stats.batteryPercent,
+            batteryTemp = stats.batteryTempCelsius
+        )
+        _metrics.value = updatedMetrics
+
+        // Normalize text & log suggestions
+        val norm = MedicalTextNormalizer.process(finalText)
+        _normalizedResult.value = norm
+
+        // Evaluate against reference if in test set mode using normalized suggestion for high accuracy
+        val ref = _selectedTestSentence.value
+        if (ref != null) {
+            val eval = AccuracyEvaluator.evaluate(
+                reference = ref.referenceText,
+                hypothesis = norm.normalizedSuggestion.ifBlank { finalText },
+                testSentence = ref
+            )
+            _evaluationReport.value = eval
+        }
+
+        // Auto-save WAV if enabled
+        if (_isSaveAudioEnabled.value && audioRecorderManager != null) {
+            lastSavedAudioPath = saveCurrentAudioRecording()
+        }
+
+        // Automatically persist session to database & upload to PC server on stop
+        saveCurrentTestSession()
+        _statusMessage.value = "Đã lưu & đồng bộ về PC"
+    }
+
+    private val testHistoryStack = mutableListOf<MedicalTestSentence>()
+
+    fun nextTestSentence() {
+        val allSentences = MedicalTestSet.SENTENCES
+        if (allSentences.isEmpty()) return
+        val currentRef = _selectedTestSentence.value
+
+        if (currentRef != null) {
+            testHistoryStack.add(currentRef)
+        }
+
+        // Pick a random sentence different from the current one
+        val available = allSentences.filter { it.id != currentRef?.id }
+        val randomNext = if (available.isNotEmpty()) available.random() else allSentences.random()
+        _selectedTestSentence.value = randomNext
+
+        if (!_captureState.value.isRecording) {
+            resetTest()
+        } else {
+            _evaluationReport.value = null
+        }
+    }
+
+    fun previousTestSentence() {
+        if (testHistoryStack.isNotEmpty()) {
+            val prev = testHistoryStack.removeAt(testHistoryStack.size - 1)
+            _selectedTestSentence.value = prev
+            if (!_captureState.value.isRecording) {
+                resetTest()
+            } else {
+                _evaluationReport.value = null
+            }
+        }
+    }
+
+    private fun saveCurrentAudioRecording(): String? {
+        return try {
+            val pcm = audioRecorderManager?.getRecordedPcm() ?: return null
+            if (pcm.isEmpty()) return null
+
+            val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+            val audioDir = File(getApplication<Application>().filesDir, "benchmark_audio")
+            if (!audioDir.exists()) audioDir.mkdirs()
+
+            val wavFile = File(audioDir, "${timeStamp}.wav")
+            WavWriter.writeWavFile(wavFile, pcm, 16000)
+            wavFile.absolutePath
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to save audio recording", e)
+            null
+        }
+    }
+
+    fun saveCurrentTestSession() {
+        val raw = _finalTranscript.value.ifEmpty { _livePartial.value }
+        if (raw.isBlank()) return
+
+        val m = _metrics.value
+        val ref = _selectedTestSentence.value
+        val eval = _evaluationReport.value
+        val norm = _normalizedResult.value
+        val audioToSave = lastSavedAudioPath
+
+        val session = BenchmarkSession(
+            timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date()),
+            device = SystemMonitor.getDeviceModel(),
+            model = asrEngine.name,
+            testId = ref?.id,
+            category = ref?.category,
+            audioDurationSec = m.audioDurationSec,
+            firstPartialMs = m.firstPartialMs,
+            finalLatencyMs = m.finalLatencyMs,
+            processingMs = m.processingMs,
+            rtf = m.rtf,
+            ramPeakMb = m.ramPeakMb,
+            ramAvgMb = m.ramAvgMb,
+            batteryPercent = m.batteryPercent,
+            batteryTemp = m.batteryTemp,
+            rawTranscript = raw,
+            normalizedTranscript = norm?.normalizedSuggestion ?: raw,
+            referenceText = ref?.referenceText,
+            cer = eval?.cer,
+            wer = eval?.wer,
+            medicalTermAccuracy = eval?.medicalTermAccuracy,
+            numericAccuracy = eval?.numericAccuracy,
+            anatomyAccuracy = eval?.anatomyAccuracy,
+            negationAccuracy = eval?.negationAccuracy,
+            audioPath = audioToSave
+        )
+
+        viewModelScope.launch(Dispatchers.IO) {
+            val insertedId = db.insert(session)
+            loadHistory()
+            withContext(Dispatchers.Main) {
+                _statusMessage.value = "Đã lưu kết quả test vào cơ sở dữ liệu"
+            }
+
+            // Auto-sync to local PC server if enabled
+            if (_isAutoSyncEnabled.value) {
+                val toUpload = session.copy(id = insertedId)
+                BenchmarkSyncClient.uploadSessions(_serverUrl.value, listOf(toUpload))
+                if (!audioToSave.isNullOrBlank()) {
+                    val audioFile = File(audioToSave)
+                    if (audioFile.exists()) {
+                        BenchmarkSyncClient.uploadAudio(_serverUrl.value, insertedId, audioFile)
+                    }
+                }
+            }
+        }
+    }
+
+    fun setServerUrl(url: String) {
+        _serverUrl.value = url.trim()
+        prefs.edit().putString("server_url", url.trim()).apply()
+    }
+
+    fun setAutoSyncEnabled(enabled: Boolean) {
+        _isAutoSyncEnabled.value = enabled
+        prefs.edit().putBoolean("auto_sync_server", enabled).apply()
+    }
+
+    fun testServerConnection(onResult: (Boolean, String) -> Unit) {
+        viewModelScope.launch {
+            val res = BenchmarkSyncClient.checkServer(_serverUrl.value)
+            res.fold(
+                onSuccess = { msg ->
+                    _serverStatus.value = "Online"
+                    withContext(Dispatchers.Main) {
+                        onResult(true, "Kết nối server PC thành công!")
+                    }
+                },
+                onFailure = { err ->
+                    _serverStatus.value = "Offline"
+                    withContext(Dispatchers.Main) {
+                        onResult(false, "Không thể kết nối server: ${err.message}")
+                    }
+                }
+            )
+        }
+    }
+
+    fun syncAllHistoryToServer(onComplete: (Boolean, String) -> Unit) {
+        val list = _historySessions.value
+        if (list.isEmpty()) {
+            onComplete(false, "Chưa có lượt test nào trong lịch sử để gửi")
+            return
+        }
+
+        viewModelScope.launch {
+            _isSyncing.value = true
+            val uploadRes = BenchmarkSyncClient.uploadSessions(_serverUrl.value, list)
+            uploadRes.fold(
+                onSuccess = { count ->
+                    var audioCount = 0
+                    for (session in list) {
+                        val path = session.audioPath
+                        if (!path.isNullOrBlank()) {
+                            val audioFile = File(path)
+                            if (audioFile.exists()) {
+                                val audioRes = BenchmarkSyncClient.uploadAudio(_serverUrl.value, session.id, audioFile)
+                                if (audioRes.isSuccess) audioCount++
+                            }
+                        }
+                    }
+                    _isSyncing.value = false
+                    val msg = if (audioCount > 0) {
+                        "Đã chuyển thành công $count lượt test & $audioCount file audio về PC!"
+                    } else {
+                        "Đã chuyển thành công $count lượt test về PC!"
+                    }
+                    withContext(Dispatchers.Main) {
+                        _statusMessage.value = msg
+                        onComplete(true, msg)
+                    }
+                },
+                onFailure = { err ->
+                    _isSyncing.value = false
+                    val msg = "Lỗi gửi về PC: ${err.message}"
+                    withContext(Dispatchers.Main) {
+                        _statusMessage.value = msg
+                        onComplete(false, msg)
+                    }
+                }
+            )
+        }
+    }
+
+    fun resetTest() {
+        audioRecorderManager?.stopRecording()
+        _livePartial.value = ""
+        _finalTranscript.value = ""
+        _normalizedResult.value = null
+        _evaluationReport.value = null
+        _metrics.value = UiBenchmarkMetrics()
+        _statusMessage.value = "Sẵn sàng"
+    }
+
+    fun loadHistory() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val list = db.getAll()
+            _historySessions.value = list
+        }
+    }
+
+    fun deleteAllHistory() {
+        viewModelScope.launch(Dispatchers.IO) {
+            db.deleteAll()
+            loadHistory()
+            withContext(Dispatchers.Main) {
+                _statusMessage.value = "Đã xóa toàn bộ dữ liệu benchmark"
+            }
+        }
+    }
+
+    fun exportHistory(asJson: Boolean): File? {
+        val list = _historySessions.value
+        if (list.isEmpty()) return null
+
+        val exportDir = File(getApplication<Application>().getExternalFilesDir(null), "exports")
+        if (!exportDir.exists()) exportDir.mkdirs()
+
+        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+        return if (asJson) {
+            val file = File(exportDir, "asr_benchmark_${timeStamp}.json")
+            BenchmarkExporter.exportToJson(list, file)
+            file
+        } else {
+            val file = File(exportDir, "asr_benchmark_${timeStamp}.csv")
+            BenchmarkExporter.exportToCsv(list, file)
+            file
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        audioRecorderManager?.release()
+        statsJob?.cancel()
+    }
+}

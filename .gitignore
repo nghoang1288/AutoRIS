@@ -1,0 +1,45 @@
+# Gradle
+.gradle/
+build/
+app/build/
+**/build/
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+.gradle
+local.properties
+captures/
+.externalNativeBuild/
+.cxx/
+
+# APK and outputs
+*.apk
+*.ap_
+*.aab
+release_apk/*.apk
+
+# Model weights and caches (large binaries)
+models/
+model_cache/
+*.onnx
+*.onnx.data
+*.tar.bz2
+*.tar.gz
+*.zip
+*.bin
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+
+# System
+.DS_Store
+Thumbs.db
+
+# Audio files (WAV)
+*.wav
+benchmark_results_device/audio/*.wav

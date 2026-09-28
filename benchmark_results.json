@@ -1,0 +1,414 @@
+{
+  "summary": {
+    "avg_first_partial_ms": 884.2,
+    "avg_rtf": 0.0444,
+    "avg_wer": 0.2071,
+    "avg_cer": 0.114,
+    "medical_term_accuracy": 0.7384,
+    "numeric_accuracy": 0.4647,
+    "anatomy_accuracy": 0.8774,
+    "negation_accuracy": 0.9474
+  },
+  "records": [
+    {
+      "id": "TEST_001",
+      "category": "CT bụng",
+      "reference": "Dày không đều thành hang môn vị dạ dày chỗ dày nhất 21 milimét gây hẹp lòng môn vị",
+      "hypothesis": "DÂY KHÔNG ĐỀU THÀNH HAI MÔN VỊ DẠ DÀY CHỖ DÀY NHẤT HAI MƯƠI MỐT MI LIÊM GÂY HẸP LÒNG MÔN VỊ",
+      "duration": 5.59,
+      "first_partial_latency_s": 0.8,
+      "processing_time_s": 0.262,
+      "rtf": 0.0469,
+      "wer": 0.3684,
+      "cer": 0.2344,
+      "term_accuracy": 0.5,
+      "numeric_accuracy": 0.0,
+      "anatomy_accuracy": 0.67,
+      "negation_accuracy": 1.0,
+      "missed_terms": [
+        "dày không đều"
+      ],
+      "missed_numbers": [
+        "21",
+        "milimét"
+      ]
+    },
+    {
+      "id": "TEST_002",
+      "category": "CT bụng",
+      "reference": "Hạch lớn nhất kích thước 21 nhân 8 milimét bờ không đều sau tiêm ngấm thuốc không đồng nhất",
+      "hypothesis": "HẠCH LỚN NHẤT KÍCH THƯỚC HAI MƯƠI MỐT NHÂN TÁM ML KHÔNG ĐỀU SAU TIÊM NGẤM THUỐC KHÔNG ĐỒNG NHẤT",
+      "duration": 5.54,
+      "first_partial_latency_s": 0.8,
+      "processing_time_s": 0.219,
+      "rtf": 0.0396,
+      "wer": 0.3158,
+      "cer": 0.2329,
+      "term_accuracy": 0.67,
+      "numeric_accuracy": 0.0,
+      "anatomy_accuracy": 1.0,
+      "negation_accuracy": 1.0,
+      "missed_terms": [
+        "bờ không đều"
+      ],
+      "missed_numbers": [
+        "21",
+        "8",
+        "milimét"
+      ]
+    },
+    {
+      "id": "TEST_003",
+      "category": "CT bụng",
+      "reference": "Gan không to bờ đều nhu mô gan trái có nang đường kính 9 milimét",
+      "hypothesis": "GAN KHÔNG TO BỜ ĐỀU NHU MÔ GAN TRÁI CÓ NANG ĐƯỜNG KÍNH CHÍN MI LIÊM",
+      "duration": 4.61,
+      "first_partial_latency_s": 1.2,
+      "processing_time_s": 0.181,
+      "rtf": 0.0394,
+      "wer": 0.2,
+      "cer": 0.14,
+      "term_accuracy": 1.0,
+      "numeric_accuracy": 0.0,
+      "anatomy_accuracy": 1.0,
+      "negation_accuracy": 1.0,
+      "missed_terms": [],
+      "missed_numbers": [
+        "9",
+        "milimét"
+      ]
+    },
+    {
+      "id": "TEST_004",
+      "category": "CT bụng",
+      "reference": "Tĩnh mạch cửa không giãn không thấy huyết khối trong lòng mạch",
+      "hypothesis": "TÍNH MẠCH CỬA KHÔNG GIẢNG KHÔNG THẤY HUYẾT KHỐI TRONG LÒNG MẠCH",
+      "duration": 3.55,
+      "first_partial_latency_s": 0.8,
+      "processing_time_s": 0.176,
+      "rtf": 0.0495,
+      "wer": 0.1667,
+      "cer": 0.0588,
+      "term_accuracy": 0.5,
+      "numeric_accuracy": 1.0,
+      "anatomy_accuracy": 0.0,
+      "negation_accuracy": 0.5,
+      "missed_terms": [
+        "tĩnh mạch cửa"
+      ],
+      "missed_numbers": []
+    },
+    {
+      "id": "TEST_005",
+      "category": "CT bụng",
+      "reference": "Đường mật trong gan không giãn không thấy sỏi tăng tỷ trọng",
+      "hypothesis": "ĐƯỜNG MẬT TRONG GAN KHÔNG DÃN KHÔNG THẤY SỎI TĂNG TỶ TRỌNG",
+      "duration": 3.86,
+      "first_partial_latency_s": 0.8,
+      "processing_time_s": 0.143,
+      "rtf": 0.037,
+      "wer": 0.0833,
+      "cer": 0.0417,
+      "term_accuracy": 1.0,
+      "numeric_accuracy": 1.0,
+      "anatomy_accuracy": 1.0,
+      "negation_accuracy": 0.5,
+      "missed_terms": [],
+      "missed_numbers": []
+    },
+    {
+      "id": "TEST_006",
+      "category": "CT bụng",
+      "reference": "Thận trái có vài nang vỏ thận kích thước nang lớn nhất 22 nhân 16 milimét",
+      "hypothesis": "THẬN TRÁI CÓ VÀI NANG VỎ THẦN KÍCH THƯỚC NAN LỚN NHẤT HAI MƯƠI HAI NHÂN MƯỜI SÁU MI LIÊM",
+      "duration": 5.21,
+      "first_partial_latency_s": 0.8,
+      "processing_time_s": 0.21,
+      "rtf": 0.0403,
+      "wer": 0.5625,
+      "cer": 0.3793,
+      "term_accuracy": 0.5,
+      "numeric_accuracy": 0.0,
+      "anatomy_accuracy": 1.0,
+      "negation_accuracy": 1.0,
+      "missed_terms": [
+        "nang vỏ thận"
+      ],
+      "missed_numbers": [
+        "22",
+        "16",
+        "milimét"
+      ]
+    },
+    {
+      "id": "TEST_007",
+      "category": "CT bụng",
+      "reference": "Túi mật thành mỏng dịch mật đồng nhất không thấy sỏi cản quang",
+      "hypothesis": "TÚI MẬT THÀNH MỎNG DỊCH MẬT ĐỒNG NHẤT KHÔNG THẤY SỎI CẢN QUANG",
+      "duration": 4.1,
+      "first_partial_latency_s": 0.8,
+      "processing_time_s": 0.178,
+      "rtf": 0.0434,
+      "wer": 0.0,
+      "cer": 0.0,
+      "term_accuracy": 1.0,
+      "numeric_accuracy": 1.0,
+      "anatomy_accuracy": 1.0,
+      "negation_accuracy": 1.0,
+      "missed_terms": [],
+      "missed_numbers": []
+    },
+    {
+      "id": "TEST_011",
+      "category": "CT ngực",
+      "reference": "Nốt đặc thùy trên phổi phải kích thước 6 milimét bờ đều không có tua gai",
+      "hypothesis": "NỐT ĐẶC THÙY TRÊN PHỔI PHẢI KÍCH THƯỚC SÁU MI LIM BỜ ĐỀU KHÔNG CÓ TÔ GAI",
+      "duration": 4.85,
+      "first_partial_latency_s": 0.8,
+      "processing_time_s": 0.199,
+      "rtf": 0.0411,
+      "wer": 0.25,
+      "cer": 0.1228,
+      "term_accuracy": 0.67,
+      "numeric_accuracy": 0.0,
+      "anatomy_accuracy": 1.0,
+      "negation_accuracy": 1.0,
+      "missed_terms": [
+        "tua gai"
+      ],
+      "missed_numbers": [
+        "6",
+        "milimét"
+      ]
+    },
+    {
+      "id": "TEST_012",
+      "category": "CT ngực",
+      "reference": "Nốt kính mờ thùy dưới phổi trái kích thước 8 milimét không thấy co kéo màng phổi lân cận",
+      "hypothesis": "NÚT KÍNH MỜ THÙY DƯỚI PHỔI TRÁI KÍCH THƯỚC TÁM MY LIM KHÔNG THẤY CÓ KÉO MÀN PHỔI LÂN CẬN",
+      "duration": 5.57,
+      "first_partial_latency_s": 1.2,
+      "processing_time_s": 0.26,
+      "rtf": 0.0467,
+      "wer": 0.3158,
+      "cer": 0.1286,
+      "term_accuracy": 0.0,
+      "numeric_accuracy": 0.0,
+      "anatomy_accuracy": 0.5,
+      "negation_accuracy": 1.0,
+      "missed_terms": [
+        "nốt kính mờ",
+        "co kéo"
+      ],
+      "missed_numbers": [
+        "8",
+        "milimét"
+      ]
+    },
+    {
+      "id": "TEST_014",
+      "category": "CT ngực",
+      "reference": "Không thấy tràn dịch tràn khí khoang màng phổi hai bên",
+      "hypothesis": "KHÔNG THẤY TRÀN DỊCH TRÀN KHÍ KHOAN MÀNG PHỔI HAI BÊN",
+      "duration": 3.55,
+      "first_partial_latency_s": 0.8,
+      "processing_time_s": 0.129,
+      "rtf": 0.0362,
+      "wer": 0.0909,
+      "cer": 0.0227,
+      "term_accuracy": 0.67,
+      "numeric_accuracy": 1.0,
+      "anatomy_accuracy": 1.0,
+      "negation_accuracy": 1.0,
+      "missed_terms": [
+        "khoang màng phổi"
+      ],
+      "missed_numbers": []
+    },
+    {
+      "id": "TEST_017",
+      "category": "CT sọ não",
+      "reference": "Nhu mô não không thấy ổ tổn thương giảm tỷ trọng dạng nhồi máu hay tăng tỷ trọng dạng xuất huyết",
+      "hypothesis": "NHU MÔ NÃO KHÔNG THẤY Ổ TỔN THƯƠNG GIẢM TỶ TRỌNG DẠNG NHỒI MÁU HAY TĂNG TỶ TRỌNG DẠNG XUẤT HUYẾT",
+      "duration": 5.71,
+      "first_partial_latency_s": 0.8,
+      "processing_time_s": 0.242,
+      "rtf": 0.0424,
+      "wer": 0.0,
+      "cer": 0.0,
+      "term_accuracy": 1.0,
+      "numeric_accuracy": 1.0,
+      "anatomy_accuracy": 1.0,
+      "negation_accuracy": 1.0,
+      "missed_terms": [],
+      "missed_numbers": []
+    },
+    {
+      "id": "TEST_019",
+      "category": "CT sọ não",
+      "reference": "Đường giữa cân đối không thấy hiệu ứng khối đè đẩy hay thoát vị não",
+      "hypothesis": "ĐƯỜNG GIỮA CÂN ĐỐI KHÔNG THẤY HIỆU ỨNG KHỐI ĐE HAY THOÁT VỊ NÃO",
+      "duration": 4.3,
+      "first_partial_latency_s": 0.8,
+      "processing_time_s": 0.18,
+      "rtf": 0.0419,
+      "wer": 0.1333,
+      "cer": 0.0755,
+      "term_accuracy": 0.75,
+      "numeric_accuracy": 1.0,
+      "anatomy_accuracy": 1.0,
+      "negation_accuracy": 1.0,
+      "missed_terms": [
+        "đè đẩy"
+      ],
+      "missed_numbers": []
+    },
+    {
+      "id": "TEST_023",
+      "category": "MRI",
+      "reference": "Thoát vị đĩa đệm trung tâm tầng L5 S1 ra sau 5 milimét chèn ép bao màng cứng",
+      "hypothesis": "THOÁT VỊ ĐĨA ĐỆM TRUNG TÂM TẦNG L NĂM S MỘT RA SAU NĂM MI LIM CHÈN ÉP BAO MÀNG CỨNG",
+      "duration": 5.74,
+      "first_partial_latency_s": 0.8,
+      "processing_time_s": 0.273,
+      "rtf": 0.0475,
+      "wer": 0.3889,
+      "cer": 0.1864,
+      "term_accuracy": 1.0,
+      "numeric_accuracy": 0.0,
+      "anatomy_accuracy": 1.0,
+      "negation_accuracy": 1.0,
+      "missed_terms": [],
+      "missed_numbers": [
+        "5",
+        "milimét"
+      ]
+    },
+    {
+      "id": "TEST_027",
+      "category": "X-quang",
+      "reference": "Bóng tim không to chỉ số tim lồng ngực nhỏ hơn không phẩy năm",
+      "hypothesis": "BÓNG TIM KHÔNG TO CHỈ SỐ TIM LỒNG NGỰC NHỎ HƠN KHÔNG PHẨY NĂM",
+      "duration": 4.22,
+      "first_partial_latency_s": 0.8,
+      "processing_time_s": 0.19,
+      "rtf": 0.0449,
+      "wer": 0.0,
+      "cer": 0.0,
+      "term_accuracy": 1.0,
+      "numeric_accuracy": 1.0,
+      "anatomy_accuracy": 1.0,
+      "negation_accuracy": 1.0,
+      "missed_terms": [],
+      "missed_numbers": []
+    },
+    {
+      "id": "TEST_033",
+      "category": "Siêu âm",
+      "reference": "Túi mật có một sỏi tăng âm kèm bóng cản lưng rõ đường kính 14 milimét di động theo tư thế",
+      "hypothesis": "TÚI MẬT CÓ MỘT SỎI TĂNG ÂM KÈM BÓNG CẢNG LƯNG RÕ ĐƯỜNG KÍNH MƯỜI BỐN MI LIM DI ĐỘNG THEO TƯ THẾ",
+      "duration": 6.0,
+      "first_partial_latency_s": 0.8,
+      "processing_time_s": 0.29,
+      "rtf": 0.0483,
+      "wer": 0.2381,
+      "cer": 0.1449,
+      "term_accuracy": 0.67,
+      "numeric_accuracy": 0.0,
+      "anatomy_accuracy": 1.0,
+      "negation_accuracy": 1.0,
+      "missed_terms": [
+        "bóng cản lưng"
+      ],
+      "missed_numbers": [
+        "14",
+        "milimét"
+      ]
+    },
+    {
+      "id": "TEST_037",
+      "category": "Số đo",
+      "reference": "Đường kính ngang chỗ hẹp nhất một phẩy hai mươi lăm milimét chiều dài đoạn tổn thương 35 milimét",
+      "hypothesis": "ĐƯỜNG KÍNH NGANG CHỖ HẸP NHẤT MỘT PHẨY HAI MƯƠI LĂM MI LIM CHIỀU DÀI ĐOẠN TỔN THƯƠNG BA MƯƠI LĂM MI LI",
+      "duration": 5.83,
+      "first_partial_latency_s": 0.8,
+      "processing_time_s": 0.314,
+      "rtf": 0.0538,
+      "wer": 0.3684,
+      "cer": 0.141,
+      "term_accuracy": 1.0,
+      "numeric_accuracy": 0.33,
+      "anatomy_accuracy": 1.0,
+      "negation_accuracy": 1.0,
+      "missed_terms": [],
+      "missed_numbers": [
+        "35",
+        "milimét"
+      ]
+    },
+    {
+      "id": "TEST_043",
+      "category": "Vị trí giải phẫu",
+      "reference": "Ống mật chủ đoạn sau tụy đường kính 8 milimét không thấy sỏi trong lòng",
+      "hypothesis": "ỐNG MỰC CHỦ ĐOẠN SAU TỤY ĐƯỜNG KÍNH TÁM MY LIM KHÔNG THẤY SỎI TRONG LÒNG",
+      "duration": 4.54,
+      "first_partial_latency_s": 0.8,
+      "processing_time_s": 0.204,
+      "rtf": 0.0449,
+      "wer": 0.2667,
+      "cer": 0.1404,
+      "term_accuracy": 0.5,
+      "numeric_accuracy": 0.0,
+      "anatomy_accuracy": 0.5,
+      "negation_accuracy": 1.0,
+      "missed_terms": [
+        "ống mật chủ"
+      ],
+      "missed_numbers": [
+        "8",
+        "milimét"
+      ]
+    },
+    {
+      "id": "TEST_046",
+      "category": "Thuốc cản quang",
+      "reference": "Sau tiêm thuốc cản quang tổn thương ngấm thuốc mạnh thì động mạch và thải thuốc nhanh thì tĩnh mạch",
+      "hypothesis": "SAU TIÊM THUỐC CẢNG QUANG TỔN THƯƠNG NGẮM THUỐC MẠNH THÌ ĐỘNG MẠCH VÀ THẢI THUỐC NHANH THÌ TĨNH MẠCH",
+      "duration": 5.38,
+      "first_partial_latency_s": 1.2,
+      "processing_time_s": 0.277,
+      "rtf": 0.0515,
+      "wer": 0.1,
+      "cer": 0.025,
+      "term_accuracy": 0.6,
+      "numeric_accuracy": 1.0,
+      "anatomy_accuracy": 1.0,
+      "negation_accuracy": 1.0,
+      "missed_terms": [
+        "thuốc cản quang",
+        "ngấm thuốc mạnh"
+      ],
+      "missed_numbers": []
+    },
+    {
+      "id": "TEST_050",
+      "category": "Bệnh lý thường gặp",
+      "reference": "Xơ vữa vôi hóa rải rác hệ động mạch chủ chậu hai bên gây hẹp dưới 50 phần trăm khẩu kính lòng mạch",
+      "hypothesis": "XƠ VỮA VÔI HÓA RẢI RÁC HỆ ĐỘNG MẠCH CHỦ CHẬU HAI BÊN GÂY HẸP DƯỚI NĂM MƯƠI PHẦN TRĂM KHẨU KÍNH LÒNG MẠCH",
+      "duration": 5.95,
+      "first_partial_latency_s": 1.2,
+      "processing_time_s": 0.293,
+      "rtf": 0.0492,
+      "wer": 0.087,
+      "cer": 0.0921,
+      "term_accuracy": 1.0,
+      "numeric_accuracy": 0.5,
+      "anatomy_accuracy": 1.0,
+      "negation_accuracy": 1.0,
+      "missed_terms": [],
+      "missed_numbers": [
+        "50"
+      ]
+    }
+  ]
+}

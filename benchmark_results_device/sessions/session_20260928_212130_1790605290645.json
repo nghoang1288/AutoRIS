@@ -1,0 +1,17 @@
+{
+  "audioDurationSec": 0.6,
+  "batteryPercent": 100,
+  "batteryTemp": 36.1,
+  "device": "OnePlus PKG110",
+  "finalLatencyMs": 105,
+  "firstPartialMs": 132,
+  "id": 1790605290645,
+  "model": "ZipFormer 150M CR-CTC-RNNT (Offline)",
+  "normalizedTranscript": "ĐÂY",
+  "processingMs": 0,
+  "ramAvgMb": 336,
+  "ramPeakMb": 526,
+  "rawTranscript": "ĐÂY",
+  "rtf": 0.0,
+  "timestamp": "2026-09-28 21:21:30"
+}
