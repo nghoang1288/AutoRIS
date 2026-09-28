@@ -46,13 +46,17 @@ import java.util.Locale
 data class UiBenchmarkMetrics(
     val audioDurationSec: Float = 0.0f,
     val firstPartialMs: Long = 0L,
+    val firstSegmentResultLatencyMs: Long = 0L,
+    val truePartialLatencyMs: Long? = null,
     val finalLatencyMs: Long = 0L,
     val processingMs: Long = 0L,
     val rtf: Float = 0.0f,
     val ramPeakMb: Int = 0,
     val ramAvgMb: Int = 0,
     val batteryPercent: Int = 0,
-    val batteryTemp: Float = 0.0f
+    val batteryTemp: Float = 0.0f,
+    val vadSegmentCount: Int = 1,
+    val vadTotalSpeechMs: Long = 0L
 )
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
@@ -140,6 +144,57 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _serverStatus = MutableStateFlow<String?>("Chưa kết nối")
     val serverStatus: StateFlow<String?> = _serverStatus.asStateFlow()
+
+    // Scenario & Noise Benchmark Parameters
+    private val _roomId = MutableStateFlow("ROOM_01")
+    val roomId: StateFlow<String> = _roomId.asStateFlow()
+
+    private val _roomType = MutableStateFlow("reading_room")
+    val roomType: StateFlow<String> = _roomType.asStateFlow()
+
+    private val _noiseType = MutableStateFlow("clean")
+    val noiseType: StateFlow<String> = _noiseType.asStateFlow()
+
+    private val _noiseLevel = MutableStateFlow("quiet")
+    val noiseLevel: StateFlow<String> = _noiseLevel.asStateFlow()
+
+    private val _speakerDistanceCm = MutableStateFlow(30)
+    val speakerDistanceCm: StateFlow<Int> = _speakerDistanceCm.asStateFlow()
+
+    private val _micOrientationDeg = MutableStateFlow(0)
+    val micOrientationDeg: StateFlow<Int> = _micOrientationDeg.asStateFlow()
+
+    private val _preprocessingProfile = MutableStateFlow("RAW")
+    val preprocessingProfile: StateFlow<String> = _preprocessingProfile.asStateFlow()
+
+    private val _speakerLockEnabled = MutableStateFlow(false)
+    val speakerLockEnabled: StateFlow<Boolean> = _speakerLockEnabled.asStateFlow()
+
+    fun setRoomConfig(roomId: String, roomType: String) {
+        _roomId.value = roomId
+        _roomType.value = roomType
+    }
+
+    fun setNoiseConfig(noiseType: String, noiseLevel: String) {
+        _noiseType.value = noiseType
+        _noiseLevel.value = noiseLevel
+    }
+
+    fun setSpeakerDistanceCm(cm: Int) {
+        _speakerDistanceCm.value = cm
+    }
+
+    fun setMicOrientationDeg(deg: Int) {
+        _micOrientationDeg.value = deg
+    }
+
+    fun setPreprocessingProfile(profile: String) {
+        _preprocessingProfile.value = profile
+    }
+
+    fun setSpeakerLockEnabled(enabled: Boolean) {
+        _speakerLockEnabled.value = enabled
+    }
 
     // Timings
     private var stopRequestedTimeNs: Long = 0L
@@ -294,7 +349,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     }
 
                     if (_metrics.value.firstPartialMs == 0L && firstLatencyMs > 0L) {
-                        _metrics.value = _metrics.value.copy(firstPartialMs = firstLatencyMs)
+                        _metrics.value = _metrics.value.copy(
+                            firstPartialMs = firstLatencyMs,
+                            firstSegmentResultLatencyMs = firstLatencyMs
+                        )
                     }
                 }
             },
@@ -453,27 +511,64 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val session = BenchmarkSession(
             timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date()),
             device = SystemMonitor.getDeviceModel(),
+            deviceModel = SystemMonitor.getDeviceModel(),
+            androidVersion = android.os.Build.VERSION.RELEASE ?: "Unknown",
+            cpuInfo = "Snapdragon 8 Gen 3",
             model = asrEngine.name,
+            modelName = asrEngine.name,
+            modelVersion = "1.0.0",
+            numThreads = 4,
             testId = ref?.id,
             category = ref?.category,
+            roomId = _roomId.value,
+            roomType = _roomType.value,
+            noiseType = _noiseType.value,
+            noiseLevel = _noiseLevel.value,
+            speakerDistanceCm = _speakerDistanceCm.value,
+            micOrientationDeg = _micOrientationDeg.value,
+            preprocessingProfile = _preprocessingProfile.value,
             audioDurationSec = m.audioDurationSec,
+            audioDurationMs = (m.audioDurationSec * 1000).toLong(),
+            sampleRate = 16000,
+            channels = 1,
+            vadSegmentCount = m.vadSegmentCount,
+            vadTotalSpeechMs = m.vadTotalSpeechMs,
+            speakerLockEnabled = _speakerLockEnabled.value,
+            speakerConfidence = 1.0f,
+            speakerRejection = false,
+            firstSegmentResultLatencyMs = if (m.firstSegmentResultLatencyMs > 0) m.firstSegmentResultLatencyMs else m.firstPartialMs,
+            truePartialLatencyMs = m.truePartialLatencyMs,
             firstPartialMs = m.firstPartialMs,
             finalLatencyMs = m.finalLatencyMs,
             processingMs = m.processingMs,
-            rtf = m.rtf,
+            rtf = if (m.audioDurationSec > 0.05f) (m.processingMs.toFloat() / (m.audioDurationSec * 1000f)) else m.rtf,
             ramPeakMb = m.ramPeakMb,
             ramAvgMb = m.ramAvgMb,
             batteryPercent = m.batteryPercent,
             batteryTemp = m.batteryTemp,
+            batteryTemperatureC = m.batteryTemp,
             rawTranscript = raw,
             normalizedTranscript = norm?.normalizedSuggestion ?: raw,
             referenceText = ref?.referenceText,
+            reference = ref?.referenceText,
+            werRaw = null,
+            cerRaw = null,
+            werNormalized = eval?.wer,
+            cerNormalized = eval?.cer,
             cer = eval?.cer,
             wer = eval?.wer,
             medicalTermAccuracy = eval?.medicalTermAccuracy,
             numericAccuracy = eval?.numericAccuracy,
+            measurementAccuracy = eval?.numericAccuracy,
             anatomyAccuracy = eval?.anatomyAccuracy,
+            lateralityAccuracy = null,
             negationAccuracy = eval?.negationAccuracy,
+            spineLevelAccuracy = null,
+            criticalNumericError = false,
+            criticalMeasurementError = false,
+            criticalNegationError = false,
+            criticalLateralityError = false,
+            criticalSpineError = false,
             audioPath = audioToSave
         )
 

@@ -31,8 +31,17 @@ CSV_FILE = os.path.join(STORAGE_DIR, "device_benchmark_aggregate.csv")
 ALL_SESSIONS_JSON = os.path.join(STORAGE_DIR, "all_device_sessions.json")
 RELEASE_APK_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "release_apk")
 
+# Benchmark V2 Storage
+STORAGE_DIR_V2 = os.path.join(os.path.dirname(os.path.abspath(__file__)), "benchmark_results_v2")
+SESSIONS_DIR_V2 = os.path.join(STORAGE_DIR_V2, "sessions")
+AUDIO_DIR_V2 = os.path.join(STORAGE_DIR_V2, "audio")
+CSV_FILE_V2 = os.path.join(STORAGE_DIR_V2, "device_benchmark_v2_aggregate.csv")
+ALL_SESSIONS_JSON_V2 = os.path.join(STORAGE_DIR_V2, "all_device_sessions_v2.json")
+
 os.makedirs(SESSIONS_DIR, exist_ok=True)
 os.makedirs(AUDIO_DIR, exist_ok=True)
+os.makedirs(SESSIONS_DIR_V2, exist_ok=True)
+os.makedirs(AUDIO_DIR_V2, exist_ok=True)
 os.makedirs(RELEASE_APK_DIR, exist_ok=True)
 
 CSV_HEADERS = [
@@ -40,6 +49,17 @@ CSV_HEADERS = [
     "AudioDurationSec", "FirstPartialMs", "FinalLatencyMs", "ProcessingMs",
     "RTF", "RamPeakMb", "BatteryPct", "BatteryTemp",
     "CER", "WER", "MedTermAcc", "NumericAcc", "AnatomyAcc", "NegationAcc",
+    "RawTranscript", "NormalizedTranscript", "ReferenceText", "AudioPath"
+]
+
+CSV_HEADERS_V2 = [
+    "ID", "SessionID", "Timestamp", "Device", "Model", "TestID", "Category",
+    "RoomID", "RoomType", "NoiseType", "NoiseLevel", "SpeakerDistCm", "MicOrientationDeg",
+    "Profile", "AudioDurationSec", "FirstSegmentLatencyMs", "TruePartialLatencyMs", "FirstPartialMs",
+    "FinalLatencyMs", "ProcessingMs", "RTF", "RamPeakMb", "BatteryPct", "BatteryTemp",
+    "WER_Raw", "CER_Raw", "WER_Norm", "CER_Norm",
+    "MedTermAcc", "NumericAcc", "MeasurementAcc", "AnatomyAcc", "LateralityAcc", "NegationAcc", "SpineLevelAcc",
+    "CritNumErr", "CritMeasErr", "CritNegErr", "CritLatErr", "CritSpineErr",
     "RawTranscript", "NormalizedTranscript", "ReferenceText", "AudioPath"
 ]
 
@@ -84,6 +104,76 @@ def append_to_csv(sessions):
                 s.get("numericAccuracy", ""),
                 s.get("anatomyAccuracy", ""),
                 s.get("negationAccuracy", ""),
+                s.get("rawTranscript", ""),
+                s.get("normalizedTranscript", ""),
+                s.get("referenceText", ""),
+                s.get("audioPath", "")
+            ])
+
+def is_v2_session(s):
+    return any(k in s for k in ("roomId", "room_id", "preprocessingProfile", "preprocessing_profile", "criticalNumericError", "sessionId"))
+
+def load_all_sessions_v2():
+    if not os.path.exists(ALL_SESSIONS_JSON_V2):
+        return []
+    try:
+        with open(ALL_SESSIONS_JSON_V2, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return []
+
+def save_all_sessions_v2(sessions):
+    with open(ALL_SESSIONS_JSON_V2, "w", encoding="utf-8") as f:
+        json.dump(sessions, f, ensure_ascii=False, indent=2)
+
+def append_to_csv_v2(sessions):
+    file_exists = os.path.exists(CSV_FILE_V2) and os.path.getsize(CSV_FILE_V2) > 0
+    with open(CSV_FILE_V2, "a", newline="", encoding="utf-8-sig") as f:
+        writer = csv.writer(f)
+        if not file_exists:
+            writer.writerow(CSV_HEADERS_V2)
+        for s in sessions:
+            writer.writerow([
+                s.get("id", ""),
+                s.get("sessionId", ""),
+                s.get("timestamp", ""),
+                s.get("deviceModel") or s.get("device", ""),
+                s.get("modelName") or s.get("model", ""),
+                s.get("testId", ""),
+                s.get("category", ""),
+                s.get("roomId", "ROOM_01"),
+                s.get("roomType", "reading_room"),
+                s.get("noiseType", "clean"),
+                s.get("noiseLevel", "quiet"),
+                s.get("speakerDistanceCm", 30),
+                s.get("micOrientationDeg", 0),
+                s.get("preprocessingProfile", "RAW"),
+                s.get("audioDurationSec", 0),
+                s.get("firstSegmentResultLatencyMs") or s.get("firstPartialMs", 0),
+                s.get("truePartialLatencyMs", ""),
+                s.get("firstPartialMs", 0),
+                s.get("finalLatencyMs", 0),
+                s.get("processingMs", 0),
+                s.get("rtf", 0),
+                s.get("ramPeakMb", 0),
+                s.get("batteryPercent", 0),
+                s.get("batteryTemp", 0),
+                s.get("werRaw", ""),
+                s.get("cerRaw", ""),
+                s.get("werNormalized") or s.get("wer", ""),
+                s.get("cerNormalized") or s.get("cer", ""),
+                s.get("medicalTermAccuracy", ""),
+                s.get("numericAccuracy", ""),
+                s.get("measurementAccuracy", "") or s.get("numericAccuracy", ""),
+                s.get("anatomyAccuracy", ""),
+                s.get("lateralityAccuracy", ""),
+                s.get("negationAccuracy", ""),
+                s.get("spineLevelAccuracy", ""),
+                1 if s.get("criticalNumericError") else 0,
+                1 if s.get("criticalMeasurementError") else 0,
+                1 if s.get("criticalNegationError") else 0,
+                1 if s.get("criticalLateralityError") else 0,
+                1 if s.get("criticalSpineError") else 0,
                 s.get("rawTranscript", ""),
                 s.get("normalizedTranscript", ""),
                 s.get("referenceText", ""),
@@ -314,34 +404,56 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
                 self.send_error(400, "No sessions provided")
                 return
 
-            # Save individual files
+            # Save individual files & route V2 vs V1
             now_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+            v2_sessions = [s for s in new_sessions if is_v2_session(s)]
+            v1_sessions = [s for s in new_sessions if not is_v2_session(s)]
+
             for s in new_sessions:
                 sid = s.get("id") or int(time.time() * 1000)
-                sfile = os.path.join(SESSIONS_DIR, f"session_{now_str}_{sid}.json")
+                target_dir = SESSIONS_DIR_V2 if is_v2_session(s) else SESSIONS_DIR
+                sfile = os.path.join(target_dir, f"session_{now_str}_{sid}.json")
                 with open(sfile, "w", encoding="utf-8") as f:
                     json.dump(s, f, ensure_ascii=False, indent=2)
 
-            # Update aggregate data
-            existing = load_all_sessions()
-            existing_ids = {x.get("id") for x in existing if x.get("id")}
-            to_append = []
-            for s in new_sessions:
-                sid = s.get("id")
-                if not sid or sid not in existing_ids:
-                    existing.append(s)
-                    to_append.append(s)
-                else:
-                    # Update existing session
-                    for idx, ex in enumerate(existing):
-                        if ex.get("id") == sid:
-                            existing[idx] = s
-                            break
+            # Update V2 aggregate data
+            if v2_sessions:
+                existing_v2 = load_all_sessions_v2()
+                existing_ids_v2 = {x.get("id") for x in existing_v2 if x.get("id")}
+                to_append_v2 = []
+                for s in v2_sessions:
+                    sid = s.get("id")
+                    if not sid or sid not in existing_ids_v2:
+                        existing_v2.append(s)
+                        to_append_v2.append(s)
+                    else:
+                        for idx, ex in enumerate(existing_v2):
+                            if ex.get("id") == sid:
+                                existing_v2[idx] = s
+                                break
+                save_all_sessions_v2(existing_v2)
+                append_to_csv_v2(to_append_v2)
 
-            save_all_sessions(existing)
-            append_to_csv(to_append)
+            # Update V1 aggregate data
+            if v1_sessions:
+                existing_v1 = load_all_sessions()
+                existing_ids_v1 = {x.get("id") for x in existing_v1 if x.get("id")}
+                to_append_v1 = []
+                for s in v1_sessions:
+                    sid = s.get("id")
+                    if not sid or sid not in existing_ids_v1:
+                        existing_v1.append(s)
+                        to_append_v1.append(s)
+                    else:
+                        for idx, ex in enumerate(existing_v1):
+                            if ex.get("id") == sid:
+                                existing_v1[idx] = s
+                                break
+                save_all_sessions(existing_v1)
+                append_to_csv(to_append_v1)
 
-            stats = calculate_summary_stats(existing)
+            all_combined = load_all_sessions() + load_all_sessions_v2()
+            stats = calculate_summary_stats(all_combined)
             print_terminal_summary(stats, len(new_sessions))
 
             self.send_response(200)
@@ -351,7 +463,7 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
             resp = {
                 "status": "success",
                 "received_count": len(new_sessions),
-                "total_stored": len(existing),
+                "total_stored": len(all_combined),
                 "message": f"Successfully received {len(new_sessions)} benchmark sessions"
             }
             self.wfile.write(json.dumps(resp, ensure_ascii=False).encode("utf-8"))
@@ -364,12 +476,17 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
 
             sid = query.get("id", ["unknown"])[0]
             filename = query.get("filename", [f"audio_{sid}.wav"])[0]
-            dest_file = os.path.join(AUDIO_DIR, f"{sid}_{filename}")
+            audio_data = self.rfile.read(content_length)
 
-            with open(dest_file, "wb") as f:
-                f.write(self.rfile.read(content_length))
+            dest_file_v1 = os.path.join(AUDIO_DIR, f"{sid}_{filename}")
+            dest_file_v2 = os.path.join(AUDIO_DIR_V2, f"{sid}_{filename}")
 
-            print(f"[AutoRIS Local Server] Saved audio file ({content_length} bytes): {dest_file}")
+            with open(dest_file_v1, "wb") as f:
+                f.write(audio_data)
+            with open(dest_file_v2, "wb") as f:
+                f.write(audio_data)
+
+            print(f"[AutoRIS Local Server] Saved audio file ({content_length} bytes): {dest_file_v2}")
 
             self.send_response(200)
             self.send_cors_headers()
