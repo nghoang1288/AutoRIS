@@ -46,4 +46,35 @@ class AudioPreprocessingTest {
             assertNotNull(profile.description)
         }
     }
+
+    @Test
+    fun testDpdfNetGracefulFallbackWhenModelAbsent() {
+        val nonExistentFile = java.io.File("non_existent_dpdfnet.onnx")
+        val dpdf = com.autoris.asrbenchmark.audio.DpdfNetAudioPreprocessor(modelFile = nonExistentFile)
+
+        assertEquals("DPDFNet", dpdf.name)
+        org.junit.Assert.assertFalse(dpdf.isModelLoaded)
+
+        val input = floatArrayOf(0.05f, -0.1f, 0.4f)
+        val output = dpdf.process(input)
+        assertArrayEquals(input, output, 0.0001f)
+
+        dpdf.reset()
+        dpdf.release()
+    }
+
+    @Test
+    fun testAudioPreprocessorFactory() {
+        val rawPrep = com.autoris.asrbenchmark.audio.AudioPreprocessorFactory.create(PreprocessingProfile.RAW)
+        assertEquals("Passthrough", rawPrep.name)
+
+        val nsPrep = com.autoris.asrbenchmark.audio.AudioPreprocessorFactory.create(PreprocessingProfile.ANDROID_NS)
+        assertEquals("Passthrough", nsPrep.name)
+
+        val dpdfPrep = com.autoris.asrbenchmark.audio.AudioPreprocessorFactory.create(PreprocessingProfile.DPDFNET)
+        assertEquals("DPDFNet", dpdfPrep.name)
+
+        val cascadePrep = com.autoris.asrbenchmark.audio.AudioPreprocessorFactory.create(PreprocessingProfile.ANDROID_NS_DPDFNET)
+        assertEquals("DPDFNet", cascadePrep.name)
+    }
 }
