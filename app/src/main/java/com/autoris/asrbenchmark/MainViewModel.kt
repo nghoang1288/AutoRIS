@@ -15,6 +15,7 @@ import com.autoris.asrbenchmark.asr.Zipformer150MOfflineEngine
 import com.autoris.asrbenchmark.asr.Zipformer30MStreamingEngine
 import com.autoris.asrbenchmark.audio.AudioCaptureState
 import com.autoris.asrbenchmark.audio.AudioRecorderManager
+import com.autoris.asrbenchmark.audio.PreprocessingProfile
 import com.autoris.asrbenchmark.audio.WavWriter
 import com.autoris.asrbenchmark.benchmark.AccuracyEvaluator
 import com.autoris.asrbenchmark.benchmark.BenchmarkSession
@@ -331,6 +332,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val manager = AudioRecorderManager(
             asrEngine = asrEngine,
             vadConfig = vadConfig,
+            preprocessingProfile = PreprocessingProfile.fromId(_preprocessingProfile.value),
             onPartialResult = { partial, firstLatencyMs ->
                 viewModelScope.launch(Dispatchers.Main) {
                     _livePartial.value = partial

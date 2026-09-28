@@ -1,9 +1,5 @@
 package com.autoris.asrbenchmark.audio
 
-import android.annotation.SuppressLint
-import android.media.AudioFormat
-import android.media.AudioRecord
-import android.media.MediaRecorder
 import android.os.SystemClock
 import android.util.Log
 import com.autoris.asrbenchmark.asr.ASREngine
@@ -16,7 +12,6 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
@@ -37,6 +32,8 @@ data class AudioCaptureState(
 class AudioRecorderManager(
     private val asrEngine: ASREngine,
     private val vadConfig: VadConfig = VadConfig(),
+    val preprocessingProfile: PreprocessingProfile = PreprocessingProfile.RAW,
+    private val preprocessor: AudioPreprocessor = PassthroughAudioPreprocessor(),
     private val onPartialResult: (text: String, firstPartialLatencyMs: Long) -> Unit,
     private val onError: (message: String) -> Unit
 ) {
@@ -44,16 +41,13 @@ class AudioRecorderManager(
     companion object {
         private const val TAG = "AudioRecorderManager"
         const val SAMPLE_RATE = 16000
-        const val CHANNEL_CONFIG = AudioFormat.CHANNEL_IN_MONO
-        const val AUDIO_FORMAT = AudioFormat.ENCODING_PCM_16BIT
         private const val CHUNK_SAMPLES = 1600 // 100ms chunks
     }
 
     private val _state = MutableStateFlow(AudioCaptureState())
     val state: StateFlow<AudioCaptureState> = _state.asStateFlow()
 
-    private var audioRecord: AudioRecord? = null
-    private var recordingJob: Job? = null
+    private var audioCapture: AudioCapture? = null
     private var decodeScope: CoroutineScope? = null
     private val decodeMutex = Mutex()
 
@@ -75,55 +69,17 @@ class AudioRecorderManager(
     private var energyWindowIndex = 0
     private var chunksRecordedCount = 0
 
+    // VAD tracking counts
+    private var silenceChunkCount = 0
+    private var speechChunkCount = 0
+    private var segmentHasSpeech = false
+
     var isSaveAudioEnabled: Boolean = false
 
-    @SuppressLint("MissingPermission")
     fun startRecording(coroutineScope: CoroutineScope): Boolean {
         if (_state.value.isRecording) {
             Log.w(TAG, "Already recording")
             return true
-        }
-
-        val minBufSize = AudioRecord.getMinBufferSize(SAMPLE_RATE, CHANNEL_CONFIG, AUDIO_FORMAT)
-        if (minBufSize <= 0) {
-            onError("Không xác định được audio buffer size phù hợp")
-            return false
-        }
-
-        val bufferSize = maxOf(minBufSize * 2, CHUNK_SAMPLES * 2 * 2)
-
-        try {
-            audioRecord = AudioRecord(
-                MediaRecorder.AudioSource.VOICE_RECOGNITION,
-                SAMPLE_RATE,
-                CHANNEL_CONFIG,
-                AUDIO_FORMAT,
-                bufferSize
-            )
-        } catch (e: Exception) {
-            // Fallback to standard MIC if VOICE_RECOGNITION fails
-            try {
-                audioRecord = AudioRecord(
-                    MediaRecorder.AudioSource.MIC,
-                    SAMPLE_RATE,
-                    CHANNEL_CONFIG,
-                    AUDIO_FORMAT,
-                    bufferSize
-                )
-            } catch (e2: Exception) {
-                onError("Khởi tạo AudioRecord thất bại: ${e2.message}")
-                return false
-            }
-        }
-
-        val record = audioRecord ?: run {
-            onError("AudioRecord is null")
-            return false
-        }
-
-        if (record.state != AudioRecord.STATE_INITIALIZED) {
-            onError("AudioRecord không thể chuyển sang trạng thái INITIALIZED")
-            return false
         }
 
         if (!asrEngine.start()) {
@@ -131,9 +87,7 @@ class AudioRecorderManager(
             return false
         }
 
-        record.startRecording()
-
-        // Reset metrics
+        // Reset metrics & preprocessor
         sessionStartTimeNs = SystemClock.elapsedRealtimeNanos()
         firstSpeechTimeNs = 0L
         firstPartialTimeNs = 0L
@@ -143,6 +97,11 @@ class AudioRecorderManager(
         energyWindow.fill(-40.0f)
         energyWindowIndex = 0
         chunksRecordedCount = 0
+        silenceChunkCount = 0
+        speechChunkCount = 0
+        segmentHasSpeech = false
+
+        preprocessor.reset()
 
         synchronized(recordedPcmBuffer) {
             recordedPcmBuffer.clear()
@@ -164,169 +123,182 @@ class AudioRecorderManager(
             samplesRecorded = 0L
         )
 
-        recordingJob = coroutineScope.launch(Dispatchers.Default) {
-            val shortBuffer = ShortArray(CHUNK_SAMPLES)
-            val floatBuffer = FloatArray(CHUNK_SAMPLES)
+        val capture = AudioCapture(
+            sampleRate = SAMPLE_RATE,
+            chunkSamples = CHUNK_SAMPLES,
+            profile = preprocessingProfile
+        )
+        audioCapture = capture
 
-            var silenceChunkCount = 0
-            var speechChunkCount = 0
-            var segmentHasSpeech = false
-
-            while (isActive && _state.value.isRecording) {
-                val readCount = record.read(shortBuffer, 0, CHUNK_SAMPLES)
-                if (readCount <= 0) {
-                    break
-                }
-                totalSamplesRecorded += readCount
-                    val durationSec = totalSamplesRecorded.toFloat() / SAMPLE_RATE
-
-                    // Save raw PCM for full uninterrupted WAV
-                    if (isSaveAudioEnabled) {
-                        synchronized(recordedPcmBuffer) {
-                            for (i in 0 until readCount) {
-                                recordedPcmBuffer.add(shortBuffer[i])
-                            }
-                        }
-                    }
-
-                    // Compute RMS dB
-                    var sumSquare = 0.0
-                    for (i in 0 until readCount) {
-                        val s = shortBuffer[i].toFloat()
-                        sumSquare += (s * s)
-                        floatBuffer[i] = s / 32768.0f
-                    }
-                    val rms = sqrt(sumSquare / readCount)
-                    val db = if (rms > 0.0) (20 * log10(rms / 32768.0)).toFloat().coerceIn(-90f, 0f) else -90f
-
-                    // Adaptive noise floor tracking via sliding percentile energy window (3.0 seconds)
-                    energyWindow[energyWindowIndex] = db
-                    energyWindowIndex = (energyWindowIndex + 1) % energyWindow.size
-                    chunksRecordedCount++
-
-                    val validCount = minOf(chunksRecordedCount, energyWindow.size)
-                    val sortedEnergies = FloatArray(validCount)
-                    for (i in 0 until validCount) {
-                        sortedEnergies[i] = energyWindow[i]
-                    }
-                    sortedEnergies.sort()
-                    val percentileIdx = (validCount * 0.15f).toInt().coerceIn(0, validCount - 1)
-                    val noiseFloorDb = sortedEnergies[percentileIdx].coerceIn(-65.0f, -30.0f)
-
-                    val speechThresholdDb = (noiseFloorDb + 7.0f).coerceIn(-46.0f, -25.0f)
-                    val silenceThresholdDb = (noiseFloorDb + 3.0f).coerceIn(-50.0f, -29.0f)
-
-                    // Add to current phrase segment buffer
-                    val audioSlice = if (readCount == CHUNK_SAMPLES) floatBuffer else floatBuffer.copyOf(readCount)
-                    synchronized(currentSegmentPcm) {
-                        for (sample in audioSlice) {
-                            currentSegmentPcm.add(sample)
-                        }
-                    }
-
-                    // Energy VAD detection
-                    val isSpeechEnergy = db >= speechThresholdDb
-                    val isSilenceEnergy = db <= silenceThresholdDb
-
-                    if (isSpeechEnergy) {
-                        speechChunkCount++
-                        silenceChunkCount = 0
-                        if (speechChunkCount >= 3) { // at least 300ms of voice
-                            segmentHasSpeech = true
-                            if (!speechDetected) {
-                                speechDetected = true
-                                firstSpeechTimeNs = SystemClock.elapsedRealtimeNanos()
-                            }
-                        }
-                    } else if (isSilenceEnergy) {
-                        if (segmentHasSpeech) {
-                            silenceChunkCount++
-                        }
-                    } else {
-                        // Hysteresis band
-                        if (segmentHasSpeech && silenceChunkCount > 0) {
-                            silenceChunkCount++
-                        }
-                    }
-
-                    // Periodic logging every 1 second (10 chunks)
-                    if (chunksRecordedCount % 10 == 0) {
-                        Log.i(TAG, "VAD: t=${String.format(Locale.ROOT, "%.1f", durationSec)}s db=${db.toInt()} noiseFloor=${noiseFloorDb.toInt()} speechThresh=${speechThresholdDb.toInt()} silenceThresh=${silenceThresholdDb.toInt()} speechChunks=$speechChunkCount silChunks=$silenceChunkCount hasSpeech=$segmentHasSpeech")
-                    }
-
-                    // Check if current phrase segment ended (natural pause ~1.0s = 10 chunks * 100ms)
-                    val isPauseDetected = segmentHasSpeech && (silenceChunkCount >= 10)
-
-                    if (isPauseDetected) {
-                        Log.i(TAG, ">>> [PAUSE TRIGGERED at ${String.format(Locale.ROOT, "%.1f", durationSec)}s] silenceChunks=$silenceChunkCount, segSamples=${currentSegmentPcm.size}")
-
-                        // Keep ~250ms trailing silence, trim the rest
-                        val trailingToKeep = (SAMPLE_RATE * 0.25f).toInt()
-                        val silenceToRemove = (silenceChunkCount * CHUNK_SAMPLES) - trailingToKeep
-                        val keepCount = if (silenceToRemove > 0 && currentSegmentPcm.size > silenceToRemove) {
-                            currentSegmentPcm.size - silenceToRemove
-                        } else {
-                            currentSegmentPcm.size
-                        }
-
-                        val segmentSamples: FloatArray
-                        synchronized(currentSegmentPcm) {
-                            if (keepCount > 0 && keepCount <= currentSegmentPcm.size) {
-                                segmentSamples = FloatArray(keepCount)
-                                for (i in 0 until keepCount) {
-                                    segmentSamples[i] = currentSegmentPcm[i]
-                                }
-                            } else {
-                                segmentSamples = currentSegmentPcm.toFloatArray()
-                            }
-                            currentSegmentPcm.clear()
-                        }
-
-                        segmentHasSpeech = false
-                        speechChunkCount = 0
-                        silenceChunkCount = 0
-
-                        if (segmentSamples.size >= (SAMPLE_RATE * 0.4f)) { // at least 400ms of audio
-                            decodeScope?.launch {
-                                decodeMutex.withLock {
-                                    val (segText, costMs) = asrEngine.decodeSegment(segmentSamples)
-                                    totalProcessingMs += costMs
-                                    if (segText.isNotBlank()) {
-                                        val formatted = formatSentence(segText)
-                                        synchronized(accumulatedSegments) {
-                                            accumulatedSegments.add(formatted)
-                                        }
-                                        val fullText = synchronized(accumulatedSegments) {
-                                            accumulatedSegments.joinToString(" ")
-                                        }
-                                        if (firstPartialTimeNs == 0L) {
-                                            firstPartialTimeNs = SystemClock.elapsedRealtimeNanos()
-                                        }
-                                        val latency = (SystemClock.elapsedRealtimeNanos() - (firstSpeechTimeNs.takeIf { it > 0 } ?: sessionStartTimeNs)) / 1_000_000
-                                        Log.i(TAG, "Segment decoded in ${costMs}ms: '$formatted'. Total: '$fullText'")
-                                        onPartialResult(fullText, latency)
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    val currentVad = when {
-                        isSpeechEnergy -> VadState.SPEECH
-                        segmentHasSpeech && silenceChunkCount > 0 -> VadState.ENDPOINT
-                        else -> VadState.SILENCE
-                    }
-
-                    _state.value = _state.value.copy(
-                        vadState = currentVad,
-                        currentDb = db,
-                        audioDurationSec = durationSec,
-                        samplesRecorded = totalSamplesRecorded
-                    )
+        val started = capture.start(coroutineScope, object : AudioCaptureListener {
+            override fun onAudioChunk(shortSamples: ShortArray, floatSamples: FloatArray, count: Int) {
+                handleIncomingAudioChunk(shortSamples, floatSamples, count)
             }
+
+            override fun onError(message: String) {
+                Log.e(TAG, "AudioCapture error: $message")
+                this@AudioRecorderManager.onError(message)
+            }
+        })
+
+        if (!started) {
+            _state.value = _state.value.copy(isRecording = false)
+            return false
         }
 
         return true
+    }
+
+    private fun handleIncomingAudioChunk(shortSamples: ShortArray, floatSamples: FloatArray, readCount: Int) {
+        if (!_state.value.isRecording) return
+
+        totalSamplesRecorded += readCount
+        val durationSec = totalSamplesRecorded.toFloat() / SAMPLE_RATE
+
+        // 1. Save raw audio for review & benchmark reproducibility
+        if (isSaveAudioEnabled) {
+            synchronized(recordedPcmBuffer) {
+                for (i in 0 until readCount) {
+                    recordedPcmBuffer.add(shortSamples[i])
+                }
+            }
+        }
+
+        // 2. Preprocessing pipeline (e.g. DPDFNet software filter if active)
+        val rawSlice = if (readCount == CHUNK_SAMPLES) floatSamples else floatSamples.copyOf(readCount)
+        val processedSlice = preprocessor.process(rawSlice)
+
+        // 3. Compute RMS dB on audio chunk
+        var sumSquare = 0.0
+        for (sample in processedSlice) {
+            sumSquare += (sample * sample)
+        }
+        val rms = sqrt(sumSquare / processedSlice.size)
+        val db = if (rms > 0.0) (20 * log10(rms.toDouble())).toFloat().coerceIn(-90f, 0f) else -90f
+
+        // 4. Adaptive noise floor tracking via sliding percentile energy window (3.0s window)
+        energyWindow[energyWindowIndex] = db
+        energyWindowIndex = (energyWindowIndex + 1) % energyWindow.size
+        chunksRecordedCount++
+
+        val validCount = minOf(chunksRecordedCount, energyWindow.size)
+        val sortedEnergies = FloatArray(validCount)
+        for (i in 0 until validCount) {
+            sortedEnergies[i] = energyWindow[i]
+        }
+        sortedEnergies.sort()
+        val percentileIdx = (validCount * 0.15f).toInt().coerceIn(0, validCount - 1)
+        val noiseFloorDb = sortedEnergies[percentileIdx].coerceIn(-65.0f, -30.0f)
+
+        val speechThresholdDb = (noiseFloorDb + 7.0f).coerceIn(-46.0f, -25.0f)
+        val silenceThresholdDb = (noiseFloorDb + 3.0f).coerceIn(-50.0f, -29.0f)
+
+        // 5. Add to current phrase segment buffer
+        synchronized(currentSegmentPcm) {
+            for (sample in processedSlice) {
+                currentSegmentPcm.add(sample)
+            }
+        }
+
+        // 6. Energy VAD detection
+        val isSpeechEnergy = db >= speechThresholdDb
+        val isSilenceEnergy = db <= silenceThresholdDb
+
+        if (isSpeechEnergy) {
+            speechChunkCount++
+            silenceChunkCount = 0
+            if (speechChunkCount >= 3) { // at least 300ms of voice
+                segmentHasSpeech = true
+                if (!speechDetected) {
+                    speechDetected = true
+                    firstSpeechTimeNs = SystemClock.elapsedRealtimeNanos()
+                }
+            }
+        } else if (isSilenceEnergy) {
+            if (segmentHasSpeech) {
+                silenceChunkCount++
+            }
+        } else {
+            // Hysteresis band
+            if (segmentHasSpeech && silenceChunkCount > 0) {
+                silenceChunkCount++
+            }
+        }
+
+        // Periodic logging every 1 second (10 chunks)
+        if (chunksRecordedCount % 10 == 0) {
+            Log.i(TAG, "VAD: t=${String.format(Locale.ROOT, "%.1f", durationSec)}s db=${db.toInt()} noiseFloor=${noiseFloorDb.toInt()} speechThresh=${speechThresholdDb.toInt()} silenceThresh=${silenceThresholdDb.toInt()} speechChunks=$speechChunkCount silChunks=$silenceChunkCount hasSpeech=$segmentHasSpeech")
+        }
+
+        // 7. Check if current phrase segment ended (natural pause ~1.0s = 10 chunks * 100ms)
+        val isPauseDetected = segmentHasSpeech && (silenceChunkCount >= 10)
+
+        if (isPauseDetected) {
+            Log.i(TAG, ">>> [PAUSE TRIGGERED at ${String.format(Locale.ROOT, "%.1f", durationSec)}s] silenceChunks=$silenceChunkCount, segSamples=${currentSegmentPcm.size}")
+
+            // Keep ~250ms trailing silence, trim remainder
+            val trailingToKeep = (SAMPLE_RATE * 0.25f).toInt()
+            val silenceToRemove = (silenceChunkCount * CHUNK_SAMPLES) - trailingToKeep
+            val keepCount = if (silenceToRemove > 0 && currentSegmentPcm.size > silenceToRemove) {
+                currentSegmentPcm.size - silenceToRemove
+            } else {
+                currentSegmentPcm.size
+            }
+
+            val segmentSamples: FloatArray
+            synchronized(currentSegmentPcm) {
+                if (keepCount in 1..currentSegmentPcm.size) {
+                    segmentSamples = FloatArray(keepCount)
+                    for (i in 0 until keepCount) {
+                        segmentSamples[i] = currentSegmentPcm[i]
+                    }
+                } else {
+                    segmentSamples = currentSegmentPcm.toFloatArray()
+                }
+                currentSegmentPcm.clear()
+            }
+
+            segmentHasSpeech = false
+            speechChunkCount = 0
+            silenceChunkCount = 0
+
+            if (segmentSamples.size >= (SAMPLE_RATE * 0.4f)) { // at least 400ms of audio
+                decodeScope?.launch {
+                    decodeMutex.withLock {
+                        val (segText, costMs) = asrEngine.decodeSegment(segmentSamples)
+                        totalProcessingMs += costMs
+                        if (segText.isNotBlank()) {
+                            val formatted = formatSentence(segText)
+                            synchronized(accumulatedSegments) {
+                                accumulatedSegments.add(formatted)
+                            }
+                            val fullText = synchronized(accumulatedSegments) {
+                                accumulatedSegments.joinToString(" ")
+                            }
+                            if (firstPartialTimeNs == 0L) {
+                                firstPartialTimeNs = SystemClock.elapsedRealtimeNanos()
+                            }
+                            val latency = (SystemClock.elapsedRealtimeNanos() - (firstSpeechTimeNs.takeIf { it > 0 } ?: sessionStartTimeNs)) / 1_000_000
+                            Log.i(TAG, "Segment decoded in ${costMs}ms: '$formatted'. Total: '$fullText'")
+                            onPartialResult(fullText, latency)
+                        }
+                    }
+                }
+            }
+        }
+
+        val currentVad = when {
+            isSpeechEnergy -> VadState.SPEECH
+            segmentHasSpeech && silenceChunkCount > 0 -> VadState.ENDPOINT
+            else -> VadState.SILENCE
+        }
+
+        _state.value = _state.value.copy(
+            vadState = currentVad,
+            currentDb = db,
+            audioDurationSec = durationSec,
+            samplesRecorded = totalSamplesRecorded
+        )
     }
 
     private fun formatSentence(s: String): String {
@@ -350,16 +322,8 @@ class AudioRecorderManager(
             vadState = VadState.SILENCE
         )
 
-        recordingJob?.cancel()
-        recordingJob = null
-
-        try {
-            audioRecord?.stop()
-            audioRecord?.release()
-        } catch (e: Exception) {
-            Log.e(TAG, "Error stopping audioRecord", e)
-        }
-        audioRecord = null
+        audioCapture?.stop()
+        audioCapture = null
 
         // Wait for any active segment decode to complete
         runBlocking {
@@ -391,6 +355,7 @@ class AudioRecorderManager(
         decodeScope = null
 
         asrEngine.stop()
+        preprocessor.reset()
 
         val fullText = synchronized(accumulatedSegments) {
             if (accumulatedSegments.isNotEmpty()) {
@@ -416,6 +381,7 @@ class AudioRecorderManager(
 
     fun release() {
         stopRecordingInternal()
+        preprocessor.release()
         asrEngine.release()
     }
 }
