@@ -1,0 +1,248 @@
+{
+  "version": "2.0.0",
+  "generated_at": "2026-09-28T23:20:00+07:00",
+  "target_hardware": {
+    "soc": "Snapdragon 8 Gen 3",
+    "cpu_threads": 4,
+    "primary_devices": [
+      "Samsung Galaxy S24 Ultra",
+      "OnePlus Ace 5 (PKG110)"
+    ],
+    "model_target": "ZipFormer 150M CR-CTC-RNNT (Local Sherpa-ONNX)"
+  },
+  "rooms": [
+    {
+      "id": "ROOM_01",
+      "name": "Phòng đọc tiêu chuẩn (Yên tĩnh)",
+      "noise_type": "AMBIENT_MINIMAL",
+      "noise_floor_db": 38.0,
+      "description": "Phòng đọc phim riêng biệt, cách âm tốt, điều hòa êm, không tiếng người lạ.",
+      "recommended_profile": "RAW",
+      "target_cer_pct": 2.0,
+      "target_rtf": 0.15
+    },
+    {
+      "id": "ROOM_MRI",
+      "name": "Phòng điều khiển MRI",
+      "noise_type": "CONTINUOUS_HUM_GRADIENT_PULSE",
+      "noise_floor_db": 62.0,
+      "description": "Tiếng bơm helium, quạt tản nhiệt nam châm siêu dẫn liên tục + tiếng xung gradient xuyên qua kính.",
+      "recommended_profile": "DPDFNET",
+      "target_cer_pct": 4.5,
+      "target_rtf": 0.22
+    },
+    {
+      "id": "ROOM_CT",
+      "name": "Phòng điều khiển CT Scanner",
+      "noise_type": "ROTATING_FAN_INTERCOM",
+      "noise_floor_db": 54.0,
+      "description": "Quạt lồng quay gantry tốc độ cao, hệ thống thổi mát bóng phát tia, âm thanh intercom hướng dẫn bệnh nhân thở.",
+      "recommended_profile": "ANDROID_NS_AGC",
+      "target_cer_pct": 3.5,
+      "target_rtf": 0.18
+    },
+    {
+      "id": "ROOM_US",
+      "name": "Phòng Siêu âm Tổng quát",
+      "noise_type": "CONVERSATION_PROBE_DOPPLER",
+      "noise_floor_db": 46.0,
+      "description": "Tiếng bác sĩ giao tiếp bệnh nhân, tiếng xột xoạt giấy lau gel, tiếng phụ tải Doppler xung.",
+      "recommended_profile": "ANDROID_NS",
+      "target_cer_pct": 3.0,
+      "target_rtf": 0.16
+    },
+    {
+      "id": "ROOM_ANGIO",
+      "name": "Phòng Can thiệp Tim mạch / DSA",
+      "noise_type": "EQUIPMENT_BEEPS_HIGH_AC",
+      "noise_floor_db": 58.0,
+      "description": "Tiếng bíp monitor sinh tồn đa thông số (ECG, SpO2), áp lực bơm thuốc cản quang, quạt áp lực âm trần phòng mổ.",
+      "recommended_profile": "ANDROID_NS_DPDFNET",
+      "target_cer_pct": 4.0,
+      "target_rtf": 0.23
+    },
+    {
+      "id": "ROOM_ER",
+      "name": "Bàn đọc CĐHA Cấp cứu (ER)",
+      "noise_type": "CHAOTIC_VOICES_ALARMS",
+      "noise_floor_db": 65.0,
+      "description": "Môi trường cực kỳ ồn ào: nhiều y bác sĩ nói chuyện lớn, tiếng còi cấp cứu, tiếng xe đẩy cáng kim loại.",
+      "recommended_profile": "ANDROID_NS_DPDFNET",
+      "target_cer_pct": 5.0,
+      "target_rtf": 0.24
+    }
+  ],
+  "preprocessing_profiles": [
+    {
+      "id": "RAW",
+      "name": "Direct Raw Audio",
+      "description": "Bypass all DSP filters, pristine 16kHz PCM input directly to ASR.",
+      "computational_overhead": "0%",
+      "recommended_for": "SNR > 25 dB (Quiet rooms)"
+    },
+    {
+      "id": "ANDROID_NS",
+      "name": "Hardware Noise Suppressor",
+      "description": "Android OS hardware-level acoustic noise suppression via AudioEffect API.",
+      "computational_overhead": "< 1% CPU",
+      "recommended_for": "15 dB <= SNR < 25 dB"
+    },
+    {
+      "id": "ANDROID_NS_AGC",
+      "name": "Hardware NS + Auto Gain Control",
+      "description": "Android OS hardware NS combined with Automatic Gain Control for varying doctor distance.",
+      "computational_overhead": "< 1.5% CPU",
+      "recommended_for": "15 dB <= SNR < 25 dB, Distance > 25 cm"
+    },
+    {
+      "id": "DPDFNET",
+      "name": "Deep Learning DPDFNet Denoising",
+      "description": "Deep dual-path differential filter neural network for spectral non-stationary noise removal.",
+      "computational_overhead": "~4-6% CPU",
+      "recommended_for": "SNR < 15 dB (High noise environments like MRI/ER)"
+    },
+    {
+      "id": "ANDROID_NS_DPDFNET",
+      "name": "Cascaded Hardware NS + DPDFNet",
+      "description": "Two-stage pipeline: hardware NS filters ambient hum, DPDFNet strips transient voice/beep artifacts.",
+      "computational_overhead": "~5-7% CPU",
+      "recommended_for": "SNR <= 5 dB (Extreme clinical noise)"
+    }
+  ],
+  "snr_test_tiers": [
+    { "level": "CLEAN", "snr_db": 30.0, "description": "Lý tưởng, không có tiếng ồn nền" },
+    { "level": "HIGH_SNR", "snr_db": 15.0, "description": "Tiếng ồn vừa phải, giọng nói rõ rệt" },
+    { "level": "MODERATE_SNR", "snr_db": 10.0, "description": "Tiếng ồn đáng kể từ máy móc lân cận" },
+    { "level": "LOW_SNR", "snr_db": 5.0, "description": "Môi trường căng thẳng (cấp cứu, MRI)" },
+    { "level": "EXTREME_SNR", "snr_db": 0.0, "description": "Âm thanh tiếng ồn bằng âm lượng giọng nói" }
+  ],
+  "speaker_distances_cm": [15, 30, 60],
+  "acceptance_criteria": {
+    "critical_error_tolerance": 0,
+    "max_allowed_rtf": 0.25,
+    "max_p95_latency_ms": 450,
+    "min_entity_f1_pct": 98.0
+  },
+  "scenarios_matrix": [
+    {
+      "scenario_id": "SCEN_01",
+      "room": "ROOM_01",
+      "snr_level": "CLEAN",
+      "snr_db": 30.0,
+      "distance_cm": 15,
+      "test_profile": "RAW",
+      "expected_cer_pct": 1.2,
+      "expected_rtf": 0.12
+    },
+    {
+      "scenario_id": "SCEN_02",
+      "room": "ROOM_01",
+      "snr_level": "CLEAN",
+      "snr_db": 30.0,
+      "distance_cm": 30,
+      "test_profile": "RAW",
+      "expected_cer_pct": 1.5,
+      "expected_rtf": 0.13
+    },
+    {
+      "scenario_id": "SCEN_03",
+      "room": "ROOM_MRI",
+      "snr_level": "MODERATE_SNR",
+      "snr_db": 10.0,
+      "distance_cm": 15,
+      "test_profile": "DPDFNET",
+      "expected_cer_pct": 3.8,
+      "expected_rtf": 0.21
+    },
+    {
+      "scenario_id": "SCEN_04",
+      "room": "ROOM_MRI",
+      "snr_level": "LOW_SNR",
+      "snr_db": 5.0,
+      "distance_cm": 30,
+      "test_profile": "DPDFNET",
+      "expected_cer_pct": 4.6,
+      "expected_rtf": 0.22
+    },
+    {
+      "scenario_id": "SCEN_05",
+      "room": "ROOM_CT",
+      "snr_level": "HIGH_SNR",
+      "snr_db": 15.0,
+      "distance_cm": 15,
+      "test_profile": "ANDROID_NS_AGC",
+      "expected_cer_pct": 2.2,
+      "expected_rtf": 0.16
+    },
+    {
+      "scenario_id": "SCEN_06",
+      "room": "ROOM_CT",
+      "snr_level": "MODERATE_SNR",
+      "snr_db": 10.0,
+      "distance_cm": 30,
+      "test_profile": "ANDROID_NS_AGC",
+      "expected_cer_pct": 3.1,
+      "expected_rtf": 0.17
+    },
+    {
+      "scenario_id": "SCEN_07",
+      "room": "ROOM_US",
+      "snr_level": "HIGH_SNR",
+      "snr_db": 15.0,
+      "distance_cm": 15,
+      "test_profile": "ANDROID_NS",
+      "expected_cer_pct": 1.9,
+      "expected_rtf": 0.14
+    },
+    {
+      "scenario_id": "SCEN_08",
+      "room": "ROOM_US",
+      "snr_level": "MODERATE_SNR",
+      "snr_db": 10.0,
+      "distance_cm": 60,
+      "test_profile": "ANDROID_NS_AGC",
+      "expected_cer_pct": 3.4,
+      "expected_rtf": 0.17
+    },
+    {
+      "scenario_id": "SCEN_09",
+      "room": "ROOM_ANGIO",
+      "snr_level": "MODERATE_SNR",
+      "snr_db": 10.0,
+      "distance_cm": 15,
+      "test_profile": "ANDROID_NS_DPDFNET",
+      "expected_cer_pct": 3.5,
+      "expected_rtf": 0.23
+    },
+    {
+      "scenario_id": "SCEN_10",
+      "room": "ROOM_ANGIO",
+      "snr_level": "LOW_SNR",
+      "snr_db": 5.0,
+      "distance_cm": 30,
+      "test_profile": "ANDROID_NS_DPDFNET",
+      "expected_cer_pct": 4.2,
+      "expected_rtf": 0.24
+    },
+    {
+      "scenario_id": "SCEN_11",
+      "room": "ROOM_ER",
+      "snr_level": "LOW_SNR",
+      "snr_db": 5.0,
+      "distance_cm": 15,
+      "test_profile": "ANDROID_NS_DPDFNET",
+      "expected_cer_pct": 3.9,
+      "expected_rtf": 0.24
+    },
+    {
+      "scenario_id": "SCEN_12",
+      "room": "ROOM_ER",
+      "snr_level": "EXTREME_SNR",
+      "snr_db": 0.0,
+      "distance_cm": 15,
+      "test_profile": "ANDROID_NS_DPDFNET",
+      "expected_cer_pct": 5.2,
+      "expected_rtf": 0.25
+    }
+  ]
+}
