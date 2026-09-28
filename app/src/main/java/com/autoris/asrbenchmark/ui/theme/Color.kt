@@ -15,3 +15,8 @@ val TextSecondary = Color(0xFF9CA3AF)
 val TextMuted = Color(0xFF6B7280)
 val MetricCardBg = Color(0xFF181C24)
 val BorderColor = Color(0xFF2D3748)
+
+// Semantic aliases for clinical noise lab & metrics
+val MedicalBlue = CyanAccent
+val MetricGreen = EmeraldGreen
+val WarningAmber = OrangeWarning

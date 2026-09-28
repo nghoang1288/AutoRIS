@@ -36,7 +36,8 @@ enum class Screen {
     TEST_SET,
     HISTORY,
     SETTINGS,
-    DEBUG
+    DEBUG,
+    NOISE_LAB
 }
 
 class MainActivity : ComponentActivity() {
@@ -82,7 +83,8 @@ class MainActivity : ComponentActivity() {
                                 onNavigateToTestSet = { currentScreen = Screen.TEST_SET },
                                 onNavigateToHistory = { currentScreen = Screen.HISTORY },
                                 onNavigateToSettings = { currentScreen = Screen.SETTINGS },
-                                onNavigateToDebug = { currentScreen = Screen.DEBUG }
+                                onNavigateToDebug = { currentScreen = Screen.DEBUG },
+                                onNavigateToNoiseLab = { currentScreen = Screen.NOISE_LAB }
                             )
                             Screen.TEST_SET -> TestSetScreen(
                                 viewModel = viewModel,
@@ -97,6 +99,10 @@ class MainActivity : ComponentActivity() {
                                 onNavigateBack = { currentScreen = Screen.HOME }
                             )
                             Screen.DEBUG -> DebugScreen(
+                                viewModel = viewModel,
+                                onNavigateBack = { currentScreen = Screen.HOME }
+                            )
+                            Screen.NOISE_LAB -> com.autoris.asrbenchmark.ui.screens.NoiseLabScreen(
                                 viewModel = viewModel,
                                 onNavigateBack = { currentScreen = Screen.HOME }
                             )

@@ -17,12 +17,17 @@ import com.autoris.asrbenchmark.audio.AudioCaptureState
 import com.autoris.asrbenchmark.audio.AudioPreprocessorFactory
 import com.autoris.asrbenchmark.audio.AudioRecorderManager
 import com.autoris.asrbenchmark.audio.PreprocessingProfile
+import com.autoris.asrbenchmark.audio.VoiceLockState
 import com.autoris.asrbenchmark.audio.WavWriter
 import com.autoris.asrbenchmark.benchmark.AccuracyEvaluator
 import com.autoris.asrbenchmark.benchmark.BenchmarkSession
+import com.autoris.asrbenchmark.benchmark.BenchmarkTrack
+import com.autoris.asrbenchmark.benchmark.EnglishTestSet
 import com.autoris.asrbenchmark.benchmark.EvaluationReport
 import com.autoris.asrbenchmark.benchmark.MedicalTestSentence
 import com.autoris.asrbenchmark.benchmark.MedicalTestSet
+import com.autoris.asrbenchmark.noise.NoiseProfile
+import com.autoris.asrbenchmark.noise.NoiseScenario
 import com.autoris.asrbenchmark.benchmark.SystemMonitor
 import com.autoris.asrbenchmark.benchmark.SystemStats
 import com.autoris.asrbenchmark.normalizer.MedicalTextNormalizer
@@ -148,6 +153,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val serverStatus: StateFlow<String?> = _serverStatus.asStateFlow()
 
     // Scenario & Noise Benchmark Parameters
+    private val _selectedScenario = MutableStateFlow(NoiseScenario.ROOM_READING_STANDARD)
+    val selectedScenario: StateFlow<NoiseScenario> = _selectedScenario.asStateFlow()
+
+    private val _benchmarkTrack = MutableStateFlow(BenchmarkTrack.VIETNAMESE_RADIOLOGY)
+    val benchmarkTrack: StateFlow<BenchmarkTrack> = _benchmarkTrack.asStateFlow()
+
+    private val _noiseProfile = MutableStateFlow(NoiseProfile())
+    val noiseProfile: StateFlow<NoiseProfile> = _noiseProfile.asStateFlow()
+
     private val _roomId = MutableStateFlow("ROOM_01")
     val roomId: StateFlow<String> = _roomId.asStateFlow()
 
@@ -171,6 +185,44 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _speakerLockEnabled = MutableStateFlow(false)
     val speakerLockEnabled: StateFlow<Boolean> = _speakerLockEnabled.asStateFlow()
+
+    private val _voiceLockConfidence = MutableStateFlow(1.0f)
+    val voiceLockConfidence: StateFlow<Float> = _voiceLockConfidence.asStateFlow()
+
+    private val _voiceLockState = MutableStateFlow(VoiceLockState.ACCEPT)
+    val voiceLockState: StateFlow<VoiceLockState> = _voiceLockState.asStateFlow()
+
+    fun selectScenario(scenario: NoiseScenario) {
+        _selectedScenario.value = scenario
+        _roomId.value = scenario.id
+        _roomType.value = scenario.roomType
+        _noiseType.value = scenario.defaultNoiseType
+        _noiseLevel.value = scenario.defaultNoiseLevel
+        _preprocessingProfile.value = scenario.recommendedProfile.id
+    }
+
+    fun selectTrack(track: BenchmarkTrack) {
+        _benchmarkTrack.value = track
+        if (track == BenchmarkTrack.ENGLISH_FRONTEND) {
+            _selectedTestSentence.value = EnglishTestSet.SENTENCES.firstOrNull()
+        } else {
+            _selectedTestSentence.value = MedicalTestSet.SENTENCES.firstOrNull()
+        }
+        resetTest()
+    }
+
+    fun calibrateNoiseFloor() {
+        viewModelScope.launch {
+            _statusMessage.value = "Đang hiệu chuẩn độ ồn phòng (1.0s)..."
+            delay(1000)
+            _noiseProfile.value = _noiseProfile.value.copy(
+                noiseFloorDb = _selectedScenario.value.typicalFloorDb,
+                speechThresholdDb = _selectedScenario.value.typicalFloorDb + 7.0f,
+                silenceThresholdDb = _selectedScenario.value.typicalFloorDb + 3.0f
+            )
+            _statusMessage.value = "Đã hiệu chuẩn độ ồn: ${_noiseProfile.value.noiseFloorDb.toInt()} dB"
+        }
+    }
 
     fun setRoomConfig(roomId: String, roomType: String) {
         _roomId.value = roomId

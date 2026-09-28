@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FormatListBulleted
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Refresh
@@ -75,7 +76,8 @@ fun HomeScreen(
     onNavigateToTestSet: () -> Unit,
     onNavigateToHistory: () -> Unit,
     onNavigateToSettings: () -> Unit,
-    onNavigateToDebug: () -> Unit
+    onNavigateToDebug: () -> Unit,
+    onNavigateToNoiseLab: () -> Unit
 ) {
     val captureState by viewModel.captureState.collectAsState()
     val livePartial by viewModel.livePartial.collectAsState()
@@ -87,6 +89,8 @@ fun HomeScreen(
     val evaluationReport by viewModel.evaluationReport.collectAsState()
     val statusMessage by viewModel.statusMessage.collectAsState()
     val selectedModelType by viewModel.selectedModelType.collectAsState()
+    val selectedScenario by viewModel.selectedScenario.collectAsState()
+    val activeProfile by viewModel.preprocessingProfile.collectAsState()
 
     val scrollState = rememberScrollState()
 
@@ -118,6 +122,9 @@ fun HomeScreen(
                 )
             }
             Row {
+                IconButton(onClick = onNavigateToNoiseLab) {
+                    Icon(Icons.Default.GraphicEq, contentDescription = "Noise Lab", tint = CyanAccent)
+                }
                 IconButton(onClick = onNavigateToDebug) {
                     Icon(Icons.Default.BugReport, contentDescription = "Debug", tint = TextSecondary)
                 }
@@ -176,6 +183,37 @@ fun HomeScreen(
                         color = if (captureState.isRecording) RedError else TextSecondary
                     )
                 }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        // Acoustic Scenario & Preprocessing Card
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(10.dp))
+                .clickable { onNavigateToNoiseLab() },
+            colors = CardDefaults.cardColors(containerColor = DarkSurface),
+            shape = RoundedCornerShape(10.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.GraphicEq, contentDescription = null, tint = CyanAccent, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Phòng: ${selectedScenario.displayName} | DSP: $activeProfile",
+                        fontSize = 11.sp,
+                        color = TextSecondary
+                    )
+                }
+                Text("Noise Lab >", fontSize = 11.sp, color = CyanAccent, fontWeight = FontWeight.SemiBold)
             }
         }
 
