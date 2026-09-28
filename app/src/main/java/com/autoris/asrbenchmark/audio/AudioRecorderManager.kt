@@ -64,9 +64,8 @@ class AudioRecorderManager(
     private val currentSegmentPcm = ArrayList<Float>(16000 * 15) // current phrase
     private val accumulatedSegments = mutableListOf<String>()
 
-    // Sliding energy window for adaptive noise floor tracking (last 30 chunks = 3.0s)
-    private val energyWindow = FloatArray(30) { -40.0f }
-    private var energyWindowIndex = 0
+    // Adaptive noise floor tracker
+    private val noiseTracker = com.autoris.asrbenchmark.noise.AdaptiveNoiseTracker()
     private var chunksRecordedCount = 0
 
     // VAD tracking counts
@@ -94,8 +93,7 @@ class AudioRecorderManager(
         speechDetected = false
         totalProcessingMs = 0L
         totalSamplesRecorded = 0L
-        energyWindow.fill(-40.0f)
-        energyWindowIndex = 0
+        noiseTracker.reset()
         chunksRecordedCount = 0
         silenceChunkCount = 0
         speechChunkCount = 0
@@ -177,21 +175,11 @@ class AudioRecorderManager(
         val db = if (rms > 0.0) (20 * log10(rms.toDouble())).toFloat().coerceIn(-90f, 0f) else -90f
 
         // 4. Adaptive noise floor tracking via sliding percentile energy window (3.0s window)
-        energyWindow[energyWindowIndex] = db
-        energyWindowIndex = (energyWindowIndex + 1) % energyWindow.size
         chunksRecordedCount++
-
-        val validCount = minOf(chunksRecordedCount, energyWindow.size)
-        val sortedEnergies = FloatArray(validCount)
-        for (i in 0 until validCount) {
-            sortedEnergies[i] = energyWindow[i]
-        }
-        sortedEnergies.sort()
-        val percentileIdx = (validCount * 0.15f).toInt().coerceIn(0, validCount - 1)
-        val noiseFloorDb = sortedEnergies[percentileIdx].coerceIn(-65.0f, -30.0f)
-
-        val speechThresholdDb = (noiseFloorDb + 7.0f).coerceIn(-46.0f, -25.0f)
-        val silenceThresholdDb = (noiseFloorDb + 3.0f).coerceIn(-50.0f, -29.0f)
+        val noiseProfile = noiseTracker.update(db)
+        val noiseFloorDb = noiseProfile.noiseFloorDb
+        val speechThresholdDb = noiseProfile.speechThresholdDb
+        val silenceThresholdDb = noiseProfile.silenceThresholdDb
 
         // 5. Add to current phrase segment buffer
         synchronized(currentSegmentPcm) {
