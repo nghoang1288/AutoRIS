@@ -561,5 +561,31 @@
     "testId": "TEST_025",
     "timestamp": "2026-09-28 21:52:05",
     "wer": 0.1764706
+  },
+  {
+    "anatomyAccuracy": 0.75,
+    "audioDurationSec": 8.54,
+    "batteryPercent": 98,
+    "batteryTemp": 36.0,
+    "category": "CT sọ não",
+    "cer": 0.025974026,
+    "device": "OnePlus PKG110",
+    "finalLatencyMs": 267,
+    "firstPartialMs": 0,
+    "id": 1790607149997,
+    "medicalTermAccuracy": 1.0,
+    "model": "ZipFormer 150M CR-CTC-RNNT (Offline)",
+    "negationAccuracy": 1.0,
+    "normalizedTranscript": "CÁC XOANG HÀM XOANG CHÁN XOANG SÀNG VÀ XOANG BƯỚM SÁNG ĐỀU KHÔNG DÀY NIÊM MẠC.",
+    "numericAccuracy": 1.0,
+    "processingMs": 0,
+    "ramAvgMb": 381,
+    "ramPeakMb": 522,
+    "rawTranscript": "CÁC XOANG HÀM XOANG CHÁN XOANG SÀNG VÀ XOANG BƯỚM SÁNG ĐỀU KHÔNG DÀY NIÊM MẠC.",
+    "referenceText": "Các xoang hàm, xoang trán, xoang sàng và xoang bướm sáng đều, không dày niêm mạc.",
+    "rtf": 0.0,
+    "testId": "TEST_021",
+    "timestamp": "2026-09-28 21:52:29",
+    "wer": 0.0625
   }
 ]
