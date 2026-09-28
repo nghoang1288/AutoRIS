@@ -64,4 +64,61 @@ class AccuracyEvaluatorTest {
         assertTrue("Must contain Số đo", categories.contains("Số đo"))
         assertTrue("Must contain Vị trí giải phẫu", categories.contains("Vị trí giải phẫu"))
     }
+
+    @Test
+    fun testStructuredEntityExtraction() {
+        val text = "khối u thận phải kích thước 25 × 18 mm tầng L4-L5 không xâm lấn"
+        val dims = AccuracyEvaluator.extractDimensions(text)
+        assertEquals(1, dims.size)
+        assertEquals(listOf(25.0f, 18.0f), dims[0].dimensions)
+        assertEquals("mm", dims[0].unit)
+
+        val spine = AccuracyEvaluator.extractSpineLevels(text)
+        assertEquals(1, spine.size)
+        assertEquals("L4-L5", spine[0].text)
+
+        val sides = AccuracyEvaluator.extractLaterality(text)
+        assertEquals(1, sides.size)
+        assertEquals("phải", sides[0].side)
+    }
+
+    @Test
+    fun testCriticalNegationErrorDetection() {
+        val ref = "gan không to, không thấy huyết khối tĩnh mạch cửa"
+        val hypDropNegation = "gan to, thấy huyết khối tĩnh mạch cửa" // Fatal omission of "không"!
+        val eval = AccuracyEvaluator.evaluate(ref, hypDropNegation)
+
+        assertTrue("Dropping negations must trigger criticalNegationError", eval.criticalNegationError)
+        assertTrue(eval.hasCriticalError())
+    }
+
+    @Test
+    fun testCriticalLateralityErrorDetection() {
+        val ref = "nang thận phải kích thước 15 mm"
+        val hypFlippedSide = "nang thận trái kích thước 15 mm" // Fatal laterality flip!
+        val eval = AccuracyEvaluator.evaluate(ref, hypFlippedSide)
+
+        assertTrue("Flipping left/right must trigger criticalLateralityError", eval.criticalLateralityError)
+        assertTrue(eval.hasCriticalError())
+    }
+
+    @Test
+    fun testCriticalSpineErrorDetection() {
+        val ref = "thoát vị đĩa đệm L4-L5 chèn ép rễ"
+        val hypWrongLevel = "thoát vị đĩa đệm L5-S1 chèn ép rễ" // Fatal wrong surgical level!
+        val eval = AccuracyEvaluator.evaluate(ref, hypWrongLevel)
+
+        assertTrue("Mutating spine level must trigger criticalSpineError", eval.criticalSpineError)
+        assertTrue(eval.hasCriticalError())
+    }
+
+    @Test
+    fun testCriticalMeasurementErrorDetection() {
+        val ref = "nốt đặc phổi phải kích thước 8 × 6 mm"
+        val hypWrongSize = "nốt đặc phổi phải kích thước 18 × 16 mm" // Fatal dimension mutation!
+        val eval = AccuracyEvaluator.evaluate(ref, hypWrongSize)
+
+        assertTrue("Mutating lesion size must trigger criticalMeasurementError", eval.criticalMeasurementError)
+        assertTrue(eval.hasCriticalError())
+    }
 }

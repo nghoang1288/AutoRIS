@@ -16,23 +16,75 @@ data class TokenDiff(
     val hypWord: String?
 )
 
+data class MeasurementEntity(
+    val value: Float,
+    val unit: String
+)
+
+data class DimensionEntity(
+    val dimensions: List<Float>,
+    val unit: String
+)
+
+data class SpineLevelEntity(
+    val text: String,
+    val startLevel: String,
+    val endLevel: String?
+)
+
+data class NegationEntity(
+    val phrase: String
+)
+
+data class LateralityEntity(
+    val side: String
+)
+
 data class EvaluationReport(
     val referenceText: String,
     val hypothesisText: String,
     val cer: Float,                     // Character Error Rate [0.0 - 1.0]
     val wer: Float,                     // Word Error Rate [0.0 - 1.0]
+    val werRaw: Float? = null,
+    val cerRaw: Float? = null,
+    val werNormalized: Float = wer,
+    val cerNormalized: Float = cer,
     val medicalTermAccuracy: Float,     // [0.0 - 1.0]
     val numericAccuracy: Float,         // [0.0 - 1.0]
+    val measurementAccuracy: Float = numericAccuracy,
     val anatomyAccuracy: Float,         // [0.0 - 1.0]
+    val lateralityAccuracy: Float = 1.0f,
     val negationAccuracy: Float,        // [0.0 - 1.0]
+    val spineLevelAccuracy: Float = 1.0f,
     val matchedTerms: List<String>,
     val missedTerms: List<String>,
     val matchedNumbers: List<String>,
     val missedNumbers: List<String>,
-    val diffTokens: List<TokenDiff>
-)
+    val diffTokens: List<TokenDiff>,
+
+    // Zero-Tolerance Clinical Critical Error Flags
+    val criticalNumericError: Boolean = false,
+    val criticalMeasurementError: Boolean = false,
+    val criticalNegationError: Boolean = false,
+    val criticalLateralityError: Boolean = false,
+    val criticalSpineError: Boolean = false
+) {
+    fun hasCriticalError(): Boolean =
+        criticalNumericError ||
+        criticalMeasurementError ||
+        criticalNegationError ||
+        criticalLateralityError ||
+        criticalSpineError
+}
 
 object AccuracyEvaluator {
+
+    private val NEGATION_KEYWORDS = listOf(
+        "không thấy", "chưa thấy", "không giãn", "không huyết khối",
+        "không ngấm thuốc", "không dày", "không to", "không có", "không tràn dịch", "không tràn khí"
+    )
+
+    private val LATERALITY_KEYWORDS = listOf("phải", "trái", "hai bên", "bên phải", "bên trái")
 
     /**
      * Cleans text for comparison: lowercases, strips excess punctuation, normalizes spaces.
@@ -55,7 +107,7 @@ object AccuracyEvaluator {
         val wer = computeWer(cleanRef, cleanHyp)
         val diffs = computeTokenDiff(cleanRef, cleanHyp)
 
-        // Evaluate domain terms
+        // 1. Evaluate key domain terms
         val keyTerms = testSentence?.keyTerms ?: emptyList()
         val keyNumbers = testSentence?.keyNumbers ?: emptyList()
         val keyAnatomy = testSentence?.keyAnatomy ?: emptyList()
@@ -72,6 +124,7 @@ object AccuracyEvaluator {
         }
         val termAcc = if (keyTerms.isNotEmpty()) matchedTerms.size.toFloat() / keyTerms.size else 1.0f
 
+        // 2. Numeric comparison
         val matchedNumbers = mutableListOf<String>()
         val missedNumbers = mutableListOf<String>()
         for (num in keyNumbers) {
@@ -83,34 +136,165 @@ object AccuracyEvaluator {
             }
         }
         val numAcc = if (keyNumbers.isNotEmpty()) matchedNumbers.size.toFloat() / keyNumbers.size else 1.0f
+        val criticalNumericErr = missedNumbers.isNotEmpty()
 
+        // 3. Anatomy
         var matchedAnatomy = 0
         for (a in keyAnatomy) {
             if (cleanHyp.contains(cleanText(a))) matchedAnatomy++
         }
         val anatomyAcc = if (keyAnatomy.isNotEmpty()) matchedAnatomy.toFloat() / keyAnatomy.size else 1.0f
 
+        // 4. Negations (Zero Tolerance)
+        val refNegations = if (keyNegations.isNotEmpty()) keyNegations else extractNegations(reference)
         var matchedNegations = 0
-        for (n in keyNegations) {
-            if (cleanHyp.contains(cleanText(n))) matchedNegations++
+        var criticalNegationErr = false
+        for (n in refNegations) {
+            if (cleanHyp.contains(cleanText(n))) {
+                matchedNegations++
+            } else {
+                criticalNegationErr = true
+            }
         }
-        val negationAcc = if (keyNegations.isNotEmpty()) matchedNegations.toFloat() / keyNegations.size else 1.0f
+        val negationAcc = if (refNegations.isNotEmpty()) matchedNegations.toFloat() / refNegations.size else 1.0f
+
+        // 5. Laterality (Zero Tolerance: Left vs Right flip)
+        val refSides = extractLaterality(reference)
+        val hypSides = extractLaterality(hypothesis)
+        var matchedSides = 0
+        var criticalLateralityErr = false
+        for (side in refSides) {
+            if (hypSides.any { it.side == side.side }) {
+                matchedSides++
+            } else {
+                criticalLateralityErr = true
+            }
+        }
+        val lateralityAcc = if (refSides.isNotEmpty()) matchedSides.toFloat() / refSides.size else 1.0f
+
+        // 6. Spine Levels (Zero Tolerance: L4-L5 vs L5-S1)
+        val refSpine = extractSpineLevels(reference)
+        val hypSpine = extractSpineLevels(hypothesis)
+        var matchedSpine = 0
+        var criticalSpineErr = false
+        for (sp in refSpine) {
+            if (hypSpine.any { it.text.equals(sp.text, ignoreCase = true) }) {
+                matchedSpine++
+            } else {
+                criticalSpineErr = true
+            }
+        }
+        val spineAcc = if (refSpine.isNotEmpty()) matchedSpine.toFloat() / refSpine.size else 1.0f
+
+        // 7. Structured Dimensions and Measurements
+        val refDims = extractDimensions(reference)
+        val hypDims = extractDimensions(hypothesis)
+        var matchedDims = 0
+        var criticalMeasurementErr = false
+        for (dim in refDims) {
+            if (hypDims.any { it.dimensions == dim.dimensions && it.unit.equals(dim.unit, ignoreCase = true) }) {
+                matchedDims++
+            } else {
+                criticalMeasurementErr = true
+            }
+        }
+        val measurementAcc = if (refDims.isNotEmpty()) matchedDims.toFloat() / refDims.size else numAcc
 
         return EvaluationReport(
             referenceText = reference,
             hypothesisText = hypothesis,
             cer = cer,
             wer = wer,
+            werRaw = null,
+            cerRaw = null,
+            werNormalized = wer,
+            cerNormalized = cer,
             medicalTermAccuracy = termAcc,
             numericAccuracy = numAcc,
+            measurementAccuracy = measurementAcc,
             anatomyAccuracy = anatomyAcc,
+            lateralityAccuracy = lateralityAcc,
             negationAccuracy = negationAcc,
+            spineLevelAccuracy = spineAcc,
             matchedTerms = matchedTerms,
             missedTerms = missedTerms,
             matchedNumbers = matchedNumbers,
             missedNumbers = missedNumbers,
-            diffTokens = diffs
+            diffTokens = diffs,
+            criticalNumericError = criticalNumericErr,
+            criticalMeasurementError = criticalMeasurementErr,
+            criticalNegationError = criticalNegationErr,
+            criticalLateralityError = criticalLateralityErr,
+            criticalSpineError = criticalSpineErr
         )
+    }
+
+    /**
+     * Extracts structured dimensions (e.g. "21 × 8 mm", "10 × 15 × 20 mm").
+     */
+    fun extractDimensions(text: String): List<DimensionEntity> {
+        val list = mutableListOf<DimensionEntity>()
+        val regex3D = Regex("(\\d+(?:\\.\\d+)?)\\s*×\\s*(\\d+(?:\\.\\d+)?)\\s*×\\s*(\\d+(?:\\.\\d+)?)(?:\\s*(mm|cm|m))?", RegexOption.IGNORE_CASE)
+        regex3D.findAll(text).forEach { m ->
+            val v1 = m.groupValues[1].toFloatOrNull() ?: 0f
+            val v2 = m.groupValues[2].toFloatOrNull() ?: 0f
+            val v3 = m.groupValues[3].toFloatOrNull() ?: 0f
+            val unit = m.groupValues[4].ifEmpty { "mm" }
+            list.add(DimensionEntity(listOf(v1, v2, v3), unit))
+        }
+
+        val regex2D = Regex("(\\d+(?:\\.\\d+)?)\\s*×\\s*(\\d+(?:\\.\\d+)?)(?!\\s*×)(?:\\s*(mm|cm|m))?", RegexOption.IGNORE_CASE)
+        regex2D.findAll(text).forEach { m ->
+            val v1 = m.groupValues[1].toFloatOrNull() ?: 0f
+            val v2 = m.groupValues[2].toFloatOrNull() ?: 0f
+            val unit = m.groupValues[3].ifEmpty { "mm" }
+            list.add(DimensionEntity(listOf(v1, v2), unit))
+        }
+        return list
+    }
+
+    /**
+     * Extracts spine level entities (e.g. "L4-L5", "L5-S1", "C4-C5", "D12-L1").
+     */
+    fun extractSpineLevels(text: String): List<SpineLevelEntity> {
+        val list = mutableListOf<SpineLevelEntity>()
+        val regex = Regex("\\b([LCDSTlcdst])(\\d+)(?:-([LCDSTlcdst])?(\\d+))?\\b")
+        regex.findAll(text).forEach { m ->
+            val p1 = m.groupValues[1].uppercase(Locale.ROOT)
+            val d1 = m.groupValues[2]
+            val p2 = m.groupValues[3].ifEmpty { p1 }.uppercase(Locale.ROOT)
+            val d2 = m.groupValues[4]
+            val full = m.value.uppercase(Locale.ROOT)
+            list.add(SpineLevelEntity(text = full, startLevel = "$p1$d1", endLevel = if (d2.isNotEmpty()) "$p2$d2" else null))
+        }
+        return list
+    }
+
+    /**
+     * Extracts laterality entities ("phải", "trái", "hai bên").
+     */
+    fun extractLaterality(text: String): List<LateralityEntity> {
+        val clean = cleanText(text)
+        val list = mutableListOf<LateralityEntity>()
+        if (clean.contains("hai bên")) {
+            list.add(LateralityEntity("hai bên"))
+        } else {
+            if (Regex("\\b(phải|bên phải)\\b").containsMatchIn(clean)) {
+                list.add(LateralityEntity("phải"))
+            }
+            if (Regex("\\b(trái|bên trái)\\b").containsMatchIn(clean)) {
+                list.add(LateralityEntity("trái"))
+            }
+        }
+        return list
+    }
+
+    /**
+     * Extracts negation phrases.
+     */
+    fun extractNegations(text: String): List<String> {
+        val clean = cleanText(text)
+        return NEGATION_KEYWORDS.filter { clean.contains(it) }
     }
 
     /**
@@ -134,9 +318,6 @@ object AccuracyEvaluator {
         return min(dist.toFloat() / refWords.size, 1.0f)
     }
 
-    /**
-     * Generic Levenshtein distance algorithm.
-     */
     private fun <T> levenshteinDistance(s1: Array<T>, s2: Array<T>): Int {
         val dp = Array(s1.size + 1) { IntArray(s2.size + 1) }
         for (i in 0..s1.size) dp[i][0] = i
@@ -146,9 +327,9 @@ object AccuracyEvaluator {
             for (j in 1..s2.size) {
                 val cost = if (s1[i - 1] == s2[j - 1]) 0 else 1
                 dp[i][j] = minOf(
-                    dp[i - 1][j] + 1,       // deletion
-                    dp[i][j - 1] + 1,       // insertion
-                    dp[i - 1][j - 1] + cost // substitution
+                    dp[i - 1][j] + 1,
+                    dp[i][j - 1] + 1,
+                    dp[i - 1][j - 1] + cost
                 )
             }
         }
@@ -173,9 +354,6 @@ object AccuracyEvaluator {
         return dp[s1.size][s2.size]
     }
 
-    /**
-     * Backtracks Levenshtein matrix to generate token-level diff for visual display.
-     */
     fun computeTokenDiff(ref: String, hyp: String): List<TokenDiff> {
         val refWords = if (ref.isEmpty()) emptyList() else ref.split(" ")
         val hypWords = if (hyp.isEmpty()) emptyList() else hyp.split(" ")
