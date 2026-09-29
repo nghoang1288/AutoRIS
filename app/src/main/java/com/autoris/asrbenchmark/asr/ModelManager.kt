@@ -289,7 +289,37 @@ object ModelManager {
         }
     }
 
-    fun getModelStatus(context: Context, type: ASRModelType): ModelStatus {
+    val DPDFNET_FILE_INFO = ModelFileInfo(
+        fileName = "dpdfnet.onnx",
+        expectedSize = 14856000L,
+        expectedSha256 = "",
+        downloadUrl = "https://huggingface.co/csukuangfj/sherpa-onnx-dpdfnet/resolve/main/dpdfnet.onnx",
+        localServerRelativePath = "models/dpdfnet.onnx"
+    )
+
+    fun isDpdfNetReady(context: Context): Boolean {
+        val file = File(context.filesDir, "models/${DPDFNET_FILE_INFO.fileName}")
+        return file.exists() && file.length() > 1000L
+    }
+
+    fun computeSha256(file: File): String {
+        if (!file.exists() || file.length() == 0L) return ""
+        return try {
+            val digest = MessageDigest.getInstance("SHA-256")
+            file.inputStream().use { input ->
+                val buffer = ByteArray(64 * 1024)
+                var bytesRead: Int
+                while (input.read(buffer).also { bytesRead = it } != -1) {
+                    digest.update(buffer, 0, bytesRead)
+                }
+            }
+            digest.digest().joinToString("") { "%02x".format(it) }
+        } catch (_: Exception) {
+            ""
+        }
+    }
+
+    fun getModelStatus(context: Context, type: ASRModelType, verifyHashes: Boolean = false): ModelStatus {
         val modelDir = getModelDir(context, type)
         val files = getModelFiles(type)
         val details = mutableListOf<FileStatusDetail>()
@@ -302,7 +332,16 @@ object ModelManager {
             val size = if (exists) file.length() else 0L
             totalBytes += size
 
-            val isValid = exists && size > 1000L
+            val hash = if (verifyHashes && exists) computeSha256(file) else ""
+            val hashMatch = if (verifyHashes && info.expectedSha256.isNotBlank() && hash.isNotBlank()) {
+                hash.equals(info.expectedSha256, ignoreCase = true)
+            } else true
+
+            val sizeMatch = if (info.expectedSize > 0L) {
+                size >= (info.expectedSize * 0.9)
+            } else size > 1000L
+
+            val isValid = exists && sizeMatch && hashMatch
             if (!isValid) allValid = false
 
             details.add(
@@ -310,7 +349,7 @@ object ModelManager {
                     fileName = info.fileName,
                     exists = exists,
                     sizeBytes = size,
-                    sha256 = "",
+                    sha256 = hash,
                     isValid = isValid
                 )
             )

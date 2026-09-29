@@ -41,8 +41,11 @@ class EndpointStateMachine(
         currentDb: Float,
         noiseFloorDb: Float
     ): EndpointState {
-        // Effective speech detection requires either neural probability >= 0.50 OR energy >= floor + 7dB
-        val effectiveSpeech = isSpeech || (speechProbability >= 0.50f) || (currentDb >= (noiseFloorDb + 7.0f))
+        // Neural VAD is the primary authority. Pure acoustic energy alone must NEVER declare speech
+        // if neural probability indicates non-speech (< 0.35f).
+        val neuralSpeech = isSpeech || (speechProbability >= 0.50f)
+        val energyQualified = (speechProbability >= 0.35f) && (currentDb >= (noiseFloorDb + 7.0f))
+        val effectiveSpeech = neuralSpeech || energyQualified
 
         if (effectiveSpeech) {
             speechStreak++

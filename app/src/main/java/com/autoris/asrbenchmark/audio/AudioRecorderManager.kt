@@ -77,6 +77,9 @@ class AudioRecorderManager(
     private var totalProcessingMs: Long = 0L
     private var totalSamplesRecorded: Long = 0L
 
+    var latestPolicyDecision: PolicyDecision? = null
+        private set
+
     // In-memory audio buffer for saving WAV
     private val recordedPcmBuffer = ArrayList<Short>(16000 * 60) // up to 60s
     private val currentSegmentPcm = ArrayList<Float>(16000 * 15) // current phrase
@@ -324,6 +327,7 @@ class AudioRecorderManager(
                 noiseProfile = noiseProfile,
                 clippingOccurred = clippingDetected
             )
+            latestPolicyDecision = decision
             onPolicyDecision?.invoke(decision)
 
             if (segmentSamples.size >= (SAMPLE_RATE * 0.4f)) { // at least 400ms of audio

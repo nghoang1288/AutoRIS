@@ -783,6 +783,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val eval = _evaluationReport.value
         val norm = _normalizedResult.value
         val audioToSave = lastSavedAudioPath
+        val policyDecision = audioRecorderManager?.latestPolicyDecision
 
         val session = BenchmarkSession(
             timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date()),
@@ -803,6 +804,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             speakerDistanceCm = _speakerDistanceCm.value,
             micOrientationDeg = _micOrientationDeg.value,
             preprocessingProfile = _preprocessingProfile.value,
+            actualPreprocessingProfile = policyDecision?.activeProfile?.id ?: _preprocessingProfile.value,
+            policyRecommendedProfile = policyDecision?.recommendedProfile?.id,
+            policyConfidence = policyDecision?.confidence,
+            policyOverride = policyDecision?.isOverride ?: false,
             audioDurationSec = m.audioDurationSec,
             audioDurationMs = (m.audioDurationSec * 1000).toLong(),
             sampleRate = 16000,

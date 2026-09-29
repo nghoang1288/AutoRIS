@@ -154,4 +154,14 @@ class VadEngineTest {
         val confirmed = fastSm.update(isSpeech = false, speechProbability = 0.1f, currentDb = -52f, noiseFloorDb = -50f)
         assertEquals(EndpointState.ENDPOINT_CONFIRMED, confirmed)
     }
+
+    @Test
+    fun testEndpointStateMachineRejectsAcousticBurstWithoutNeuralSpeech() {
+        val sm = EndpointStateMachine(minSpeechChunksToEnter = 2, minSilenceChunksForPossible = 5, minSilenceChunksForConfirmed = 10)
+        // High energy acoustic burst (e.g. door slam or keyboard clatter at -20dB vs floor -50dB)
+        // but neural probability is low (0.10f) and isSpeech is false.
+        val state = sm.update(isSpeech = false, speechProbability = 0.10f, currentDb = -20f, noiseFloorDb = -50f)
+        assertEquals("Neural VAD must reject high-energy non-speech burst", EndpointState.SILENCE, state)
+        assertEquals(0, sm.speechStreak)
+    }
 }

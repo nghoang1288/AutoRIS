@@ -37,6 +37,10 @@ data class BenchmarkSession(
 
     // Audio & Preprocessing Pipeline
     val preprocessingProfile: String = "RAW",
+    val actualPreprocessingProfile: String = preprocessingProfile,
+    val policyRecommendedProfile: String? = null,
+    val policyConfidence: Float? = null,
+    val policyOverride: Boolean = false,
     val audioDurationSec: Float = 0.0f,
     val audioDurationMs: Long = (audioDurationSec * 1000).toLong(),
     val sampleRate: Int = 16000,
