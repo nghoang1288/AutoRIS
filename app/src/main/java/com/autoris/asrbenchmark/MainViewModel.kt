@@ -13,6 +13,7 @@ import com.autoris.asrbenchmark.asr.ModelManager
 import com.autoris.asrbenchmark.asr.ModelStatus
 import com.autoris.asrbenchmark.asr.Zipformer150MOfflineEngine
 import com.autoris.asrbenchmark.asr.Zipformer30MStreamingEngine
+import com.autoris.asrbenchmark.audio.AudioCapture
 import com.autoris.asrbenchmark.audio.AudioCaptureState
 import com.autoris.asrbenchmark.audio.AudioPreprocessorFactory
 import com.autoris.asrbenchmark.audio.AudioRecorderManager
@@ -213,14 +214,28 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun calibrateNoiseFloor() {
         viewModelScope.launch {
-            _statusMessage.value = "Đang hiệu chuẩn độ ồn phòng (1.0s)..."
-            delay(1000)
-            _noiseProfile.value = _noiseProfile.value.copy(
-                noiseFloorDb = _selectedScenario.value.typicalFloorDb,
-                speechThresholdDb = _selectedScenario.value.typicalFloorDb + 7.0f,
-                silenceThresholdDb = _selectedScenario.value.typicalFloorDb + 3.0f
-            )
-            _statusMessage.value = "Đã hiệu chuẩn độ ồn: ${_noiseProfile.value.noiseFloorDb.toInt()} dB"
+            _statusMessage.value = "Đang thu âm hiệu chuẩn độ ồn phòng (1.0s)..."
+            val samples = AudioCapture.recordCalibrationSamples(durationMs = 1000)
+            if (samples.isNotEmpty()) {
+                val tracker = com.autoris.asrbenchmark.noise.AdaptiveNoiseTracker()
+                tracker.calibrate(samples)
+                val floorDb = tracker.getEstimatedNoiseFloor()
+                _noiseProfile.value = _noiseProfile.value.copy(
+                    noiseFloorDb = floorDb,
+                    speechThresholdDb = floorDb + 7.0f,
+                    silenceThresholdDb = floorDb + 3.0f,
+                    currentDb = floorDb
+                )
+                _statusMessage.value = "Hiệu chuẩn thành công: Độ ồn thực tế ${floorDb.toInt()} dB"
+            } else {
+                val fallbackFloor = _selectedScenario.value.typicalFloorDb
+                _noiseProfile.value = _noiseProfile.value.copy(
+                    noiseFloorDb = fallbackFloor,
+                    speechThresholdDb = fallbackFloor + 7.0f,
+                    silenceThresholdDb = fallbackFloor + 3.0f
+                )
+                _statusMessage.value = "Không thể ghi âm micro, dùng mặc định phòng: ${fallbackFloor.toInt()} dB"
+            }
         }
     }
 

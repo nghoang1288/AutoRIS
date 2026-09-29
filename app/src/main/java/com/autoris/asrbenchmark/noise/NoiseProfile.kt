@@ -67,21 +67,25 @@ class AdaptiveNoiseTracker(
 
     /**
      * Updates tracker with incoming chunk RMS dB.
+     * If isSpeech is true, the baseline noise floor window is frozen to prevent speech energy
+     * from corrupting the ambient acoustic noise floor.
      */
-    fun update(currentDb: Float): NoiseProfile {
-        energyWindow[windowIndex] = currentDb
-        windowIndex = (windowIndex + 1) % energyWindow.size
-        chunksCount++
+    fun update(currentDb: Float, isSpeech: Boolean = false): NoiseProfile {
+        if (!isSpeech) {
+            energyWindow[windowIndex] = currentDb
+            windowIndex = (windowIndex + 1) % energyWindow.size
+            chunksCount++
 
-        val validCount = minOf(chunksCount, energyWindow.size)
-        val sorted = FloatArray(validCount)
-        for (i in 0 until validCount) {
-            sorted[i] = energyWindow[i]
+            val validCount = minOf(chunksCount, energyWindow.size)
+            val sorted = FloatArray(validCount)
+            for (i in 0 until validCount) {
+                sorted[i] = energyWindow[i]
+            }
+            sorted.sort()
+
+            val pIdx = (validCount * percentile).toInt().coerceIn(0, validCount - 1)
+            currentNoiseFloorDb = sorted[pIdx].coerceIn(-65.0f, -28.0f)
         }
-        sorted.sort()
-
-        val pIdx = (validCount * percentile).toInt().coerceIn(0, validCount - 1)
-        currentNoiseFloorDb = sorted[pIdx].coerceIn(-65.0f, -28.0f)
 
         val speechThresh = (currentNoiseFloorDb + speechDeltaDb).coerceIn(-46.0f, -25.0f)
         val silenceThresh = (currentNoiseFloorDb + silenceDeltaDb).coerceIn(-50.0f, -29.0f)

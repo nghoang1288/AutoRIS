@@ -11,6 +11,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
+import kotlinx.coroutines.withContext
+
 interface AudioCaptureListener {
     fun onAudioChunk(shortSamples: ShortArray, floatSamples: FloatArray, count: Int)
     fun onError(message: String)
@@ -25,6 +27,82 @@ class AudioCapture(
         private const val TAG = "AudioCapture"
         const val CHANNEL_CONFIG = AudioFormat.CHANNEL_IN_MONO
         const val AUDIO_FORMAT = AudioFormat.ENCODING_PCM_16BIT
+
+        @SuppressLint("MissingPermission")
+        suspend fun recordCalibrationSamples(
+            sampleRate: Int = 16000,
+            durationMs: Int = 1000
+        ): FloatArray = withContext(Dispatchers.IO) {
+            val totalSamplesNeeded = (sampleRate * (durationMs / 1000.0)).toInt()
+            val chunkSamples = 1600
+            val minBufSize = AudioRecord.getMinBufferSize(sampleRate, CHANNEL_CONFIG, AUDIO_FORMAT)
+            if (minBufSize <= 0) return@withContext FloatArray(0)
+            val bufferSize = maxOf(minBufSize * 2, chunkSamples * 2 * 2)
+
+            var record: AudioRecord? = null
+            try {
+                record = AudioRecord(
+                    MediaRecorder.AudioSource.VOICE_RECOGNITION,
+                    sampleRate,
+                    CHANNEL_CONFIG,
+                    AUDIO_FORMAT,
+                    bufferSize
+                )
+            } catch (_: Throwable) {}
+
+            if (record == null || record.state != AudioRecord.STATE_INITIALIZED) {
+                try {
+                    record?.release()
+                    record = AudioRecord(
+                        MediaRecorder.AudioSource.MIC,
+                        sampleRate,
+                        CHANNEL_CONFIG,
+                        AUDIO_FORMAT,
+                        bufferSize
+                    )
+                } catch (_: Throwable) {
+                    return@withContext FloatArray(0)
+                }
+            }
+
+            if (record.state != AudioRecord.STATE_INITIALIZED) {
+                try { record.release() } catch (_: Throwable) {}
+                return@withContext FloatArray(0)
+            }
+
+            val result = FloatArray(totalSamplesNeeded)
+            val shortBuffer = ShortArray(chunkSamples)
+            var written = 0
+
+            try {
+                record.startRecording()
+                while (written < totalSamplesNeeded) {
+                    val toRead = minOf(chunkSamples, totalSamplesNeeded - written)
+                    val read = record.read(shortBuffer, 0, toRead)
+                    if (read > 0) {
+                        for (i in 0 until read) {
+                            result[written + i] = shortBuffer[i] / 32768.0f
+                        }
+                        written += read
+                    } else {
+                        break
+                    }
+                }
+            } catch (e: Throwable) {
+                Log.e(TAG, "Calibration capture error: ${e.message}")
+            } finally {
+                try {
+                    if (record.recordingState == AudioRecord.RECORDSTATE_RECORDING) {
+                        record.stop()
+                    }
+                } catch (_: Throwable) {}
+                try {
+                    record.release()
+                } catch (_: Throwable) {}
+            }
+
+            if (written == totalSamplesNeeded) result else result.copyOf(written)
+        }
     }
 
     private var audioRecord: AudioRecord? = null

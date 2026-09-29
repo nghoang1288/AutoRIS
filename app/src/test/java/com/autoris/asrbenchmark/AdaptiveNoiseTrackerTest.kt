@@ -66,4 +66,26 @@ class AdaptiveNoiseTrackerTest {
         tracker.reset(-50.0f)
         assertEquals(-50.0f, tracker.getEstimatedNoiseFloor(), 0.1f)
     }
+
+    @Test
+    fun testNoiseFloorFreezesDuringSpeech() {
+        val tracker = AdaptiveNoiseTracker(windowSizeChunks = 10, percentile = 0.15f)
+
+        // Seed with ambient noise floor around -50 dB
+        repeat(10) {
+            tracker.update(-50.0f, isSpeech = false)
+        }
+        assertEquals(-50.0f, tracker.getEstimatedNoiseFloor(), 1.0f)
+
+        // Doctor speaks loudly at -18 dB for 20 chunks (2.0s)
+        repeat(20) {
+            val prof = tracker.update(-18.0f, isSpeech = true)
+            // Baseline noise floor should remain frozen at -50 dB
+            assertEquals(-50.0f, prof.noiseFloorDb, 1.0f)
+            assertTrue(prof.snrDb >= 30.0f)
+        }
+
+        // Noise floor remains frozen after speech burst
+        assertEquals(-50.0f, tracker.getEstimatedNoiseFloor(), 1.0f)
+    }
 }
