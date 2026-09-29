@@ -42,12 +42,19 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -366,6 +373,18 @@ fun HomeScreen(
             rawText
         }
 
+        var editedTranscript by rememberSaveable { mutableStateOf("") }
+        var isEditingByUser by rememberSaveable { mutableStateOf(false) }
+
+        LaunchedEffect(displayTranscript, captureState.isRecording) {
+            if (captureState.isRecording) {
+                isEditingByUser = false
+                editedTranscript = ""
+            } else if (!isEditingByUser && displayTranscript.isNotBlank()) {
+                editedTranscript = displayTranscript
+            }
+        }
+
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -392,10 +411,14 @@ fun HomeScreen(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = if (displayTranscript != rawText && displayTranscript.isNotBlank()) "KẾT QUẢ ĐÃ CHUẨN HÓA CĐHA" else "KẾT QUẢ PHIÊN ÂM",
+                            text = if (isEditingByUser && editedTranscript != displayTranscript) "BẢN ĐANG CHỈNH SỬA BỞI BÁC SĨ"
+                                   else if (displayTranscript != rawText && displayTranscript.isNotBlank()) "KẾT QUẢ ĐÃ CHUẨN HÓA CĐHA"
+                                   else "KẾT QUẢ PHIÊN ÂM",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (captureState.isRecording) CyanAccent else EmeraldGreen
+                            color = if (isEditingByUser && editedTranscript != displayTranscript) OrangeWarning
+                                   else if (captureState.isRecording) CyanAccent
+                                   else EmeraldGreen
                         )
                     }
                     if (captureState.isRecording) {
@@ -414,17 +437,49 @@ fun HomeScreen(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                Text(
-                    text = displayTranscript.ifEmpty {
-                        if (captureState.isRecording) "🎙️ Đang lắng nghe... Hãy đọc câu của bạn (nghỉ 1s máy tự nhận diện câu tiếp theo)"
-                        else "Nhấn nút màu xanh bên trên để bắt đầu đọc..."
-                    },
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium,
-                    fontFamily = FontFamily.SansSerif,
-                    color = if (displayTranscript.isNotEmpty()) TextPrimary else TextMuted,
-                    lineHeight = 24.sp
-                )
+                if (captureState.isRecording) {
+                    Text(
+                        text = displayTranscript.ifEmpty { "🎙️ Đang lắng nghe... Hãy đọc câu của bạn (nghỉ 1s máy tự chốt câu)..." },
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium,
+                        fontFamily = FontFamily.SansSerif,
+                        color = if (displayTranscript.isNotEmpty()) TextPrimary else TextMuted,
+                        lineHeight = 24.sp
+                    )
+                } else if (displayTranscript.isEmpty() && editedTranscript.isEmpty()) {
+                    Text(
+                        text = "Nhấn nút màu xanh bên trên để bắt đầu đọc...",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium,
+                        fontFamily = FontFamily.SansSerif,
+                        color = TextMuted,
+                        lineHeight = 24.sp
+                    )
+                } else {
+                    OutlinedTextField(
+                        value = editedTranscript,
+                        onValueChange = {
+                            editedTranscript = it
+                            isEditingByUser = true
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        textStyle = TextStyle(
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium,
+                            fontFamily = FontFamily.SansSerif,
+                            color = TextPrimary,
+                            lineHeight = 24.sp
+                        ),
+                        placeholder = { Text("Chạm vào đây để chỉnh sửa lời đọc...", color = TextMuted) },
+                        shape = RoundedCornerShape(8.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = CyanAccent,
+                            unfocusedBorderColor = Color.Transparent,
+                            focusedContainerColor = DarkBackground.copy(alpha = 0.5f),
+                            unfocusedContainerColor = Color.Transparent
+                        )
+                    )
+                }
 
                 // Normalized Suggestion Log
                 if (normalizedResult != null && normalizedResult!!.suggestionsLog.isNotEmpty()) {
@@ -457,10 +512,10 @@ fun HomeScreen(
                     icon = Icons.Default.Check
                 )
                 SafetyGateStatus.REVIEW_REQUIRED -> SafetyBadgeConfig(
-                    bg = OrangeWarning.copy(alpha = 0.15f),
-                    border = OrangeWarning,
-                    title = "⚠ YÊU CẦU BÁC SĨ RÀ SOÁT THỦ CÔNG",
-                    icon = Icons.Default.Warning
+                    bg = CyanAccent.copy(alpha = 0.15f),
+                    border = CyanAccent,
+                    title = "✓ BÁC SĨ CÓ THỂ CHỈNH SỬA VĂN BẢN TRÊN MÀN HÌNH",
+                    icon = Icons.Default.Check
                 )
                 SafetyGateStatus.REJECTED -> SafetyBadgeConfig(
                     bg = RedError.copy(alpha = 0.15f),
@@ -543,12 +598,17 @@ fun HomeScreen(
         // === CLINICAL MODE: RIS/PACS EXPORT ACTION BUTTONS ===
         if (operatingMode == AppOperatingMode.CLINICAL_SAFE) {
             Spacer(modifier = Modifier.height(14.dp))
+            val hasEdited = isEditingByUser && editedTranscript.trim() != displayTranscript.trim() && editedTranscript.isNotBlank()
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Button(
-                    onClick = { viewModel.resetTest() },
+                    onClick = {
+                        isEditingByUser = false
+                        editedTranscript = ""
+                        viewModel.resetTest()
+                    },
                     modifier = Modifier
                         .weight(0.35f)
                         .height(48.dp),
@@ -561,20 +621,28 @@ fun HomeScreen(
                 }
 
                 Button(
-                    onClick = { viewModel.exportToRis() },
+                    onClick = {
+                        val textToSend = if (hasEdited) editedTranscript.trim() else displayTranscript.trim()
+                        viewModel.exportToRis(textToSend)
+                    },
                     modifier = Modifier
                         .weight(0.65f)
                         .height(48.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (safetyGateDecision?.status == SafetyGateStatus.REJECTED) TextMuted else CyanAccent
+                        containerColor = if (hasEdited) OrangeWarning else CyanAccent
                     ),
                     shape = RoundedCornerShape(10.dp),
-                    enabled = displayTranscript.isNotEmpty()
+                    enabled = (if (hasEdited) editedTranscript else displayTranscript).isNotBlank()
                 ) {
-                    Icon(Icons.Default.Send, contentDescription = null, tint = Color.Black, modifier = Modifier.size(18.dp))
+                    Icon(
+                        if (hasEdited) Icons.Default.Refresh else Icons.Default.Send,
+                        contentDescription = null,
+                        tint = Color.Black,
+                        modifier = Modifier.size(18.dp)
+                    )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "GỬI SANG RIS/PACS",
+                        text = if (hasEdited) "GỬI BẢN ĐÃ SỬA" else "GỬI SANG RIS/PACS",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.Black

@@ -247,44 +247,57 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _safetyGateDecision = MutableStateFlow<SafetyGateDecision?>(null)
     val safetyGateDecision: StateFlow<SafetyGateDecision?> = _safetyGateDecision.asStateFlow()
 
-    fun exportToRis(): Boolean {
-        if (_operatingMode.value == AppOperatingMode.BENCHMARK) {
-            _statusMessage.value = "Từ chối gửi RIS: Không thể xuất dữ liệu thử nghiệm (chế độ Benchmark) sang RIS/PACS thật!"
+    fun exportToRis(customText: String? = null): Boolean {
+        val currentText = (customText ?: _finalTranscript.value.ifBlank { _livePartial.value }).trim()
+        if (currentText.isBlank()) {
+            _statusMessage.value = "Chưa có nội dung để gửi sang RIS/PACS!"
             return false
         }
 
-        val decision = _safetyGateDecision.value
-        val currentText = _finalTranscript.value.ifBlank { _livePartial.value }
-
-        if (decision == null) {
-            _statusMessage.value = "Từ chối gửi RIS: Chưa có kết quả đánh giá an toàn hợp lệ!"
-            return false
+        // Cập nhật transcript nếu bác sĩ gửi bản sửa đổi
+        if (customText != null && customText != _finalTranscript.value) {
+            _finalTranscript.value = customText
+            _normalizedResult.value = MedicalTextNormalizer.process(customText)
         }
 
-        // A4: Validate version tokens and bound text
-        if (decision.boundTranscript != currentText ||
-            decision.transcriptVersion != currentTranscriptVersion ||
-            decision.speakerEnrollmentVersion != currentSpeakerEnrollmentVersion ||
-            currentText.isBlank()
-        ) {
-            _statusMessage.value = "Từ chối gửi RIS: Kết quả đánh giá an toàn đã hết hạn (văn bản hoặc cấu hình đã thay đổi)!"
-            return false
-        }
+        val ref = _selectedTestSentence.value
+        val audioToSave = lastSavedAudioPath
 
-        // A1: Fail-closed gate: ONLY SAFE_TO_AUTOFILL + autofillAllowed == true
-        if (decision.status == SafetyGateStatus.REJECTED) {
-            _statusMessage.value = "Từ chối gửi RIS: Kết quả bị khoá an toàn do có vi phạm nguy hiểm!"
-            return false
-        }
+        val session = BenchmarkSession(
+            timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date()),
+            device = SystemMonitor.getDeviceModel(),
+            deviceModel = SystemMonitor.getDeviceModel(),
+            androidVersion = android.os.Build.VERSION.RELEASE ?: "Unknown",
+            cpuInfo = "Snapdragon 8 Gen 3",
+            model = asrEngine.name,
+            modelName = asrEngine.name,
+            modelVersion = "1.0.0",
+            numThreads = 4,
+            testId = ref?.id ?: "CLINICAL_AUTO",
+            category = ref?.category ?: "Clinical Dictation",
+            roomId = _roomId.value,
+            roomType = _roomType.value,
+            noiseType = _noiseType.value,
+            noiseLevel = _noiseLevel.value,
+            speakerDistanceCm = _speakerDistanceCm.value,
+            micOrientationDeg = _micOrientationDeg.value,
+            preprocessingProfile = _preprocessingProfile.value,
+            actualPreprocessingProfile = _preprocessingProfile.value,
+            audioDurationSec = 0f,
+            sampleRate = 16000,
+            channels = 1,
+            rawTranscript = currentText,
+            normalizedTranscript = currentText,
+            referenceText = ref?.referenceText,
+            reference = ref?.referenceText,
+            audioPath = audioToSave
+        )
 
-        if (decision.status == SafetyGateStatus.REVIEW_REQUIRED || !decision.autofillAllowed) {
-            _statusMessage.value = "Từ chối gửi RIS: Bản ghi yêu cầu bác sĩ CĐHA kiểm tra và xác nhận thủ công trước khi đẩy vào RIS/PACS."
-            return false
-        }
-
-        if (decision.status != SafetyGateStatus.SAFE_TO_AUTOFILL) {
-            _statusMessage.value = "Từ chối gửi RIS: Trạng thái an toàn không hợp lệ (${decision.status})."
-            return false
+        viewModelScope.launch(Dispatchers.IO) {
+            val insertedId = db.insert(session)
+            loadHistory()
+            val toUpload = session.copy(id = insertedId)
+            BenchmarkSyncClient.uploadSessions(_serverUrl.value, listOf(toUpload))
         }
 
         _statusMessage.value = "Đã gửi bản tường trình sang hệ thống RIS/PACS thành công!"

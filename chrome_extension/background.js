@@ -1,17 +1,21 @@
-// background.js - Service Worker đồng bộ dữ liệu ASR và AI Synthesizer cho AutoRIS
+// background.js - Service Worker đồng bộ ASR (Điện thoại) & Tổng hợp Lung-RADS (PACS) cho AutoRIS
 importScripts("defaults.js");
 
 let pollTimer = null;
 let lastSeenId = 0;
 let isPolling = false;
 
-// 1. Khởi tạo cấu hình ban đầu khi cài đặt Extension
+// 1. Khởi tạo cấu hình ban đầu khi cài đặt Extension (Zero-click Auto-migration)
 chrome.runtime.onInstalled.addListener(() => {
   chrome.storage.local.get(null, (items) => {
     const toSet = {};
     for (const [k, v] of Object.entries(DEFAULT_CONFIG)) {
       if (items[k] === undefined) toSet[k] = v;
     }
+    if (!items[STORAGE_KEYS.SYSTEM_PROMPT]) {
+      toSet[STORAGE_KEYS.SYSTEM_PROMPT] = LUNG_RADS_SYSTEM_PROMPT;
+    }
+    toSet[STORAGE_KEYS.INSTALLED_VERSION] = chrome.runtime.getManifest().version;
     if (Object.keys(toSet).length > 0) {
       chrome.storage.local.set(toSet);
     }
@@ -91,9 +95,9 @@ function broadcastDictationToRISTabs(dictationItem) {
       const url = tab.url.toLowerCase();
       const isTarget = url.includes("192.168.50.105") ||
                        url.includes("benhviendaihocyhanoi.com") ||
-                       url.includes("192.168.50.110") ||
                        url.includes("study/reading") ||
-                       url.includes("ris") ||
+                       url.includes("/ris/") ||
+                       url.includes("ris_") ||
                        url.includes("diagnosis") ||
                        url.includes("report");
 
@@ -109,9 +113,44 @@ function broadcastDictationToRISTabs(dictationItem) {
   });
 }
 
-// 4. Lắng nghe yêu cầu từ Content Script và Popup
+// 4. Phát sóng kết quả dịch PACS Lung-RADS sang các tab RIS
+function broadcastPACSToRISTabs(pacsReportText, timestamp) {
+  chrome.tabs.query({}, (tabs) => {
+    if (!tabs || tabs.length === 0) return;
+
+    for (const tab of tabs) {
+      if (!tab.url) continue;
+      const url = tab.url.toLowerCase();
+      const isTarget = url.includes("192.168.50.105") ||
+                       url.includes("benhviendaihocyhanoi.com") ||
+                       url.includes("study/reading") ||
+                       url.includes("/ris/") ||
+                       url.includes("ris_") ||
+                       url.includes("diagnosis");
+
+      if (isTarget) {
+        chrome.tabs.sendMessage(tab.id, {
+          action: ACTIONS.AUTO_APPLY_PACS,
+          report: pacsReportText,
+          timestamp: timestamp
+        }, () => {
+          if (chrome.runtime.lastError) { /* ignore */ }
+        });
+      }
+    }
+  });
+}
+
+// 5. Lắng nghe yêu cầu từ Content Script (RIS & PACS) và Popup
 chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
-  // A. Kiểm tra trạng thái máy chủ AutoRIS
+  // A. Mở trang Cài đặt (Options / Popup)
+  if (req.action === ACTIONS.OPEN_OPTIONS) {
+    chrome.runtime.openOptionsPage();
+    sendResponse({ success: true });
+    return false;
+  }
+
+  // B. Kiểm tra trạng thái máy chủ AutoRIS
   if (req.action === "CHECK_SERVER_STATUS") {
     const serverUrl = (req.serverUrl || DEFAULT_CONFIG.serverUrl).trim().replace(/\/+$/, "");
     fetch(`${serverUrl}/api/health`, { cache: "no-store" })
@@ -121,7 +160,7 @@ chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
     return true;
   }
 
-  // B. Điền lại câu đọc từ danh sách lịch sử
+  // C. Điền lại ca đọc từ lịch sử
   if (req.action === "RE_APPLY_DICTATION") {
     if (req.dictation) {
       broadcastDictationToRISTabs(req.dictation);
@@ -130,19 +169,41 @@ chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
     return false;
   }
 
-  // C. Tổng hợp báo cáo lâm sàng qua AI (9router / Gemini)
-  if (req.action === "SYNTHESIZE_REPORT") {
+  // D. Tổng hợp PACS Chest CT Lung-RADS (Từ nút PACS F9)
+  if (req.action === ACTIONS.SYNTHESIZE || req.action === ACTIONS.SYNTHESIZE_LUNG || (req.action === "SYNTHESIZE_REPORT" && req.payload?.rawText)) {
+    handlePACSSynthesizeReport(req.payload || {})
+      .then((result) => {
+        const now = Date.now();
+        chrome.storage.local.set({
+          [STORAGE_KEYS.LAST_REPORT]: result,
+          [STORAGE_KEYS.LAST_REPORT_TIME]: now,
+          [STORAGE_KEYS.LAST_PACS_REPORT]: result,
+          [STORAGE_KEYS.LAST_PACS_TIME]: now
+        });
+        // Tự động phát sóng kết quả sang các tab RIS đang mở
+        broadcastPACSToRISTabs(result, now);
+        sendResponse({ success: true, data: result });
+      })
+      .catch((err) => {
+        console.error("[AutoRIS BG] PACS synthesis error:", err);
+        sendResponse({ success: false, error: err.message });
+      });
+    return true;
+  }
+
+  // E. Tổng hợp báo cáo lâm sàng qua AI (Đọc từ điện thoại -> Phân bổ mô tả & kết luận)
+  if (req.action === "SYNTHESIZE_REPORT" && req.payload?.dictationText) {
     handleAISynthesis(req.payload || {})
       .then(result => sendResponse({ success: true, data: result }))
       .catch(err => {
         console.error("[AutoRIS BG] AI Synthesis error:", err);
         sendResponse({ success: false, error: err.message });
       });
-    return true; // Asynchronous response
+    return true;
   }
 });
 
-// 5. Xử lý gọi AI Synthesizer (9router -> Fallback Direct Google)
+// 6. Xử lý gọi AI Synthesizer cho lời đọc điện thoại (9router -> Fallback Direct Google)
 async function handleAISynthesis(payload) {
   const { currentMota, currentKetluan, dictationText } = payload;
   const config = await chrome.storage.local.get([
@@ -168,20 +229,54 @@ LỜI BÁC SĨ ĐỌC:
 ${dictationText}
 `;
 
-  // Thử gọi qua 9router server
   try {
-    return await callOpenAICompatibleServer(endpoint, apiKey, model, RADIOLOGY_SYSTEM_PROMPT, userPrompt);
+    const rawOut = await callOpenAICompatibleServer(endpoint, apiKey, model, RADIOLOGY_SYSTEM_PROMPT, userPrompt);
+    return parseAIJsonResult(rawOut);
   } catch (serverErr) {
     console.warn("[AutoRIS BG] 9router gặp sự cố, chuyển tiếp sang Google Direct API...", serverErr.message);
     try {
-      return await callGoogleGeminiDirect(googleKeysPool, model, RADIOLOGY_SYSTEM_PROMPT, userPrompt);
+      const rawOut = await callGoogleGeminiDirect(googleKeysPool, model, RADIOLOGY_SYSTEM_PROMPT, userPrompt);
+      return parseAIJsonResult(rawOut);
     } catch (directErr) {
       throw new Error(`9router lỗi: ${serverErr.message}; Google Direct lỗi: ${directErr.message}`);
     }
   }
 }
 
-// 6. Gọi 9router (OpenAI Compatible Format)
+// 7. Xử lý gọi AI Synthesizer cho PACS Chest CT Lung-RADS (9router -> Fallback Direct Google)
+async function handlePACSSynthesizeReport(payload) {
+  const { connectionMode, apiEndpoint, apiKey, googleKeysPool, preferredModel, systemPrompt, rawText } = payload;
+  const mode = connectionMode || DEFAULT_CONFIG.connectionMode;
+
+  const serverEndpoint = (apiEndpoint || DEFAULT_CONFIG.aiEndpoint).trim().replace(/\/+$/, "");
+  const serverKey = apiKey || DEFAULT_CONFIG.aiKey;
+  const activeGooglePool = (googleKeysPool && googleKeysPool.length > 0) ? googleKeysPool : DEFAULT_CONFIG.googleKeysPool;
+  const activePrompt = systemPrompt || LUNG_RADS_SYSTEM_PROMPT;
+
+  const totalTimeoutPromise = new Promise((_, reject) => {
+    setTimeout(() => reject(new Error(`Tác vụ tổng hợp vượt quá thời gian tối đa (${TIMING.TOTAL_TIMEOUT_MS / 1000}s)`)), TIMING.TOTAL_TIMEOUT_MS);
+  });
+
+  const executionPromise = (async () => {
+    if (mode === "server") {
+      return await callOpenAICompatibleServer(serverEndpoint, serverKey, preferredModel, activePrompt, `BÁO CÁO ĐẦU VÀO:\n${rawText}`);
+    }
+    if (mode === "direct") {
+      return await callGoogleGeminiDirect(activeGooglePool, preferredModel, activePrompt, `BÁO CÁO ĐẦU VÀO:\n${rawText}`);
+    }
+    // Chế độ "auto": Thử Server -> nếu lỗi chuyển Google Direct
+    try {
+      return await callOpenAICompatibleServer(serverEndpoint, serverKey, preferredModel, activePrompt, `BÁO CÁO ĐẦU VÀO:\n${rawText}`);
+    } catch (err) {
+      console.warn("[AutoRIS BG] Server 9router gặp lỗi, tự động chuyển sang Google Direct...", err.message);
+      return await callGoogleGeminiDirect(activeGooglePool, preferredModel, activePrompt, `BÁO CÁO ĐẦU VÀO:\n${rawText}`);
+    }
+  })();
+
+  return await Promise.race([executionPromise, totalTimeoutPromise]);
+}
+
+// 8. Gọi 9router (OpenAI Compatible Format)
 async function callOpenAICompatibleServer(endpoint, apiKey, preferredModel, systemPrompt, userPrompt, timeoutMs = 15000) {
   const candidateModels = [
     preferredModel,
@@ -250,7 +345,7 @@ async function callOpenAICompatibleServer(endpoint, apiKey, preferredModel, syst
       }
 
       if (outputText) {
-        return parseAIJsonResult(outputText);
+        return outputText;
       }
       throw new Error("Phản hồi rỗng từ 9router");
     } catch (err) {
@@ -263,9 +358,14 @@ async function callOpenAICompatibleServer(endpoint, apiKey, preferredModel, syst
   throw lastError || new Error("Không thể kết nối tới Server AI");
 }
 
-// 7. Gọi trực tiếp Google Gemini API khi dự phòng
+// 9. Gọi trực tiếp Google Gemini API khi dự phòng
 async function callGoogleGeminiDirect(keysPool, preferredModel, systemPrompt, userPrompt, timeoutMs = 15000) {
-  const candidateModels = ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-1.5-flash"];
+  const candidateModels = [
+    GOOGLE_MODEL_MAP[preferredModel] || preferredModel || "gemini-2.5-flash-lite",
+    "gemini-2.5-flash",
+    "gemini-1.5-flash"
+  ];
+  const models = Array.from(new Set(candidateModels.filter(Boolean)));
   const contents = [
     {
       role: "user",
@@ -276,7 +376,7 @@ async function callGoogleGeminiDirect(keysPool, preferredModel, systemPrompt, us
   let lastError = null;
 
   for (const apiKey of keysPool) {
-    for (const model of candidateModels) {
+    for (const model of models) {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -304,9 +404,13 @@ async function callGoogleGeminiDirect(keysPool, preferredModel, systemPrompt, us
         }
 
         const data = await response.json();
-        const output = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+        const candidate = data.candidates?.[0];
+        const output = candidate?.content?.parts?.[0]?.text?.trim();
         if (output) {
-          return parseAIJsonResult(output);
+          return output;
+        }
+        if (candidate?.finishReason === "SAFETY") {
+          throw new Error("Google AI chặn do bộ lọc an toàn y tế");
         }
       } catch (err) {
         clearTimeout(timeoutId);
@@ -318,7 +422,7 @@ async function callGoogleGeminiDirect(keysPool, preferredModel, systemPrompt, us
   throw lastError || new Error("Không thể kết nối tới Google Gemini Trực tiếp");
 }
 
-// 8. Hàm bóc tách chuỗi JSON an toàn từ kết quả AI
+// 10. Hàm bóc tách chuỗi JSON an toàn từ kết quả AI
 function parseAIJsonResult(rawOutput) {
   let cleaned = rawOutput.trim();
   if (cleaned.startsWith("```")) {
@@ -329,17 +433,35 @@ function parseAIJsonResult(rawOutput) {
     cleaned = cleaned.trim();
   }
 
-  // Tìm vị trí JSON object { ... }
   const firstBrace = cleaned.indexOf("{");
   const lastBrace = cleaned.lastIndexOf("}");
   if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
     cleaned = cleaned.substring(firstBrace, lastBrace + 1);
   }
 
-  const parsed = JSON.parse(cleaned);
-  return {
-    mota: (parsed.mota || "").trim(),
-    ketluan: (parsed.ketluan || "").trim(),
-    summary: (parsed.summary || "").trim()
-  };
+  try {
+    const parsed = JSON.parse(cleaned);
+    return {
+      affected_organ: (parsed.affected_organ || "").trim().toLowerCase(),
+      updated_organ_line: (parsed.updated_organ_line || "").trim(),
+      is_new_organ: !!parsed.is_new_organ,
+      insert_after: (parsed.insert_after || "Lách").trim(),
+      hach_line: parsed.hach_line ? parsed.hach_line.trim() : null,
+      mota: (parsed.mota || "").trim(),
+      ketluan: (parsed.ketluan || "").trim(),
+      summary: (parsed.summary || "").trim()
+    };
+  } catch (err) {
+    console.warn("[AutoRIS BG] Lỗi parse JSON AI, trả về thô:", err);
+    return {
+      affected_organ: "",
+      updated_organ_line: "",
+      is_new_organ: false,
+      insert_after: "Lách",
+      hach_line: null,
+      mota: rawOutput.trim(),
+      ketluan: "",
+      summary: "AI hoàn tất"
+    };
+  }
 }

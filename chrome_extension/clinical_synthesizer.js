@@ -77,7 +77,7 @@
       if (useAI) {
         try {
           const aiResult = await this.callAISynthesizer(currentMota, currentKetluan, cleanDictation);
-          if (aiResult && aiResult.mota && aiResult.ketluan) {
+          if (aiResult && (aiResult.mota || aiResult.updated_organ_line) && aiResult.ketluan) {
             return aiResult;
           }
         } catch (err) {
@@ -121,123 +121,168 @@
     localDeterministicFallback(currentMota, currentKetluan, dictationText) {
       let mota = (currentMota || "").normalize("NFC").trim();
       let ketluan = (currentKetluan || "").normalize("NFC").trim();
-      const cleanDictation = dictationText.normalize("NFC");
+      const cleanDictation = dictationText.normalize("NFC").trim();
       const lower = cleanDictation.toLowerCase();
 
       // Xóa câu bình thường ở kết luận
       const normalKLRegex = /(?:hiện tại|hiện tại)\s+(?:không|chưa)\s+thấy\s+bất\s+thường[^\n]*/gi;
       ketluan = ketluan.replace(normalKLRegex, "").trim();
 
-      // Kiểm tra cơ quan liên quan
-      let organMatched = false;
+      let affectedOrgan = "";
+      let updatedOrganLine = "";
+      let isNewOrgan = false;
+      let insertAfter = "Lách";
+      let hachLine = null;
       let generatedConclusion = "";
+      let summaryText = "";
 
       // 1. GAN
       if (lower.includes("gan") || lower.includes("hạ phân thùy") || lower.includes("hpt") || lower.includes("nhu mô gan")) {
+        affectedOrgan = "gan";
+        const finding = cleanDictation.replace(/^(nhu mô gan|nhu mô|gan)\s*/i, "").trim();
+        updatedOrganLine = `-- Gan không to, bờ đều, nhu mô gan ${finding}.`;
+        
         const ganRegex = /(--\s*Gan[^\n]*)/i;
         if (ganRegex.test(mota)) {
-          mota = mota.replace(ganRegex, () => {
-            const finding = dictationText.replace(/^(nhu mô gan|gan)\s*/i, "").trim();
-            return `-- Gan không to, bờ đều, nhu mô gan ${finding}.`;
-          });
-          organMatched = true;
-          generatedConclusion = lower.includes("nang") ? "Nang gan." :
-                                lower.includes("u máu") ? "U máu gan." :
-                                lower.includes("vôi hóa") ? "Nốt vôi hóa gan." : "Tổn thương gan.";
+          mota = mota.replace(ganRegex, updatedOrganLine);
         }
+
+        // Tạo kết luận ngắn gọn, không ghi kích thước, bắt đầu bằng "Hình ảnh"
+        let lesion = "tổn thương gan";
+        if (lower.includes("nang")) {
+          if (lower.includes("trái")) lesion = "nang gan trái";
+          else if (lower.includes("phải")) lesion = "nang gan phải";
+          else if (lower.includes("hạ phân thùy") || lower.includes("hpt")) {
+            const hptMatch = cleanDictation.match(/(?:hạ phân thùy|hpt)\s*([ivx\d]+)/i);
+            lesion = `nang gan hạ phân thùy ${hptMatch ? hptMatch[1].toUpperCase() : ''}`.trim();
+          } else lesion = "nang gan";
+        } else if (lower.includes("u máu")) {
+          lesion = "u máu gan";
+        } else if (lower.includes("vôi hóa") || lower.includes("nốt vôi")) {
+          lesion = "nốt vôi hóa gan";
+        }
+
+        generatedConclusion = `Hình ảnh ${lesion}.`;
+        summaryText = `Cập nhật gan: ${lesion}`;
       }
 
       // 2. DẠ DÀY (nếu chưa có dòng dạ dày thì thêm mới)
-      if (lower.includes("dạ dày") || lower.includes("hang vị") || lower.includes("môn vị") || lower.includes("thành dạ dày")) {
-        let stomachText = dictationText;
+      else if (lower.includes("dạ dày") || lower.includes("hang vị") || lower.includes("môn vị") || lower.includes("thành dạ dày")) {
+        affectedOrgan = "da_day";
+        isNewOrgan = true;
+        insertAfter = "Lách";
+
+        let stomachText = cleanDictation;
         let hachText = "";
-        const hachIdx = dictationText.search(/(?:lân cận có vài hạch|kèm hạch|có vài hạch|hạch lân cận)/i);
+        const hachIdx = cleanDictation.search(/(?:lân cận có vài hạch|kèm hạch|có vài hạch|hạch lân cận)/i);
         if (hachIdx !== -1) {
-          stomachText = dictationText.slice(0, hachIdx).replace(/[,;]\s*$/, "").trim();
-          hachText = dictationText.slice(hachIdx).trim();
+          stomachText = cleanDictation.slice(0, hachIdx).replace(/[,;]\s*$/, "").trim();
+          hachText = cleanDictation.slice(hachIdx).trim();
+        }
+
+        updatedOrganLine = `-- Dạ dày: ${stomachText}`;
+        if (hachText) {
+          hachLine = `-- Hạch: ${hachText}`;
         }
 
         const ddRegex = /(--\s*Dạ dày[^\n]*)/i;
         if (ddRegex.test(mota)) {
-          mota = mota.replace(ddRegex, `-- Dạ dày: ${stomachText}`);
+          isNewOrgan = false;
+          mota = mota.replace(ddRegex, updatedOrganLine);
         } else {
-          // Chèn sau Lách hoặc Tụy
           const lachRegex = /(--\s*Lách[^\n]*\n?|--\s*Lách[^\n]*\n?)/i;
           if (lachRegex.test(mota)) {
-            mota = mota.replace(lachRegex, `$1-- Dạ dày: ${stomachText}\n`);
+            mota = mota.replace(lachRegex, `$1${updatedOrganLine}\n`);
           } else {
-            mota += `\n-- Dạ dày: ${stomachText}`;
+            mota += `\n${updatedOrganLine}`;
           }
         }
 
-        if (hachText) {
+        if (hachLine) {
           const hachRegex = /(--\s*Không thấy hạch[^\n]*|--\s*Không thấy hạch[^\n]*|--\s*Hạch[^\n]*)/i;
           if (hachRegex.test(mota)) {
-            mota = mota.replace(hachRegex, `-- Hạch: ${hachText}`);
+            mota = mota.replace(hachRegex, hachLine);
           }
         }
 
-        organMatched = true;
         generatedConclusion = "Hình ảnh dày thành không đều hang - môn vị dạ dày gây hẹp lòng môn vị, kèm vài hạch lân cận.";
+        summaryText = "Thêm mô tả Dạ dày & Hạch lân cận";
       }
 
       // 3. TÚI MẬT
-      if (lower.includes("túi mật") || lower.includes("sỏi mật") || lower.includes("polyp túi mật")) {
+      else if (lower.includes("túi mật") || lower.includes("sỏi mật") || lower.includes("polyp túi mật")) {
+        affectedOrgan = "tui_mat";
+        updatedOrganLine = `-- Túi mật: ${cleanDictation}`;
         const tmRegex = /(--\s*Túi mật[^\n]*|--\s*Túi mật[^\n]*)/i;
         if (tmRegex.test(mota)) {
-          mota = mota.replace(tmRegex, `-- Túi mật: ${dictationText}`);
-          organMatched = true;
-          generatedConclusion = lower.includes("sỏi") ? "Sỏi túi mật." : "Polyp túi mật.";
+          mota = mota.replace(tmRegex, updatedOrganLine);
         }
+        const lesion = lower.includes("sỏi") ? "sỏi túi mật" : (lower.includes("polyp") ? "polyp túi mật" : "bệnh lý túi mật");
+        generatedConclusion = `Hình ảnh ${lesion}.`;
+        summaryText = `Cập nhật túi mật: ${lesion}`;
       }
 
       // 4. THẬN
-      if (lower.includes("thận phải") || lower.includes("thận trái") || lower.includes("sỏi thận") || lower.includes("nang thận")) {
+      else if (lower.includes("thận phải") || lower.includes("thận trái") || lower.includes("hai thận") || lower.includes("sỏi thận") || lower.includes("nang thận")) {
         const isRight = lower.includes("phải");
         const isLeft = lower.includes("trái");
+        affectedOrgan = isLeft ? "than_trai" : (isRight ? "than_phai" : "than");
+        const organLabel = isLeft ? "Thận trái" : (isRight ? "Thận phải" : "Hai thận");
+        updatedOrganLine = `-- ${organLabel}: ${cleanDictation}`;
+
         const tpRegex = /(--\s*Thận phải[^\n]*|--\s*Thận phải[^\n]*)/i;
         const ttRegex = /(--\s*Thận trái[^\n]*|--\s*Thận trái[^\n]*)/i;
+        const htRegex = /(--\s*Hai\s*thận[^\n]*|--\s*Hai\s*thận[^\n]*)/i;
 
         if (isRight && tpRegex.test(mota)) {
-          mota = mota.replace(tpRegex, `-- Thận phải: ${dictationText}`);
-          organMatched = true;
-          generatedConclusion = "Bệnh lý thận phải.";
+          mota = mota.replace(tpRegex, updatedOrganLine);
         } else if (isLeft && ttRegex.test(mota)) {
-          mota = mota.replace(ttRegex, `-- Thận trái: ${dictationText}`);
-          organMatched = true;
-          generatedConclusion = "Bệnh lý thận trái.";
+          mota = mota.replace(ttRegex, updatedOrganLine);
+        } else if (htRegex.test(mota)) {
+          mota = mota.replace(htRegex, updatedOrganLine);
         }
+
+        const lesion = lower.includes("sỏi") ? "sỏi thận" : (lower.includes("nang") ? "nang thận" : "tổn thương thận");
+        const side = isLeft ? " trái" : (isRight ? " phải" : "");
+        generatedConclusion = `Hình ảnh ${lesion}${side}.`;
+        summaryText = `Cập nhật ${organLabel.toLowerCase()}: ${lesion}${side}`;
       }
 
-      // 5. HẠCH (nếu chưa được xử lý trong cơ quan cụ thể)
-      if (lower.includes("hạch") && !lower.includes("dạ dày")) {
-        const hachRegex = /(--\s*Không thấy hạch[^\n]*|--\s*Không thấy hạch[^\n]*|--\s*Hạch[^\n]*)/i;
-        if (hachRegex.test(mota)) {
-          mota = mota.replace(hachRegex, `-- Hạch: ${dictationText}`);
-        }
+      // 5. Mặc định nếu không khớp cơ quan cụ thể
+      else {
+        affectedOrgan = "khac";
+        updatedOrganLine = `-- Ghi nhận thêm: ${cleanDictation}`;
+        mota += `\n${updatedOrganLine}`;
+        generatedConclusion = `Hình ảnh ${cleanDictation}.`;
+        summaryText = `Ghi nhận thêm: ${cleanDictation.slice(0, 30)}...`;
       }
 
-      // Nếu không khớp cơ quan nào ở trên, thêm dòng mới vào cuối phần mô tả
-      if (!organMatched) {
-        mota += `\n-- Ghi nhận thêm: ${dictationText}`;
-        generatedConclusion = dictationText;
-      }
-
-      // Cập nhật kết luận
+      // Chuẩn hóa kết luận: Bắt đầu bằng 1 từ "Hình ảnh" duy nhất, không lặp
       if (generatedConclusion) {
-        if (ketluan) {
-          if (!ketluan.includes(generatedConclusion)) {
-            ketluan = `${ketluan}\n${generatedConclusion}`;
-          }
+        if (!generatedConclusion.startsWith("Hình ảnh")) {
+          generatedConclusion = `Hình ảnh ${generatedConclusion}`;
+        }
+        // Xoá lặp từ "Hình ảnh"
+        generatedConclusion = generatedConclusion.replace(/^Hình ảnh\s+Hình ảnh/i, "Hình ảnh");
+
+        if (ketluan && !ketluan.includes(generatedConclusion)) {
+          // Bỏ chữ "Hình ảnh" ở các câu tiếp theo nếu đã có câu trước
+          const subsequent = generatedConclusion.replace(/^Hình ảnh\s*/i, "");
+          ketluan = `${ketluan}\n${subsequent}`.trim();
         } else {
           ketluan = generatedConclusion;
         }
       }
 
       return {
+        affected_organ: affectedOrgan,
+        updated_organ_line: updatedOrganLine,
+        is_new_organ: isNewOrgan,
+        insert_after: insertAfter,
+        hach_line: hachLine,
         mota: mota.trim(),
         ketluan: ketluan.trim(),
-        summary: `Điền tự động: ${dictationText.slice(0, 30)}...`
+        summary: summaryText || `Cập nhật ${affectedOrgan}`
       };
     }
   };

@@ -141,6 +141,43 @@
   color: #ffffff;
 }
 
+/* Nút chọn tab nhận kết quả khi mở nhiều tab RIS cùng lúc */
+.autoris-tab-select-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(30, 41, 59, 0.9);
+  border: 1px solid #475569;
+  border-radius: 6px;
+  padding: 3px 8px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.autoris-tab-select-toggle:hover {
+  background: #334155;
+  border-color: #38bdf8;
+  color: #f8fafc;
+}
+
+.autoris-tab-select-toggle input[type="checkbox"] {
+  cursor: pointer;
+  accent-color: #10b981;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+}
+
+.autoris-tab-select-toggle.is-active {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: #10b981;
+  color: #34d399;
+}
+
 /* Hiệu ứng nhấp nháy làm nổi bật vùng vừa được điền trên RIS */
 .autoris-highlight-pulse {
   outline: 2px solid #38bdf8 !important;
