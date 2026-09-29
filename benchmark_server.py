@@ -11,6 +11,8 @@ import json
 import csv
 import time
 import socket
+import queue
+import threading
 from datetime import datetime
 from urllib.parse import urlparse, parse_qs
 try:
@@ -47,6 +49,45 @@ os.makedirs(AUDIO_DIR, exist_ok=True)
 os.makedirs(SESSIONS_DIR_V2, exist_ok=True)
 os.makedirs(AUDIO_DIR_V2, exist_ok=True)
 os.makedirs(RELEASE_APK_DIR, exist_ok=True)
+
+# Real-time Dictation Sync (Chrome Extension & RIS Integration)
+RECENT_DICTATIONS = []
+RECENT_LOCK = threading.Lock()
+DICTATION_LISTENERS = []
+LISTENERS_LOCK = threading.Lock()
+
+def broadcast_dictation(session_data):
+    sid = session_data.get("id") or session_data.get("sessionId") or int(time.time() * 1000)
+    norm = session_data.get("normalizedTranscript") or session_data.get("rawTranscript") or ""
+    raw = session_data.get("rawTranscript") or ""
+    category = session_data.get("category") or ""
+    test_id = session_data.get("testId") or "CLINICAL"
+    
+    item = {
+        "id": sid,
+        "timestamp": session_data.get("timestamp") or datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "raw_transcript": raw,
+        "normalized_transcript": norm,
+        "category": category,
+        "test_id": test_id,
+        "device": session_data.get("deviceModel") or session_data.get("device", "")
+    }
+    
+    with RECENT_LOCK:
+        RECENT_DICTATIONS.append(item)
+        if len(RECENT_DICTATIONS) > 100:
+            RECENT_DICTATIONS.pop(0)
+            
+    with LISTENERS_LOCK:
+        dead = []
+        for q in DICTATION_LISTENERS:
+            try:
+                q.put_nowait(item)
+            except Exception:
+                dead.append(q)
+        for d in dead:
+            if d in DICTATION_LISTENERS:
+                DICTATION_LISTENERS.remove(d)
 
 CSV_HEADERS = [
     "ID", "Timestamp", "Device", "Model", "TestID", "Category",
@@ -212,6 +253,25 @@ def append_to_csv_v2(sessions):
                 s.get("audioPath", "")
             ])
 
+def init_recent_dictations():
+    sessions = get_all_sessions()
+    with RECENT_LOCK:
+        for s in sessions[-30:]:
+            sid = s.get("id") or s.get("sessionId")
+            norm = s.get("normalizedTranscript") or s.get("rawTranscript") or ""
+            raw = s.get("rawTranscript") or ""
+            category = s.get("category") or ""
+            test_id = s.get("testId") or "CLINICAL"
+            RECENT_DICTATIONS.append({
+                "id": sid,
+                "timestamp": s.get("timestamp") or "",
+                "raw_transcript": raw,
+                "normalized_transcript": norm,
+                "category": category,
+                "test_id": test_id,
+                "device": s.get("deviceModel") or s.get("device", "")
+            })
+
 def calculate_summary_stats(sessions):
     if not sessions:
         return None
@@ -311,6 +371,7 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         parsed = urlparse(self.path)
         path = parsed.path
+        query = parse_qs(parsed.query)
 
         if path == "/api/health":
             self.send_response(200)
@@ -343,6 +404,69 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self.end_headers()
             self.wfile.write(json.dumps(sessions, ensure_ascii=False).encode("utf-8"))
+            return
+
+        elif path == "/api/dictation/latest":
+            after_id = query.get("after_id", [""])[0]
+            with RECENT_LOCK:
+                items = list(RECENT_DICTATIONS)
+            
+            if not items:
+                resp = {"has_new": False}
+            elif not after_id:
+                resp = {"has_new": True, "dictation": items[-1]}
+            else:
+                new_items = []
+                found = False
+                for it in items:
+                    if str(it.get("id")) == str(after_id):
+                        found = True
+                        new_items = []
+                    elif found:
+                        new_items.append(it)
+                if new_items:
+                    resp = {"has_new": True, "dictation": new_items[-1]}
+                else:
+                    resp = {"has_new": False}
+            
+            self.send_response(200)
+            self.send_cors_headers()
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.end_headers()
+            self.wfile.write(json.dumps(resp, ensure_ascii=False).encode("utf-8"))
+            return
+
+        elif path == "/api/dictation/stream":
+            client_queue = queue.Queue(maxsize=50)
+            with LISTENERS_LOCK:
+                DICTATION_LISTENERS.append(client_queue)
+
+            self.send_response(200)
+            self.send_cors_headers()
+            self.send_header("Content-Type", "text/event-stream")
+            self.send_header("Cache-Control", "no-cache")
+            self.send_header("Connection", "keep-alive")
+            self.send_header("X-Accel-Buffering", "no")
+            self.end_headers()
+
+            try:
+                self.wfile.write(b": connected\n\n")
+                self.wfile.flush()
+                while True:
+                    try:
+                        item = client_queue.get(timeout=10)
+                        data_str = f"data: {json.dumps(item, ensure_ascii=False)}\n\n"
+                        self.wfile.write(data_str.encode("utf-8"))
+                        self.wfile.flush()
+                    except queue.Empty:
+                        self.wfile.write(b": ping\n\n")
+                        self.wfile.flush()
+            except Exception:
+                pass
+            finally:
+                with LISTENERS_LOCK:
+                    if client_queue in DICTATION_LISTENERS:
+                        DICTATION_LISTENERS.remove(client_queue)
             return
 
         elif path == "/dashboard":
@@ -489,6 +613,9 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
             all_combined = load_all_sessions() + load_all_sessions_v2()
             stats = calculate_summary_stats(all_combined)
             print_terminal_summary(stats, len(new_sessions))
+
+            for s in new_sessions:
+                broadcast_dictation(s)
 
             self.send_response(200)
             self.send_cors_headers()
@@ -789,6 +916,7 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
         self.wfile.write(html.encode("utf-8"))
 
 def run_server():
+    init_recent_dictations()
     server_address = ("0.0.0.0", PORT)
     httpd = BaseServer(server_address, BenchmarkHandler)
     print("=" * 70)
