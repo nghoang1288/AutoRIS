@@ -594,12 +594,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         val profile = PreprocessingProfile.fromId(_preprocessingProfile.value)
         val preprocessor = AudioPreprocessorFactory.create(profile, getApplication())
-        val streamingEngine: ASREngine? = if (
-            _selectedModelType.value == ASRModelType.ZIPFORMER_150M_OFFLINE &&
-            ModelManager.getModelStatus(getApplication(), ASRModelType.ZIPFORMER_30M_STREAMING).isReady
-        ) {
-            Zipformer30MStreamingEngine(getApplication(), vadConfig, numThreads = 2)
-        } else null
+        val streamingEngine: ASREngine? = null // Sole model: ZipFormer 150M handles all decodes
 
         val manager = AudioRecorderManager(
             asrEngine = asrEngine,
@@ -610,6 +605,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             preprocessor = preprocessor,
             speakerVerifier = speakerVerifier,
             isSpeakerLockEnabled = _speakerLockEnabled.value,
+            onPolicyDecision = { decision ->
+                viewModelScope.launch(Dispatchers.Main) {
+                    _preprocessingProfile.value = decision.activeProfile.name
+                    val floor = _noiseProfile.value.noiseFloorDb
+                    val matchedScenario = when {
+                        floor < -48.0f -> NoiseScenario.ROOM_READING_STANDARD
+                        floor < -43.0f -> NoiseScenario.ROOM_CT_CONSOLE
+                        floor < -38.0f -> NoiseScenario.ROOM_MRI_CONSOLE
+                        else -> NoiseScenario.ROOM_EMERGENCY
+                    }
+                    _selectedScenario.value = matchedScenario
+                    _roomId.value = matchedScenario.id
+                    _roomType.value = matchedScenario.roomType
+                }
+            },
             onNoiseProfileUpdate = { liveProfile ->
                 viewModelScope.launch(Dispatchers.Main) {
                     _noiseProfile.value = liveProfile

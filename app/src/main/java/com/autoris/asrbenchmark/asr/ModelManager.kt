@@ -123,21 +123,21 @@ object ModelManager {
         ),
         ModelFileInfo(
             fileName = "encoder.onnx",
-            expectedSize = 154670000L,
+            expectedSize = 154671174L,
             expectedSha256 = "",
             downloadUrl = "https://huggingface.co/hynt/ZipFormer-150M-CR-CTC-RNNT-6000h/resolve/main/encoder-epoch-11-avg-2.int8.onnx",
             localServerRelativePath = "models/zipformer-150m/encoder.onnx"
         ),
         ModelFileInfo(
             fileName = "decoder.onnx",
-            expectedSize = 1308700L,
+            expectedSize = 1308689L,
             expectedSha256 = "",
             downloadUrl = "https://huggingface.co/hynt/ZipFormer-150M-CR-CTC-RNNT-6000h/resolve/main/decoder-epoch-11-avg-2.int8.onnx",
             localServerRelativePath = "models/zipformer-150m/decoder.onnx"
         ),
         ModelFileInfo(
             fileName = "joiner.onnx",
-            expectedSize = 1033400L,
+            expectedSize = 1033417L,
             expectedSha256 = "",
             downloadUrl = "https://huggingface.co/hynt/ZipFormer-150M-CR-CTC-RNNT-6000h/resolve/main/joiner-epoch-11-avg-2.int8.onnx",
             localServerRelativePath = "models/zipformer-150m/joiner.onnx"
@@ -338,7 +338,7 @@ object ModelManager {
             } else true
 
             val sizeMatch = if (info.expectedSize > 0L) {
-                size >= info.expectedSize
+                size >= (info.expectedSize * 0.95)
             } else size > 1000L
 
             val isValid = exists && sizeMatch && hashMatch

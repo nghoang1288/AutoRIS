@@ -126,7 +126,7 @@ fun SettingsScreen(
         )
         Spacer(modifier = Modifier.height(8.dp))
 
-        ASRModelType.entries.forEach { modelType ->
+        listOf(ASRModelType.ZIPFORMER_150M_OFFLINE).forEach { modelType ->
             val isSelected = (selectedModelType == modelType)
             Card(
                 modifier = Modifier

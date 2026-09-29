@@ -98,6 +98,7 @@ fun HomeScreen(
     val selectedSentence by viewModel.selectedTestSentence.collectAsState()
     val evaluationReport by viewModel.evaluationReport.collectAsState()
     val statusMessage by viewModel.statusMessage.collectAsState()
+    val modelStatus by viewModel.modelStatus.collectAsState()
     val selectedModelType by viewModel.selectedModelType.collectAsState()
     val selectedScenario by viewModel.selectedScenario.collectAsState()
     val activeProfile by viewModel.preprocessingProfile.collectAsState()
@@ -200,8 +201,7 @@ fun HomeScreen(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(10.dp))
-                .clickable { onNavigateToSettings() },
+                .clip(RoundedCornerShape(10.dp)),
             colors = CardDefaults.cardColors(containerColor = DarkSurface),
             shape = RoundedCornerShape(10.dp)
         ) {
@@ -213,9 +213,9 @@ fun HomeScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(text = "Model đang chạy (Nhấn để đổi):", fontSize = 11.sp, color = TextMuted)
+                    Text(text = "Model ASR (Mặc định CĐHA):", fontSize = 11.sp, color = TextMuted)
                     Text(
-                        text = selectedModelType.displayName,
+                        text = "ZipFormer 150M CR-CTC-RNNT",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = CyanAccent
@@ -224,7 +224,7 @@ fun HomeScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     val statusDotColor = when {
                         captureState.isRecording -> RedError
-                        statusMessage.contains("Sẵn sàng") -> EmeraldGreen
+                        statusMessage.contains("Sẵn sàng") || modelStatus.isReady -> EmeraldGreen
                         else -> OrangeWarning
                     }
                     Box(
@@ -249,8 +249,7 @@ fun HomeScreen(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(10.dp))
-                .clickable { onNavigateToNoiseLab() },
+                .clip(RoundedCornerShape(10.dp)),
             colors = CardDefaults.cardColors(containerColor = DarkSurface),
             shape = RoundedCornerShape(10.dp)
         ) {
@@ -265,12 +264,11 @@ fun HomeScreen(
                     Icon(Icons.Default.GraphicEq, contentDescription = null, tint = CyanAccent, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Phòng: ${selectedScenario.displayName} | DSP: $activeProfile",
+                        text = "Phòng: ${selectedScenario.displayName} | DSP: $activeProfile (Tự động thích ứng)",
                         fontSize = 11.sp,
                         color = TextSecondary
                     )
                 }
-                Text("Noise Lab >", fontSize = 11.sp, color = CyanAccent, fontWeight = FontWeight.SemiBold)
             }
         }
 
