@@ -2,7 +2,31 @@
 (function () {
   "use strict";
 
-  console.log("[AutoRIS Content] Injected into:", window.location.href);
+  // Kiểm tra trang hiện tại có phải là RIS hay không
+  function isRISPage() {
+    const url = window.location.href.toLowerCase();
+    if (
+      url.includes("192.168.50.105") ||
+      url.includes("benhviendaihocyhanoi.com") ||
+      url.includes("study/reading") ||
+      url.includes("/ris/") ||
+      url.includes("ris_")
+    ) {
+      return true;
+    }
+    // Hoặc nếu trên trang có chứa editor chẩn đoán đặc thù của RIS
+    if (document.querySelector("div.text-diagnosis, #txt-mota, #txt-ketluan, .text-diagnosis")) {
+      return true;
+    }
+    return false;
+  }
+
+  // Tuyệt đối không can thiệp hay hiện Floating Bar ở các tab bình thường
+  if (!isRISPage()) {
+    return;
+  }
+
+  console.log("[AutoRIS Content] Injected into RIS page:", window.location.href);
 
   let lastDictationText = "";
   let lastSynthesizedData = null;

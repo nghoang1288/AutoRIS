@@ -43,3 +43,6 @@ Thumbs.db
 # Audio files (WAV)
 *.wav
 benchmark_results_device/audio/*.wav
+
+# Sensitive credentials
+auth.txt
