@@ -11,6 +11,9 @@
     <!-- Optional: only used if user triggers model download from Hugging Face -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Haptic feedback for dictation start/stop -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
     <application
         android:name=".AsrBenchmarkApp"
         android:allowBackup="false"

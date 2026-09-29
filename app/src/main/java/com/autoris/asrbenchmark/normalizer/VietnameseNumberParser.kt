@@ -122,6 +122,13 @@ object VietnameseNumberParser {
             result = singleUnit.replace(result, "$dVal $1")
         }
 
+        // 7. Single digit words after clinical dimension keywords: e.g. "đường kính chín" -> "đường kính 9"
+        val dimKeywords = "(?:đường\\s+kính|kích\\s+thước|dày|sâu|rộng|dài|cao|nhỏ\\s+hơn|lớn\\s+hơn)"
+        for ((dWord, dVal) in DIGIT_WORDS) {
+            val dimPattern = Regex("\\b($dimKeywords)\\s+$dWord\\b", RegexOption.IGNORE_CASE)
+            result = dimPattern.replace(result, "$1 $dVal")
+        }
+
         return result
     }
 }

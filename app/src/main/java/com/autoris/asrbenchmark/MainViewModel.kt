@@ -147,7 +147,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _captureState = MutableStateFlow(AudioCaptureState())
     val captureState: StateFlow<AudioCaptureState> = _captureState.asStateFlow()
 
-    private val _isSaveAudioEnabled = MutableStateFlow(false)
+    private val _isSaveAudioEnabled = MutableStateFlow(true)
     val isSaveAudioEnabled: StateFlow<Boolean> = _isSaveAudioEnabled.asStateFlow()
 
     private val _statusMessage = MutableStateFlow("Sẵn sàng")
@@ -671,6 +671,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         val started = manager.startRecording(viewModelScope)
         if (started) {
+            com.autoris.asrbenchmark.ui.util.HapticHelper.vibrateStart(getApplication())
             _statusMessage.value = "Đang thu âm liên tục..."
             viewModelScope.launch {
                 manager.state.collect { state ->
@@ -684,6 +685,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun stopRecording() {
+        com.autoris.asrbenchmark.ui.util.HapticHelper.vibrateStop(getApplication())
         stopRequestedTimeNs = SystemClock.elapsedRealtimeNanos()
         invalidateSafetyDecision("Recording stop requested")
         _statusMessage.value = "Đang chốt kết quả và lưu..."
@@ -729,6 +731,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // Normalize text & log suggestions
         val norm = MedicalTextNormalizer.process(finalText)
         _normalizedResult.value = norm
+        Log.i(TAG, "Finalize result: raw='$finalText' -> norm='${norm.normalizedSuggestion}'")
+
+        // Track tested sentence to avoid duplicates
+        _selectedTestSentence.value?.id?.let { testedSentenceIds.add(it) }
 
         // Evaluate against reference if in test set mode using normalized suggestion for high accuracy
         val ref = _selectedTestSentence.value
@@ -743,7 +749,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         recomputeSafetyGate()
 
-        // Auto-save WAV if enabled
+        // Auto-save WAV if enabled (always enabled by default for benchmark reproducibility)
         if (_isSaveAudioEnabled.value && audioRecorderManager != null) {
             lastSavedAudioPath = saveCurrentAudioRecording()
         }
@@ -754,9 +760,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private val testHistoryStack = mutableListOf<MedicalTestSentence>()
+    private val testedSentenceIds = mutableSetOf<String>()
 
     fun nextTestSentence() {
-        val allSentences = MedicalTestSet.SENTENCES
+        val allSentences = if (_benchmarkTrack.value == BenchmarkTrack.ENGLISH_FRONTEND) {
+            EnglishTestSet.SENTENCES
+        } else {
+            MedicalTestSet.SENTENCES
+        }
         if (allSentences.isEmpty()) return
         val currentRef = _selectedTestSentence.value
 
@@ -764,10 +775,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             testHistoryStack.add(currentRef)
         }
 
-        // Pick a random sentence different from the current one
-        val available = allSentences.filter { it.id != currentRef?.id }
-        val randomNext = if (available.isNotEmpty()) available.random() else allSentences.random()
-        _selectedTestSentence.value = randomNext
+        // Prevent duplicate sentences: sequentially select from unvisited sentences
+        val currentIndex = allSentences.indexOfFirst { it.id == currentRef?.id }
+        val unvisited = allSentences.filter { !testedSentenceIds.contains(it.id) && it.id != currentRef?.id }
+        val next = if (unvisited.isNotEmpty()) {
+            unvisited.firstOrNull { allSentences.indexOf(it) > currentIndex } ?: unvisited.first()
+        } else {
+            // All sentences in the track tested, wrap around sequentially
+            val nextIndex = if (currentIndex >= 0) (currentIndex + 1) % allSentences.size else 0
+            allSentences[nextIndex]
+        }
+        _selectedTestSentence.value = next
 
         if (!_captureState.value.isRecording) {
             resetTest()
@@ -794,11 +812,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             if (pcm.isEmpty()) return null
 
             val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-            val audioDir = File(getApplication<Application>().filesDir, "benchmark_audio")
+            val testId = _selectedTestSentence.value?.id ?: "CLINICAL"
+            val baseDir = getApplication<Application>().getExternalFilesDir(android.os.Environment.DIRECTORY_RECORDINGS)
+                ?: File(getApplication<Application>().filesDir, "benchmark_audio")
+            val audioDir = File(baseDir, "autoris_recordings")
             if (!audioDir.exists()) audioDir.mkdirs()
 
-            val wavFile = File(audioDir, "${timeStamp}.wav")
+            val wavFile = File(audioDir, "${testId}_${timeStamp}.wav")
             WavWriter.writeWavFile(wavFile, pcm, 16000)
+            Log.i(TAG, "Audio recording saved for offline verification: ${wavFile.absolutePath} (${pcm.size} samples)")
             wavFile.absolutePath
         } catch (e: Exception) {
             Log.e(TAG, "Failed to save audio recording", e)

@@ -391,7 +391,8 @@ class AudioRecorderManager(
     private fun formatSentence(s: String): String {
         val trimmed = s.trim()
         if (trimmed.isEmpty()) return ""
-        val cap = trimmed.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
+        val lower = trimmed.lowercase(Locale("vi", "VN"))
+        val cap = lower.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
         return if (cap.endsWith(".") || cap.endsWith("?") || cap.endsWith("!")) cap else "$cap."
     }
 
@@ -435,6 +436,7 @@ class AudioRecorderManager(
                 synchronized(accumulatedSegments) {
                     accumulatedSegments.add(formatted)
                 }
+                Log.i(TAG, "Leftover segment decoded in ${costMs}ms: '$formatted'")
             }
         }
 

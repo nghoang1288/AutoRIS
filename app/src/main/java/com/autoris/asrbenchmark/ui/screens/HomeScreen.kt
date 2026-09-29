@@ -121,18 +121,48 @@ fun HomeScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                Text(
-                    text = "AUTORIS ASR",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimary
-                )
-                Text(
-                    text = "${SystemMonitor.getDeviceModel()} • On-device ZipFormer",
-                    fontSize = 11.sp,
-                    color = CyanAccent,
-                    fontWeight = FontWeight.SemiBold
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "AUTORIS ASR",
+                        fontSize = 19.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(DarkSurface)
+                            .border(1.dp, BorderColor, RoundedCornerShape(4.dp))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = "150M SOTA",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = CyanAccent
+                        )
+                    }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    val statusDotColor = when {
+                        captureState.isRecording -> RedError
+                        statusMessage.contains("Sẵn sàng") || modelStatus.isReady -> EmeraldGreen
+                        else -> OrangeWarning
+                    }
+                    Box(
+                        modifier = Modifier
+                            .size(7.dp)
+                            .clip(CircleShape)
+                            .background(statusDotColor)
+                    )
+                    Spacer(modifier = Modifier.width(5.dp))
+                    Text(
+                        text = if (captureState.isRecording) "Đang thu (${captureState.currentDb.toInt()} dB)" else statusMessage,
+                        fontSize = 11.sp,
+                        color = if (captureState.isRecording) RedError else TextSecondary
+                    )
+                }
             }
             Row {
                 IconButton(onClick = onNavigateToNoiseLab) {
@@ -195,87 +225,32 @@ fun HomeScreen(
             }
         }
 
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Compact Acoustic Room & DSP Bar
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(6.dp))
+                .background(DarkSurface)
+                .padding(horizontal = 10.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Icons.Default.GraphicEq, contentDescription = null, tint = CyanAccent, modifier = Modifier.size(14.dp))
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = "${selectedScenario.displayName} • DSP: $activeProfile (Tự động thích ứng)",
+                fontSize = 11.sp,
+                color = TextSecondary
+            )
+        }
+
         Spacer(modifier = Modifier.height(10.dp))
-
-        // Model & Status Card
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(10.dp)),
-            colors = CardDefaults.cardColors(containerColor = DarkSurface),
-            shape = RoundedCornerShape(10.dp)
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(text = "Model ASR (Mặc định CĐHA):", fontSize = 11.sp, color = TextMuted)
-                    Text(
-                        text = "ZipFormer 150M CR-CTC-RNNT",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = CyanAccent
-                    )
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    val statusDotColor = when {
-                        captureState.isRecording -> RedError
-                        statusMessage.contains("Sẵn sàng") || modelStatus.isReady -> EmeraldGreen
-                        else -> OrangeWarning
-                    }
-                    Box(
-                        modifier = Modifier
-                            .size(10.dp)
-                            .clip(CircleShape)
-                            .background(statusDotColor)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = if (captureState.isRecording) "Thu âm (${captureState.currentDb.toInt()} dB)" else statusMessage,
-                        fontSize = 12.sp,
-                        color = if (captureState.isRecording) RedError else TextSecondary
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-        // Acoustic Scenario & Preprocessing Card
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(10.dp)),
-            colors = CardDefaults.cardColors(containerColor = DarkSurface),
-            shape = RoundedCornerShape(10.dp)
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.GraphicEq, contentDescription = null, tint = CyanAccent, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "Phòng: ${selectedScenario.displayName} | DSP: $activeProfile (Tự động thích ứng)",
-                        fontSize = 11.sp,
-                        color = TextSecondary
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(14.dp))
 
         // === BENCHMARK ONLY: REFERENCE TEST SENTENCE CARD ===
         if (operatingMode == AppOperatingMode.BENCHMARK && selectedSentence != null) {
+            val allSentences = com.autoris.asrbenchmark.benchmark.MedicalTestSet.SENTENCES
+            val sIndex = allSentences.indexOfFirst { it.id == selectedSentence!!.id }
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = DarkSurfaceVariant),
@@ -288,7 +263,7 @@ fun HomeScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "${selectedSentence!!.id} • ${selectedSentence!!.category}",
+                            text = "${selectedSentence!!.id} (${if (sIndex >= 0) sIndex + 1 else 1}/${allSentences.size}) • ${selectedSentence!!.category}",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
                             color = CyanAccent
@@ -330,9 +305,9 @@ fun HomeScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            // Prominent "CÂU TEST TIẾP THEO" Button
+            // Prominent "CÂU TEST TIẾP THEO" Button (Sequential, non-repeating)
             Button(
                 onClick = { viewModel.nextTestSentence() },
                 modifier = Modifier
@@ -342,14 +317,14 @@ fun HomeScreen(
                 shape = RoundedCornerShape(10.dp)
             ) {
                 Text(
-                    text = "🎲 CÂU TIẾP THEO (NGẪU NHIÊN)",
+                    text = "⏭️ CÂU TIẾP THEO (KHÔNG TRÙNG)",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.Black
                 )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(10.dp))
         }
 
         // === MAIN MIC BUTTON ===
@@ -384,13 +359,19 @@ fun HomeScreen(
         Spacer(modifier = Modifier.height(14.dp))
 
         // === TRANSCRIPT DISPLAY ===
-        val currentText = finalTranscript.ifEmpty { livePartial }
+        val rawText = finalTranscript.ifEmpty { livePartial }
+        val displayTranscript = if (!captureState.isRecording && normalizedResult != null && normalizedResult!!.normalizedSuggestion.isNotBlank()) {
+            normalizedResult!!.normalizedSuggestion
+        } else {
+            rawText
+        }
+
         Card(
             modifier = Modifier
                 .fillMaxWidth()
                 .border(
                     1.dp,
-                    if (captureState.isRecording) RedError.copy(alpha = 0.8f) else if (currentText.isNotEmpty()) EmeraldGreen else BorderColor,
+                    if (captureState.isRecording) RedError.copy(alpha = 0.8f) else if (displayTranscript.isNotEmpty()) EmeraldGreen else BorderColor,
                     RoundedCornerShape(12.dp)
                 ),
             colors = CardDefaults.cardColors(containerColor = DarkSurface),
@@ -411,7 +392,7 @@ fun HomeScreen(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "KẾT QUẢ PHIÊN ÂM",
+                            text = if (displayTranscript != rawText && displayTranscript.isNotBlank()) "KẾT QUẢ ĐÃ CHUẨN HÓA CĐHA" else "KẾT QUẢ PHIÊN ÂM",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = if (captureState.isRecording) CyanAccent else EmeraldGreen
@@ -434,14 +415,14 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.height(10.dp))
 
                 Text(
-                    text = currentText.ifEmpty {
+                    text = displayTranscript.ifEmpty {
                         if (captureState.isRecording) "🎙️ Đang lắng nghe... Hãy đọc câu của bạn (nghỉ 1s máy tự nhận diện câu tiếp theo)"
                         else "Nhấn nút màu xanh bên trên để bắt đầu đọc..."
                     },
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Medium,
                     fontFamily = FontFamily.SansSerif,
-                    color = if (currentText.isNotEmpty()) TextPrimary else TextMuted,
+                    color = if (displayTranscript.isNotEmpty()) TextPrimary else TextMuted,
                     lineHeight = 24.sp
                 )
 
@@ -451,18 +432,10 @@ fun HomeScreen(
                     HorizontalDivider(color = BorderColor)
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "✨ ĐÃ CHUẨN HÓA CĐHA / ĐO ĐẠC / GIẢI PHẪU:",
+                        text = "✨ HIỆU CHỈNH CHUẨN HÓA CĐHA / ĐO ĐẠC / GIẢI PHẪU:",
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         color = OrangeWarning
-                    )
-                    Spacer(modifier = Modifier.height(3.dp))
-                    Text(
-                        text = normalizedResult!!.normalizedSuggestion,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = EmeraldGreen,
-                        lineHeight = 22.sp
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     for (log in normalizedResult!!.suggestionsLog) {
@@ -596,7 +569,7 @@ fun HomeScreen(
                         containerColor = if (safetyGateDecision?.status == SafetyGateStatus.REJECTED) TextMuted else CyanAccent
                     ),
                     shape = RoundedCornerShape(10.dp),
-                    enabled = currentText.isNotEmpty()
+                    enabled = displayTranscript.isNotEmpty()
                 ) {
                     Icon(Icons.Default.Send, contentDescription = null, tint = Color.Black, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))

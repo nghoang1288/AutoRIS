@@ -149,7 +149,20 @@ object AccuracyEvaluator {
         for (num in keyNumbers) {
             val trimmedNum = num.trim()
             val numPattern = Regex("(?<=^|[^\\w%])" + Regex.escape(trimmedNum) + "(?=[^\\w%]|$)")
-            if (numPattern.containsMatchIn(hypothesis) || numPattern.containsMatchIn(cleanHyp)) {
+            val altNum = when (trimmedNum.lowercase(Locale.ROOT)) {
+                "độ 1" -> "độ một"
+                "độ một" -> "độ 1"
+                "độ 2" -> "độ hai"
+                "độ hai" -> "độ 2"
+                "độ 3" -> "độ ba"
+                "độ ba" -> "độ 3"
+                "độ 4" -> "độ bốn"
+                "độ bốn" -> "độ 4"
+                else -> null
+            }
+            val altPattern = altNum?.let { Regex("(?<=^|[^\\w%])" + Regex.escape(it) + "(?=[^\\w%]|$)") }
+            if (numPattern.containsMatchIn(hypothesis) || numPattern.containsMatchIn(cleanHyp) ||
+                (altPattern != null && (altPattern.containsMatchIn(hypothesis) || altPattern.containsMatchIn(cleanHyp)))) {
                 matchedNumbers.add(num)
             } else {
                 missedNumbers.add(num)

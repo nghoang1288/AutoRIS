@@ -188,4 +188,43 @@ class MedicalNormalizerTest {
         assertTrue("Must normalize L bốn năm to L4-L5 without turning into 45", result.normalizedSuggestion.contains("L4-L5"))
         assertEquals("L4-L5", result.spineLevels[0].normalized)
     }
+
+    @Test
+    fun testRealDeviceRadiologyCases() {
+        // 1. Liver cyst with diameter 9 mm and nhu mô
+        val liverRaw = "GAN KHÔNG TO BỜ ĐỀU NHƯNG MÔ GAN TRÁI CÓ NANG ĐƯỜNG KÍNH CHÍN."
+        val liverRes = MedicalTextNormalizer.process(liverRaw)
+        assertTrue("Nhu mô must be fixed", liverRes.normalizedSuggestion.contains("nhu mô gan trái"))
+        assertTrue("Diameter 9 mm must be normalized", liverRes.normalizedSuggestion.contains("đường kính 9 mm"))
+
+        // 2. Brain MRI with FLAIR and thùy trán
+        val brainRaw = "TỔN THƯƠNG TĂNG TÍN HIỆU TRÊN T HAI VÀ FLY Ở CHẤT TRẮNG SÂU THUỶ TRÁN HAI BÊN."
+        val brainRes = MedicalTextNormalizer.process(brainRaw)
+        assertTrue("FLAIR must be recognized from fly", brainRes.normalizedSuggestion.contains("FLAIR"))
+        assertTrue("thùy trán must be normalized", brainRes.normalizedSuggestion.contains("thùy trán"))
+
+        // 3. Chest X-ray angle and pleural effusion
+        val chestRaw = "GÓC TÂM HOÀNH VÀ GÓC SƠN LÀNH HAI BÊN NHỌN KHÔNG THẤY TRÀN DỊCH MỎNG."
+        val chestRes = MedicalTextNormalizer.process(chestRaw)
+        assertTrue("Góc sườn hoành must be fixed", chestRes.normalizedSuggestion.contains("góc sườn hoành"))
+        assertTrue("Tràn dịch màng phổi must be fixed", chestRes.normalizedSuggestion.contains("tràn dịch màng phổi"))
+
+        // 4. Brain atrophy
+        val brainAtrophyRaw = "HỆ THỐNG NÃO THẤT VÀ CÁC RÃNH QUẬN NÃO HAI BÊN GIÃN NHẸ PHÙ HỢP CHO NÃO TUỔI GIÀ."
+        val brainAtrophyRes = MedicalTextNormalizer.process(brainAtrophyRaw)
+        assertTrue("Rãnh cuộn não must be fixed", brainAtrophyRes.normalizedSuggestion.contains("rãnh cuộn não"))
+        assertTrue("Teo não tuổi già must be fixed", brainAtrophyRes.normalizedSuggestion.contains("teo não tuổi già"))
+
+        // 5. Portal vein
+        val portalRaw = "TÍCH MẠCH CỬA KHÔNG GIAN KHÔNG THẤY HUYẾT KHỐI TRONG LÒNG MẠCH."
+        val portalRes = MedicalTextNormalizer.process(portalRaw)
+        assertTrue("Tĩnh mạch cửa must be fixed", portalRes.normalizedSuggestion.contains("Tĩnh mạch cửa"))
+        assertTrue("Không giãn must be fixed", portalRes.normalizedSuggestion.contains("không giãn"))
+
+        // 6. Multi-filler trailing words
+        val fillerRaw = "TRUNG THẤT KHÔNG THẤY HẠCH LỚN. KÍCH THƯỚC HẠCH NHỎ HƠN MƯỜI MM TRÊN TRỤC NGẮN. ĐÂY. NÀY."
+        val fillerRes = MedicalTextNormalizer.process(fillerRaw)
+        assertFalse("Trailing fillers 'đây' and 'này' must be removed", fillerRes.normalizedSuggestion.contains("đây", ignoreCase = true))
+        assertFalse("Trailing fillers 'đây' and 'này' must be removed", fillerRes.normalizedSuggestion.contains("này", ignoreCase = true))
+    }
 }
