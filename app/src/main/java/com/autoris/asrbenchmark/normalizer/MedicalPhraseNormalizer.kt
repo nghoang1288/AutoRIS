@@ -40,7 +40,23 @@ object MedicalPhraseNormalizer {
         Regex("\\bmuôn\\s+vị\\b", RegexOption.IGNORE_CASE) to "môn vị",
         Regex("\\b(?:hang|hai)\\s+môn\\s+vị\\b", RegexOption.IGNORE_CASE) to "hang - môn vị",
         Regex("\\btỉ\\s+trọng\\b", RegexOption.IGNORE_CASE) to "tỷ trọng",
-        Regex("\\bphế\\s+quản\\s+chứa\\s+khí\\b", RegexOption.IGNORE_CASE) to "phế quản khí",
+        // Spoken punctuation deduction: "phải" as comma when between clinical descriptors/clauses
+        Regex("\\s+(?:phẩy|phải)\\s+(nghĩ|không|giảm|tăng|kèm|di\\s+động|đường\\s+kính|kích\\s+thước|liên\\s+tục)\\b", RegexOption.IGNORE_CASE) to ", $1",
+        Regex("\\b(dày|lan\\s+tỏa|lan\\s+toả|rõ|đều|liên\\s+tục|sâu|nhẹ|đồng\\s+nhất|bình\\s+thường|khu\\s+trú|mũn|gai|mm)\\s+(?:phẩy|phải)\\s+", RegexOption.IGNORE_CASE) to "$1, ",
+
+        // Radiology Phonetics & Dialect calibration
+        Regex("\\b(?:và|va)\\s+hoành\\b", RegexOption.IGNORE_CASE) to "vòm hoành",
+        Regex("\\blềm\\s+hơi\\b", RegexOption.IGNORE_CASE) to "liềm hơi",
+        Regex("\\btrồng\\s+ngắn\\b", RegexOption.IGNORE_CASE) to "chồng ngắn",
+        Regex("\\bgóc\\s+(?:xương|sương)\\s+hoành\\b", RegexOption.IGNORE_CASE) to "góc sườn hoành",
+        Regex("\\bdây\\s+chẳng\\s+chéo\\b", RegexOption.IGNORE_CASE) to "dây chằng chéo",
+        Regex("\\bphùỷ\\s+xương\\b", RegexOption.IGNORE_CASE) to "phù tủy xương",
+        Regex("\\bđối\\s+hoàng\\s+tử\\b", RegexOption.IGNORE_CASE) to "đối quang từ",
+        Regex("\\btừ\\s+chán\\b", RegexOption.IGNORE_CASE) to "thùy trán",
+        Regex("\\bba\\s+màng\\s+cứng\\b", RegexOption.IGNORE_CASE) to "bao màng cứng",
+        Regex("\\b(?:tráng|cháng)\\s+đều\\b", RegexOption.IGNORE_CASE) to "sáng đều",
+        Regex("\\bnãn\\s+thất\\b", RegexOption.IGNORE_CASE) to "não thất",
+
         Regex("\\bđộ\\s+một\\b", RegexOption.IGNORE_CASE) to "độ 1",
         Regex("\\bđộ\\s+hai\\b", RegexOption.IGNORE_CASE) to "độ 2",
         Regex("\\bđộ\\s+ba\\b", RegexOption.IGNORE_CASE) to "độ 3",

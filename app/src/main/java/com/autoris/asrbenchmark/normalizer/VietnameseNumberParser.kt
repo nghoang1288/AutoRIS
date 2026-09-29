@@ -131,6 +131,10 @@ object VietnameseNumberParser {
             result = dimPattern.replace(result, "$1 $dVal")
         }
 
+        // 8. Spoken decimal fractions: e.g. "nhỏ hơn không năm" -> "nhỏ hơn 0.5"
+        val zeroFivePattern = Regex("\\b((?:nhỏ\\s+hơn|lớn\\s+hơn|bằng|chỉ\\s+số|tỷ\\s+lệ)\\s+)không\\s+năm\\b", RegexOption.IGNORE_CASE)
+        result = zeroFivePattern.replace(result, "$10.5")
+
         return result
     }
 }

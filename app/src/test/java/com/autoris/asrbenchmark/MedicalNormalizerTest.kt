@@ -256,5 +256,29 @@ class MedicalNormalizerTest {
         val pleuraRaw = "Không thấy tràn dịch tràn khí qua màng phổi hai bên."
         val pleuraRes = MedicalTextNormalizer.process(pleuraRaw)
         assertTrue("Khoang màng phổi must be fixed from qua màng phổi", pleuraRes.normalizedSuggestion.contains("khoang màng phổi"))
+
+        // 10. Spoken comma deduction ("phải" as comma) and thoracic ratio
+        val commaRaw = "Nhu mô gan dày phải tăng âm nhẹ lan toả phải giảm hút âm vùng sâu phải nghĩ gan nhiễm mỡ độ một."
+        val commaRes = MedicalTextNormalizer.process(commaRaw)
+        assertTrue("Nhu mô gan dày, tăng âm", commaRes.normalizedSuggestion.contains("Nhu mô gan dày, tăng âm"))
+        assertTrue("giảm hút âm vùng sâu, nghĩ", commaRes.normalizedSuggestion.contains("giảm hút âm vùng sâu, nghĩ"))
+
+        val diaphragmRaw = "Và hoành hai bên đều phải liên tục phải không thấy lềm hơi dưới hoành."
+        val diaphragmRes = MedicalTextNormalizer.process(diaphragmRaw)
+        assertTrue("Vòm hoành must be fixed from và hoành", diaphragmRes.normalizedSuggestion.contains("Vòm hoành"))
+        assertTrue("Liềm hơi must be fixed from lềm hơi", diaphragmRes.normalizedSuggestion.contains("liềm hơi"))
+
+        val thoracicRaw = "Bóng tim không to chỉ số tim lồng ngực nhỏ hơn không năm."
+        val thoracicRes = MedicalTextNormalizer.process(thoracicRaw)
+        assertTrue("0.5 must be parsed from không năm", thoracicRes.normalizedSuggestion.contains("0.5"))
+
+        val kneeRaw = "Đứt hoàn toàn dây chẳng chéo trước khớp gối phải kèm phùỷ xương lồi cầu ngoài."
+        val kneeRes = MedicalTextNormalizer.process(kneeRaw)
+        assertTrue("Dây chằng chéo must be fixed", kneeRes.normalizedSuggestion.contains("dây chằng chéo"))
+        assertTrue("Phù tủy xương must be fixed", kneeRes.normalizedSuggestion.contains("phù tủy xương"))
+
+        val contrastRaw = "Khối u ngấm thuốc mạnh sau tiêm đối hoàng tử giới hạn rõ đường kính mười tám mm."
+        val contrastRes = MedicalTextNormalizer.process(contrastRaw)
+        assertTrue("Đối quang từ must be fixed from đối hoàng tử", contrastRes.normalizedSuggestion.contains("đối quang từ"))
     }
 }
