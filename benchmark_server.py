@@ -126,6 +126,34 @@ def load_all_sessions_v2():
     except Exception:
         return []
 
+def get_all_sessions():
+    v1 = load_all_sessions()
+    v2 = load_all_sessions_v2()
+    seen_ids = set()
+    combined = []
+    # Process V2 (newer schema) first, then V1
+    for s in v2 + v1:
+        sid = s.get("id") or s.get("sessionId")
+        if sid and sid in seen_ids:
+            continue
+        if sid:
+            seen_ids.add(sid)
+        
+        s_norm = dict(s)
+        if s_norm.get("wer") is None and s_norm.get("werNormalized") is not None:
+            s_norm["wer"] = s_norm.get("werNormalized")
+        if s_norm.get("cer") is None and s_norm.get("cerNormalized") is not None:
+            s_norm["cer"] = s_norm.get("cerNormalized")
+        if not s_norm.get("device"):
+            s_norm["device"] = s_norm.get("deviceModel", "")
+        if not s_norm.get("model"):
+            s_norm["model"] = s_norm.get("modelName", "")
+        if not s_norm.get("firstPartialMs") and s_norm.get("firstSegmentResultLatencyMs"):
+            s_norm["firstPartialMs"] = s_norm.get("firstSegmentResultLatencyMs")
+            
+        combined.append(s_norm)
+    return combined
+
 def save_all_sessions_v2(sessions):
     with open(ALL_SESSIONS_JSON_V2, "w", encoding="utf-8") as f:
         json.dump(sessions, f, ensure_ascii=False, indent=2)
@@ -293,13 +321,13 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
                 "status": "ok",
                 "host": socket.gethostname(),
                 "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "total_stored": len(load_all_sessions())
+                "total_stored": len(get_all_sessions())
             }
             self.wfile.write(json.dumps(resp, ensure_ascii=False).encode("utf-8"))
             return
 
         elif path == "/api/benchmark/summary":
-            sessions = load_all_sessions()
+            sessions = get_all_sessions()
             stats = calculate_summary_stats(sessions)
             self.send_response(200)
             self.send_cors_headers()
@@ -309,7 +337,7 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
             return
 
         elif path == "/api/benchmark/sessions":
-            sessions = load_all_sessions()
+            sessions = get_all_sessions()
             self.send_response(200)
             self.send_cors_headers()
             self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -323,7 +351,9 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
 
         elif path.startswith("/audio/"):
             filename = os.path.basename(path)
-            audio_path = os.path.join(AUDIO_DIR, filename)
+            audio_path = os.path.join(AUDIO_DIR_V2, filename)
+            if not os.path.exists(audio_path):
+                audio_path = os.path.join(AUDIO_DIR, filename)
             if os.path.exists(audio_path):
                 self.send_response(200)
                 self.send_cors_headers()
@@ -522,7 +552,7 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
         self.wfile.write(html.encode("utf-8"))
 
     def render_dashboard(self):
-        sessions = load_all_sessions()
+        sessions = get_all_sessions()
         stats = calculate_summary_stats(sessions) or {
             "total_sessions": 0, "avg_first_partial_ms": 0, "avg_final_latency_ms": 0,
             "avg_rtf": 0, "avg_wer_pct": 0, "avg_cer_pct": 0, "avg_med_term_acc_pct": 0,
@@ -538,17 +568,21 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
             med_val = f"{round(s.get('medicalTermAccuracy')*100, 1)}%" if s.get('medicalTermAccuracy') is not None else "--"
             num_val = f"{round(s.get('numericAccuracy')*100, 1)}%" if s.get('numericAccuracy') is not None else "--"
             
-            sid = s.get("id", "")
-            # check audio
+            sid = s.get("id", "") or s.get("sessionId", "")
+            # check audio in both V2 and V1 directories
             audio_html = "--"
-            for af in os.listdir(AUDIO_DIR):
-                if af.startswith(str(sid)):
-                    audio_html = f'<audio controls src="/audio/{af}" style="height:28px;width:150px;"></audio>'
+            for adir in [AUDIO_DIR_V2, AUDIO_DIR]:
+                if os.path.exists(adir):
+                    for af in os.listdir(adir):
+                        if str(sid) and str(sid) in af:
+                            audio_html = f'<audio controls src="/audio/{af}" style="height:28px;width:150px;"></audio>'
+                            break
+                if audio_html != "--":
                     break
 
             rows_html.append(f"""
             <tr>
-              <td><b>{s.get('testId', '--')}</b><br><small style="color:#94a3b8;">{s.get('category', '--')}</small></td>
+              <td><b>{s.get('testId') or 'CLINICAL'}</b><br><small style="color:#94a3b8;">{s.get('category', '--')}</small></td>
               <td>
                 <div style="font-size:13px;color:#e2e8f0;margin-bottom:4px;"><b>Gốc:</b> {s.get('referenceText', '--')}</div>
                 <div style="font-size:13px;color:#38bdf8;margin-bottom:4px;"><b>Nhận diện:</b> {s.get('rawTranscript', '--')}</div>
