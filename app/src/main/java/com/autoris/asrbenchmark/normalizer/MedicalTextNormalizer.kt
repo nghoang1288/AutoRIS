@@ -9,7 +9,14 @@ data class NormalizedResult(
     val detectedNumbers: List<String>,
     val detectedAnatomy: List<String>,
     val detectedNegations: List<String>,
-    val suggestionsLog: List<String>
+    val suggestionsLog: List<String>,
+    val measurements: List<ParsedMeasurement> = emptyList(),
+    val dimensions: List<ParsedDimension> = emptyList(),
+    val spineLevels: List<ParsedSpineLevel> = emptyList(),
+    val lateralities: List<ParsedLaterality> = emptyList(),
+    val negations: List<ParsedNegation> = emptyList(),
+    val clinicalScores: List<ParsedClinicalScore> = emptyList(),
+    val hasAmbiguityOrConflict: Boolean = false
 )
 
 object MedicalTextNormalizer {
@@ -40,11 +47,11 @@ object MedicalTextNormalizer {
     // Negations
     val NEGATION_PATTERNS = listOf(
         "không thấy", "không giãn", "không huyết khối", "không ngấm thuốc", "không to", "không dày",
-        "chưa thấy", "không có", "không tràn dịch", "không tràn khí", "không vôi hóa"
+        "chưa thấy", "không có", "không tràn dịch", "không tràn khí", "không vôi hóa", "loại trừ"
     )
 
     /**
-     * Modularized normalizer pipeline for Radiology / CĐHA.
+     * Modularized normalizer pipeline for Radiology / CĐHA with 3-tier semantic parsing.
      */
     fun process(rawText: String): NormalizedResult {
         if (rawText.isBlank()) {
@@ -66,48 +73,121 @@ object MedicalTextNormalizer {
         val afterPhonetics = MedicalPhraseNormalizer.fixPhonetics(normalized, suggestionsLog)
         normalized = afterPhonetics
 
-        // 2. Spine Levels (MUST precede general number parsing so "L bốn năm" -> "L4-L5")
+        // 2. Clinical Scoring Systems (BI-RADS, TI-RADS, PI-RADS, LI-RADS, ASPECTS, EF)
+        val (afterScores, parsedScores) = ClinicalScoreParser.parse(normalized)
+        if (afterScores != normalized) {
+            suggestionsLog.add("Chuẩn hóa phân loại CĐHA: -> \"$afterScores\"")
+            normalized = afterScores
+        }
+
+        // 3. Spine Levels (MUST precede general number parsing so "L bốn năm" -> "L4-L5")
         val afterSpine = SpineLevelParser.parse(normalized)
         if (afterSpine != normalized) {
             suggestionsLog.add("Chuẩn hóa tầng cột sống: -> \"$afterSpine\"")
             normalized = afterSpine
         }
 
-        // 3. Spoken Vietnamese numbers (decimals, compounds, tens, hundreds)
+        // 4. Spoken Vietnamese numbers (decimals, compounds, tens, hundreds)
         val afterNumbers = VietnameseNumberParser.parse(normalized)
         if (afterNumbers != normalized) {
             normalized = afterNumbers
         }
 
-        // 4. Ranges (e.g. "từ 5 đến 10 mm" -> "5 - 10 mm")
+        // 5. Ranges (e.g. "từ 5 đến 10 mm" -> "5 - 10 mm")
         val afterRange = RangeParser.parse(normalized)
         normalized = afterRange
 
-        // 5. Dimensions (e.g. "21 x 8" -> "21 × 8 mm", "10 x 15 x 20 mm" -> "10 × 15 × 20 mm")
+        // 6. Dimensions (e.g. "21 x 8" -> "21 × 8 mm", "10 x 15 x 20 mm" -> "10 × 15 × 20 mm")
         val afterDim = DimensionParser.parse(normalized)
         normalized = afterDim
 
-        // 6. Percentages (e.g. "70 phần trăm" -> "70%")
+        // 7. Percentages (e.g. "70 phần trăm" -> "70%")
         val afterPct = PercentageParser.parse(normalized)
         normalized = afterPct
 
-        // 7. Volumes (e.g. "25 mi li lít" -> "25 ml")
+        // 8. Volumes (e.g. "25 mi li lít" -> "25 ml")
         val afterVol = VolumeParser.parse(normalized)
         normalized = afterVol
 
-        // 8. Measurements & contextual defaults (e.g. "đường kính 15" -> "đường kính 15 mm")
+        // 9. Measurements & contextual defaults (e.g. "đường kính 15" -> "đường kính 15 mm")
         val afterMeas = MeasurementParser.parse(normalized)
         normalized = afterMeas
 
-        // 9. Clean trailing verbal fillers & capitalize
+        // 10. Clean trailing verbal fillers & capitalize
         normalized = MedicalPhraseNormalizer.cleanTrailingFillers(normalized)
         normalized = MedicalPhraseNormalizer.capitalizeFirstLetter(normalized)
 
-        // 10. Extract domain entities
+        // 11. Extract domain entities
         val normLower = normalized.lowercase(Locale.ROOT)
         val foundAnatomy = ANATOMY_TERMS.filter { normLower.contains(it) }
         val foundPathology = PATHOLOGY_TERMS.filter { normLower.contains(it) }
         val foundNegations = NEGATION_PATTERNS.filter { normLower.contains(it) }
+
+        // 12. Semantic parsing: Laterality & Conflict Checking
+        val (parsedLateralities, hasLateralityConflict) = LateralityParser.parse(normalized)
+
+        // 13. Semantic parsing: Clinical Negations
+        val parsedNegations = NegationParser.parse(normalized)
+
+        // 14. Semantic parsing: Spine Levels
+        val spineRegex = Regex("\\b([LCDST]\\d+(?:-[LCDST]\\d+)?)\\b")
+        val parsedSpineLevels = spineRegex.findAll(normalized).map {
+            ParsedSpineLevel(raw = it.value, normalized = it.value, certainty = CertaintyLevel.EXPLICIT)
+        }.toList()
+
+        // 15. Semantic parsing: Dimensions
+        val dimRegex = Regex("\\b(\\d+(?:\\.\\d+)?)\\s*×\\s*(\\d+(?:\\.\\d+)?)(?:\\s*×\\s*(\\d+(?:\\.\\d+)?))?\\s*(mm|cm|m)\\b")
+        val parsedDims = dimRegex.findAll(normalized).map { match ->
+            val d1 = match.groupValues[1].toFloatOrNull() ?: 0f
+            val d2 = match.groupValues[2].toFloatOrNull() ?: 0f
+            val d3Str = match.groupValues[3]
+            val dimsList = if (d3Str.isNotEmpty()) listOf(d1, d2, d3Str.toFloatOrNull() ?: 0f) else listOf(d1, d2)
+            val unit = match.groupValues[4]
+            ParsedDimension(
+                raw = match.value,
+                normalized = match.value,
+                dims = dimsList,
+                unit = unit,
+                certainty = if (rawText.contains(unit, ignoreCase = true)) CertaintyLevel.EXPLICIT else CertaintyLevel.INFERRED
+            )
+        }.toList()
+
+        // 16. Semantic parsing: Measurements
+        val measRegex = Regex("\\b(\\d+(?:\\.\\d+)?)\\s*(mm|cm|m|%|ml|HU)\\b")
+        val parsedMeasurements = mutableListOf<ParsedMeasurement>()
+        measRegex.findAll(normalized).forEach { match ->
+            val v = match.groupValues[1].toFloatOrNull()
+            val u = match.groupValues[2]
+            val certainty = if (rawText.contains(u, ignoreCase = true)) CertaintyLevel.EXPLICIT else CertaintyLevel.INFERRED
+            parsedMeasurements.add(
+                ParsedMeasurement(raw = match.value, normalized = match.value, value = v, unit = u, certainty = certainty)
+            )
+        }
+
+        // Check for ambiguous isolated numbers without unit
+        val bareNumberRegex = Regex("\\b\\d+(?:\\.\\d+)?\\b")
+        var hasAmbiguity = hasLateralityConflict
+        bareNumberRegex.findAll(normalized).forEach { match ->
+            val numStr = match.value
+            val isPartOfDim = parsedDims.any { it.normalized.contains(numStr) }
+            val isPartOfMeas = parsedMeasurements.any { it.normalized.contains(numStr) }
+            val isPartOfSpine = parsedSpineLevels.any { it.normalized.contains(numStr) }
+            val isPartOfScore = parsedScores.any { it.raw.contains(numStr) }
+
+            if (!isPartOfDim && !isPartOfMeas && !isPartOfSpine && !isPartOfScore) {
+                parsedMeasurements.add(
+                    ParsedMeasurement(
+                        raw = numStr,
+                        normalized = numStr,
+                        value = numStr.toFloatOrNull(),
+                        unit = null,
+                        certainty = CertaintyLevel.AMBIGUOUS,
+                        ambiguityReason = "Số đo thiếu đơn vị lâm sàng (mm/cm)"
+                    )
+                )
+                hasAmbiguity = true
+            }
+        }
 
         val foundNumbers = mutableListOf<String>()
         val numberMatchRegex = Regex("\\b\\d+(?:\\.\\d+)?(?:\\s*×\\s*\\d+(?:\\.\\d+)?)*(?:\\s*(?:mm|cm|m|%|ml|HU))?\\b")
@@ -122,7 +202,14 @@ object MedicalTextNormalizer {
             detectedNumbers = foundNumbers,
             detectedAnatomy = foundAnatomy,
             detectedNegations = foundNegations,
-            suggestionsLog = suggestionsLog
+            suggestionsLog = suggestionsLog,
+            measurements = parsedMeasurements,
+            dimensions = parsedDims,
+            spineLevels = parsedSpineLevels,
+            lateralities = parsedLateralities,
+            negations = parsedNegations,
+            clinicalScores = parsedScores,
+            hasAmbiguityOrConflict = hasAmbiguity
         )
     }
 }

@@ -1,14 +1,20 @@
 package com.autoris.asrbenchmark
 
+import com.autoris.asrbenchmark.normalizer.CertaintyLevel
+import com.autoris.asrbenchmark.normalizer.ClinicalScoreParser
 import com.autoris.asrbenchmark.normalizer.DimensionParser
+import com.autoris.asrbenchmark.normalizer.LateralityParser
+import com.autoris.asrbenchmark.normalizer.LateralityType
 import com.autoris.asrbenchmark.normalizer.MedicalPhraseNormalizer
 import com.autoris.asrbenchmark.normalizer.MedicalTextNormalizer
+import com.autoris.asrbenchmark.normalizer.NegationParser
 import com.autoris.asrbenchmark.normalizer.PercentageParser
 import com.autoris.asrbenchmark.normalizer.RangeParser
 import com.autoris.asrbenchmark.normalizer.SpineLevelParser
 import com.autoris.asrbenchmark.normalizer.VietnameseNumberParser
 import com.autoris.asrbenchmark.normalizer.VolumeParser
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -68,6 +74,85 @@ class MedicalNormalizerTest {
     }
 
     @Test
+    fun testClinicalScoreParser() {
+        val (biradsText, biradsScores) = ClinicalScoreParser.parse("tổn thương vú phân loại bi rads 4a")
+        assertTrue(biradsText.contains("BI-RADS 4A"))
+        assertEquals(1, biradsScores.size)
+        assertEquals("BI-RADS", biradsScores[0].system)
+        assertEquals("4A", biradsScores[0].score)
+
+        val (tiradsText, _) = ClinicalScoreParser.parse("nhân giáp ti-rads 3")
+        assertTrue(tiradsText.contains("TI-RADS 3"))
+
+        val (piradsText, _) = ClinicalScoreParser.parse("tuyến tiền liệt pi rads 5")
+        assertTrue(piradsText.contains("PI-RADS 5"))
+
+        val (liradsText, _) = ClinicalScoreParser.parse("khối u gan li rads 2")
+        assertTrue(liradsText.contains("LI-RADS 2"))
+
+        val (aspectsText, _) = ClinicalScoreParser.parse("nhồi máu não aspects 9 điểm")
+        assertTrue(aspectsText.contains("ASPECTS 9"))
+
+        val (efText, efScores) = ClinicalScoreParser.parse("phân suất tống máu ef sáu mươi phần trăm")
+        val efAfterNumbers = VietnameseNumberParser.parse(efText)
+        val (efFinal, _) = ClinicalScoreParser.parse(efAfterNumbers)
+        assertTrue(efFinal.contains("EF 60%"))
+    }
+
+    @Test
+    fun testLateralityAndContradiction() {
+        val (latRight, confRight) = LateralityParser.parse("nang thận phải kích thước nhỏ")
+        assertFalse(confRight)
+        assertEquals(LateralityType.RIGHT, latRight[0].side)
+
+        val (latLeft, confLeft) = LateralityParser.parse("thâm nhiễm thùy dưới phổi trái")
+        assertFalse(confLeft)
+        assertEquals(LateralityType.LEFT, latLeft[0].side)
+
+        val (latBilateral, confBi) = LateralityParser.parse("thoái hóa hai bên khớp háng")
+        assertFalse(confBi)
+        assertEquals(LateralityType.BILATERAL, latBilateral[0].side)
+
+        // Contradictory laterality in the same phrase
+        val (latConflict, isConflicted) = LateralityParser.parse("u nang thận phải nằm ở cực dưới bên trái")
+        assertTrue(isConflicted)
+        assertTrue(latConflict.any { it.isContradictory })
+    }
+
+    @Test
+    fun testNegationPreservationAndScope() {
+        val negations = NegationParser.parse("không thấy sỏi cản quang hệ tiết niệu và chưa thấy tràn dịch màng phổi")
+        assertEquals(2, negations.size)
+        assertEquals("không thấy", negations[0].trigger)
+        assertTrue(negations[0].scopeText.contains("sỏi cản quang"))
+        assertEquals("chưa thấy", negations[1].trigger)
+        assertTrue(negations[1].scopeText.contains("tràn dịch màng phổi"))
+
+        // End-to-end check: Ensure "không thấy" is never dropped
+        val result = MedicalTextNormalizer.process("không thấy hình ảnh bất thường trên phim")
+        assertTrue(result.normalizedSuggestion.startsWith("Không thấy"))
+        assertEquals(1, result.negations.size)
+    }
+
+    @Test
+    fun testThreeTierCertaintyArchitecture() {
+        // EXPLICIT: Explicit unit in speech
+        val resExplicit = MedicalTextNormalizer.process("nốt phổi kích thước 15 x 20 mm")
+        assertEquals(CertaintyLevel.EXPLICIT, resExplicit.dimensions[0].certainty)
+        assertFalse(resExplicit.hasAmbiguityOrConflict)
+
+        // INFERRED: Inferred mm default in radiology
+        val resInferred = MedicalTextNormalizer.process("đường kính hai mươi mốt nhân tám")
+        assertTrue(resInferred.dimensions.isNotEmpty())
+        assertEquals(CertaintyLevel.INFERRED, resInferred.dimensions[0].certainty)
+
+        // AMBIGUOUS: Bare number without any unit or clinical dimension
+        val resAmbiguous = MedicalTextNormalizer.process("ghi nhận có 45 ổ dịch không rõ nguồn gốc")
+        assertTrue(resAmbiguous.hasAmbiguityOrConflict)
+        assertTrue(resAmbiguous.measurements.any { it.certainty == CertaintyLevel.AMBIGUOUS })
+    }
+
+    @Test
     fun testMedicalPhraseNormalizer() {
         val fixed = MedicalPhraseNormalizer.fixPhonetics("cái chiếc nốt kính mờ không gian bờ mà đều clitsung")
         assertTrue(fixed.contains("kích thước"))
@@ -82,7 +167,6 @@ class MedicalNormalizerTest {
 
     @Test
     fun testFullMedicalPipelineEndToEnd() {
-        // Clinical sentence: "dày thành không đều hang môn vị dạ dày kích thước hai mươi mốt nhân tám"
         val raw = "dày thành không đều hang môn vị dạ dày cái chiếc hai mươi mốt nhân tám đó thôi"
         val result = MedicalTextNormalizer.process(raw)
 
@@ -98,5 +182,6 @@ class MedicalNormalizerTest {
         val result = MedicalTextNormalizer.process(raw)
 
         assertTrue("Must normalize L bốn năm to L4-L5 without turning into 45", result.normalizedSuggestion.contains("L4-L5"))
+        assertEquals("L4-L5", result.spineLevels[0].normalized)
     }
 }
