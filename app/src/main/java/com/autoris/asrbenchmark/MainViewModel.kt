@@ -508,8 +508,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         val profile = PreprocessingProfile.fromId(_preprocessingProfile.value)
         val preprocessor = AudioPreprocessorFactory.create(profile, getApplication())
+        val streamingEngine: ASREngine? = if (
+            _selectedModelType.value == ASRModelType.ZIPFORMER_150M_OFFLINE &&
+            ModelManager.getModelStatus(getApplication(), ASRModelType.ZIPFORMER_30M_STREAMING).isReady
+        ) {
+            Zipformer30MStreamingEngine(getApplication(), vadConfig, numThreads = 2)
+        } else null
+
         val manager = AudioRecorderManager(
             asrEngine = asrEngine,
+            streamingEngine = streamingEngine,
             vadConfig = vadConfig,
             vadEngine = com.autoris.asrbenchmark.vad.NeuralVadEngine(context = getApplication()),
             preprocessingProfile = profile,

@@ -40,6 +40,7 @@ data class AudioCaptureState(
 
 class AudioRecorderManager(
     private val asrEngine: ASREngine,
+    private val streamingEngine: ASREngine? = null,
     private val vadConfig: VadConfig = VadConfig(),
     private val vadEngine: VadEngine = EnergyVadEngine(),
     val preprocessingProfile: PreprocessingProfile = PreprocessingProfile.RAW,
@@ -65,6 +66,7 @@ class AudioRecorderManager(
 
     private var audioCapture: AudioCapture? = null
     private var decodeScope: CoroutineScope? = null
+    private var streamingScope: CoroutineScope? = null
     private val decodeMutex = Mutex()
 
     // Timing metrics
@@ -133,6 +135,8 @@ class AudioRecorderManager(
         }
 
         decodeScope = CoroutineScope(Dispatchers.Default + Job())
+        streamingScope = CoroutineScope(Dispatchers.Default + Job())
+        streamingEngine?.start()
 
         _state.value = AudioCaptureState(
             isRecording = true,
@@ -259,6 +263,22 @@ class AudioRecorderManager(
             }
         }
 
+        // 7b. Feed live speech chunk to streaming engine for immediate partial feedback
+        if (streamingEngine != null && isSpeaking) {
+            val chunkCopy = processedSlice.clone()
+            streamingScope?.launch {
+                streamingEngine.acceptAudio(chunkCopy)
+                streamingEngine.decodeStep()
+                val partial = streamingEngine.getPartialResult().trim()
+                if (partial.isNotBlank()) {
+                    val prefix = synchronized(accumulatedSegments) { accumulatedSegments.joinToString(" ") }
+                    val displayText = if (prefix.isNotBlank()) "$prefix $partial" else partial
+                    val latency = (SystemClock.elapsedRealtimeNanos() - (firstSpeechTimeNs.takeIf { it > 0 } ?: sessionStartTimeNs)) / 1_000_000
+                    onPartialResult(displayText, latency)
+                }
+            }
+        }
+
         // Periodic logging every 1 second (10 chunks)
         if (chunksRecordedCount % 10 == 0) {
             Log.i(TAG, "VAD: t=${String.format(Locale.ROOT, "%.1f", durationSec)}s db=${db.toInt()} floor=${noiseProfile.noiseFloorDb.toInt()} state=$currentState isSpeaking=$isSpeaking segSamples=${synchronized(currentSegmentPcm) { currentSegmentPcm.size }}")
@@ -267,6 +287,7 @@ class AudioRecorderManager(
         // 8. Natural sentence boundary reached
         if (currentState == EndpointState.ENDPOINT_CONFIRMED && speechDetected) {
             Log.i(TAG, ">>> [PAUSE TRIGGERED at ${String.format(Locale.ROOT, "%.1f", durationSec)}s] state=$currentState segSamples=${synchronized(currentSegmentPcm) { currentSegmentPcm.size }}")
+            streamingEngine?.reset()
 
             // Keep ~250ms trailing silence, trim remainder
             val trailingToKeep = (SAMPLE_RATE * 0.25f).toInt()
@@ -407,7 +428,10 @@ class AudioRecorderManager(
 
         decodeScope?.cancel()
         decodeScope = null
+        streamingScope?.cancel()
+        streamingScope = null
 
+        streamingEngine?.stop()
         asrEngine.stop()
         preprocessor.reset()
 
@@ -437,6 +461,7 @@ class AudioRecorderManager(
         stopRecordingInternal()
         preprocessor.release()
         vadEngine.release()
+        streamingEngine?.release()
         asrEngine.release()
     }
 }
