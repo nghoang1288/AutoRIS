@@ -2,16 +2,22 @@ package com.autoris.asrbenchmark.vad
 
 import android.content.Context
 import android.util.Log
+import com.k2fsa.sherpa.onnx.SileroVadModelConfig
+import com.k2fsa.sherpa.onnx.Vad
+import com.k2fsa.sherpa.onnx.VadModelConfig
 import java.io.File
 
 /**
- * Neural VAD Engine (Silero-compatible ONNX).
- * Gracefully falls back to Adaptive EnergyVadEngine if model asset is absent.
+ * Neural VAD Engine leveraging native Sherpa-ONNX Silero VAD bindings.
+ * Operates on 16kHz mono audio streams.
+ * If model weights are absent, explicitly logs `active_vad = ENERGY_FALLBACK`
+ * and delegates to EnergyVadEngine.
  */
 class NeuralVadEngine(
     private val context: Context? = null,
     private val modelFile: File? = null,
-    private val threshold: Float = 0.5f
+    private val threshold: Float = 0.5f,
+    private val numThreads: Int = 2
 ) : VadEngine {
 
     companion object {
@@ -20,18 +26,15 @@ class NeuralVadEngine(
         private const val SILERO_FRAME_SIZE = 512 // 32ms at 16kHz
     }
 
-    override val name: String get() = if (isModelLoaded) "NeuralVAD (Silero)" else "NeuralVAD (Fallback Energy)"
+    override val name: String get() = if (isModelLoaded) "NeuralVAD (Silero ONNX Native)" else "NeuralVAD (ENERGY_FALLBACK)"
     override val isNeural: Boolean get() = isModelLoaded
 
     var isModelLoaded: Boolean = false
         private set
 
+    private var nativeVad: Vad? = null
     private val fallbackEngine = EnergyVadEngine(speechProbabilityThreshold = threshold)
     private var currentProb: Float = 0.0f
-
-    // Silero VAD state buffers
-    private var hState: FloatArray? = null
-    private var cState: FloatArray? = null
 
     init {
         initModel()
@@ -42,70 +45,72 @@ class NeuralVadEngine(
             val target = modelFile ?: run {
                 context?.let { ctx ->
                     val file = File(ctx.filesDir, "models/$MODEL_FILENAME")
-                    if (file.exists()) file else null
+                    if (file.exists() && file.length() > 0) file else null
                 }
             }
 
             if (target != null && target.exists() && target.length() > 0) {
-                safeLog("Loading Silero VAD ONNX model from: ${target.absolutePath}")
-                // Model asset present; initialize hidden states
-                hState = FloatArray(2 * 1 * 64) { 0.0f }
-                cState = FloatArray(2 * 1 * 64) { 0.0f }
+                safeLog("Loading native Silero VAD ONNX model from: ${target.absolutePath} (${target.length()} bytes)")
+
+                val sileroConfig = SileroVadModelConfig(
+                    model = target.absolutePath,
+                    threshold = threshold,
+                    minSilenceDuration = 0.5f,
+                    minSpeechDuration = 0.25f,
+                    windowSize = SILERO_FRAME_SIZE,
+                    maxSpeechDuration = 30.0f
+                )
+                val config = VadModelConfig(
+                    sileroVadModelConfig = sileroConfig,
+                    sampleRate = 16000,
+                    numThreads = numThreads,
+                    provider = "cpu",
+                    debug = false
+                )
+
+                nativeVad?.release()
+                nativeVad = Vad(assetManager = null, config = config)
                 isModelLoaded = true
+                safeLog("Native Silero VAD successfully initialized: active_vad = SILERO_ONNX_NATIVE")
             } else {
-                safeLog("Silero VAD model ($MODEL_FILENAME) not found; using Adaptive Energy fallback.")
+                safeLog("Silero VAD model ($MODEL_FILENAME) not found; active_vad = ENERGY_FALLBACK")
                 isModelLoaded = false
             }
         } catch (e: Throwable) {
-            safeLog("Failed to load Neural VAD model: ${e.message}; using Energy fallback.")
+            safeLog("Failed to initialize native Silero VAD: ${e.message}; active_vad = ENERGY_FALLBACK")
             isModelLoaded = false
         }
     }
 
     override fun process(pcmChunk: FloatArray): Boolean {
-        if (!isModelLoaded) {
+        if (!isModelLoaded || nativeVad == null) {
             val detected = fallbackEngine.process(pcmChunk)
             currentProb = fallbackEngine.getSpeechProbability()
             return detected
         }
 
         return try {
-            // For neural model, frame chunk into 512-sample windows
-            if (pcmChunk.size < SILERO_FRAME_SIZE) {
-                val detected = fallbackEngine.process(pcmChunk)
-                currentProb = fallbackEngine.getSpeechProbability()
-                return detected
-            }
-
-            var maxFrameProb = 0.0f
+            val vad = nativeVad!!
+            // Frame into 512-sample slices
+            var maxProb = 0.0f
             var offset = 0
             while (offset + SILERO_FRAME_SIZE <= pcmChunk.size) {
-                val frameProb = inferFrame(pcmChunk, offset, SILERO_FRAME_SIZE)
-                if (frameProb > maxFrameProb) {
-                    maxFrameProb = frameProb
+                val slice = FloatArray(SILERO_FRAME_SIZE) { pcmChunk[offset + it] }
+                val prob = vad.compute(slice)
+                if (prob > maxProb) {
+                    maxProb = prob
                 }
                 offset += SILERO_FRAME_SIZE
             }
 
-            currentProb = maxFrameProb
-            currentProb >= threshold
+            currentProb = maxProb
+            vad.isSpeechDetected() || currentProb >= threshold
         } catch (e: Throwable) {
-            safeLog("Error during neural VAD inference: ${e.message}; delegating to fallback.")
+            safeLog("Error during native VAD compute: ${e.message}; falling back to EnergyVadEngine")
             val detected = fallbackEngine.process(pcmChunk)
             currentProb = fallbackEngine.getSpeechProbability()
             detected
         }
-    }
-
-    private fun inferFrame(samples: FloatArray, offset: Int, length: Int): Float {
-        // Fallback simulation/heuristic if ONNX session runtime is detached
-        var sumSquare = 0.0
-        for (i in 0 until length) {
-            val s = samples[offset + i]
-            sumSquare += (s * s)
-        }
-        val rms = kotlin.math.sqrt(sumSquare / length)
-        return (rms * 15.0f).toFloat().coerceIn(0.0f, 1.0f)
     }
 
     override fun getSpeechProbability(): Float = currentProb
@@ -113,13 +118,18 @@ class NeuralVadEngine(
     override fun reset() {
         fallbackEngine.reset()
         currentProb = 0.0f
-        hState?.fill(0.0f)
-        cState?.fill(0.0f)
+        try {
+            nativeVad?.reset()
+        } catch (_: Throwable) {}
     }
 
     override fun release() {
         reset()
         fallbackEngine.release()
+        try {
+            nativeVad?.release()
+        } catch (_: Throwable) {}
+        nativeVad = null
         isModelLoaded = false
     }
 
