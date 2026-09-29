@@ -65,6 +65,10 @@ data class SafetyEvidence(
     val acousticQuality: AcousticQuality = AcousticQuality(),
     val parserStatus: ParserStatus = ParserStatus.UNKNOWN,
     val criticalEntitiesStatus: EvidenceStatus = EvidenceStatus.UNKNOWN,
+    val entityValidation: CriticalEntityValidationResult? = null,
+    val boundTranscript: String = "",
+    val transcriptVersion: Long = 0L,
+    val speakerEnrollmentVersion: Long = 0L,
     val unresolvedAmbiguities: List<String> = emptyList(),
     val criticalErrors: List<String> = emptyList()
 )
@@ -92,7 +96,10 @@ data class SafetyGateDecision(
     val reasons: List<String>,
     val autofillAllowed: Boolean,
     val criticalErrorCount: Int,
-    val mode: SafetyGateMode = SafetyGateMode.PRODUCTION
+    val mode: SafetyGateMode = SafetyGateMode.PRODUCTION,
+    val boundTranscript: String = "",
+    val transcriptVersion: Long = 0L,
+    val speakerEnrollmentVersion: Long = 0L
 )
 
 /**
@@ -127,11 +134,47 @@ class SafetyGate(
                 reasons = reasons,
                 autofillAllowed = false,
                 criticalErrorCount = criticalCount,
-                mode = SafetyGateMode.PRODUCTION
+                mode = SafetyGateMode.PRODUCTION,
+                boundTranscript = evidence.boundTranscript,
+                transcriptVersion = evidence.transcriptVersion,
+                speakerEnrollmentVersion = evidence.speakerEnrollmentVersion
             )
         }
 
-        // 1b. Critical entity status invalid
+        // 1b. Ambiguous entities rejected (A5)
+        if (evidence.entityValidation?.hasAmbiguousEntities == true) {
+            criticalCount++
+            reasons.add("Critical Entity Status REJECTED: Phát hiện thực thể mơ hồ (CertaintyLevel.AMBIGUOUS)")
+            reasons.addAll(evidence.entityValidation.criticalErrors)
+            return SafetyGateDecision(
+                status = SafetyGateStatus.REJECTED,
+                safetyScore = 0.0f,
+                reasons = reasons,
+                autofillAllowed = false,
+                criticalErrorCount = criticalCount,
+                mode = SafetyGateMode.PRODUCTION,
+                boundTranscript = evidence.boundTranscript,
+                transcriptVersion = evidence.transcriptVersion,
+                speakerEnrollmentVersion = evidence.speakerEnrollmentVersion
+            )
+        }
+
+        // 1c. Validator not executed or UNKNOWN entity validation (A6, A7)
+        if (evidence.entityValidation != null && !evidence.entityValidation.validatorExecuted) {
+            return SafetyGateDecision(
+                status = SafetyGateStatus.REJECTED,
+                safetyScore = 0.0f,
+                reasons = listOf("Critical Entity Validator Error: Validator was not executed"),
+                autofillAllowed = false,
+                criticalErrorCount = 1,
+                mode = SafetyGateMode.PRODUCTION,
+                boundTranscript = evidence.boundTranscript,
+                transcriptVersion = evidence.transcriptVersion,
+                speakerEnrollmentVersion = evidence.speakerEnrollmentVersion
+            )
+        }
+
+        // 1d. Critical entity status invalid
         if (evidence.criticalEntitiesStatus == EvidenceStatus.INVALID) {
             criticalCount++
             reasons.add("Critical Entity Status INVALID: Mismatch in dimensions, spine levels, or laterality")
@@ -141,11 +184,14 @@ class SafetyGate(
                 reasons = reasons,
                 autofillAllowed = false,
                 criticalErrorCount = criticalCount,
-                mode = SafetyGateMode.PRODUCTION
+                mode = SafetyGateMode.PRODUCTION,
+                boundTranscript = evidence.boundTranscript,
+                transcriptVersion = evidence.transcriptVersion,
+                speakerEnrollmentVersion = evidence.speakerEnrollmentVersion
             )
         }
 
-        // 1c. Unauthorized speaker rejected
+        // 1e. Unauthorized speaker rejected
         if (evidence.speakerState == SpeakerState.REJECTED) {
             reasons.add("Voice Lock: Speaker rejected as unauthorized background voice")
             return SafetyGateDecision(
@@ -154,11 +200,14 @@ class SafetyGate(
                 reasons = reasons,
                 autofillAllowed = false,
                 criticalErrorCount = 0,
-                mode = SafetyGateMode.PRODUCTION
+                mode = SafetyGateMode.PRODUCTION,
+                boundTranscript = evidence.boundTranscript,
+                transcriptVersion = evidence.transcriptVersion,
+                speakerEnrollmentVersion = evidence.speakerEnrollmentVersion
             )
         }
 
-        // 1d. Syntax or parser crash
+        // 1f. Syntax or parser crash
         if (evidence.parserStatus == ParserStatus.SYNTAX_ERROR) {
             criticalCount++
             reasons.add("Parser Syntax Error: Malformed clinical entity structure")
@@ -168,11 +217,14 @@ class SafetyGate(
                 reasons = reasons,
                 autofillAllowed = false,
                 criticalErrorCount = criticalCount,
-                mode = SafetyGateMode.PRODUCTION
+                mode = SafetyGateMode.PRODUCTION,
+                boundTranscript = evidence.boundTranscript,
+                transcriptVersion = evidence.transcriptVersion,
+                speakerEnrollmentVersion = evidence.speakerEnrollmentVersion
             )
         }
 
-        // 1e. Audio clipping / corrupted signal
+        // 1g. Audio clipping / corrupted signal
         if (evidence.acousticQuality.clippingDetected) {
             reasons.add("Audio Signal Corrupted: Clipping detected during dictation")
             return SafetyGateDecision(
@@ -181,11 +233,14 @@ class SafetyGate(
                 reasons = reasons,
                 autofillAllowed = false,
                 criticalErrorCount = 0,
-                mode = SafetyGateMode.PRODUCTION
+                mode = SafetyGateMode.PRODUCTION,
+                boundTranscript = evidence.boundTranscript,
+                transcriptVersion = evidence.transcriptVersion,
+                speakerEnrollmentVersion = evidence.speakerEnrollmentVersion
             )
         }
 
-        // 1f. Missing required safety evidence (FAIL-CLOSED: Unknown critical entities cannot autofill)
+        // 1h. Missing required safety evidence (FAIL-CLOSED: Unknown critical entities cannot autofill)
         if (evidence.criticalEntitiesStatus == EvidenceStatus.UNKNOWN) {
             reasons.add("Missing Required Evidence: Critical entity validation status is UNKNOWN")
             return SafetyGateDecision(
@@ -194,12 +249,21 @@ class SafetyGate(
                 reasons = reasons,
                 autofillAllowed = false,
                 criticalErrorCount = 0,
-                mode = SafetyGateMode.PRODUCTION
+                mode = SafetyGateMode.PRODUCTION,
+                boundTranscript = evidence.boundTranscript,
+                transcriptVersion = evidence.transcriptVersion,
+                speakerEnrollmentVersion = evidence.speakerEnrollmentVersion
             )
         }
 
         // 2. REVIEW_REQUIRED CONDITIONS
         val reviewReasons = mutableListOf<String>()
+
+        // 2a. Inferred critical entities (A5: INFERRED -> REVIEW_REQUIRED)
+        if (evidence.entityValidation?.hasInferredCriticalEntities == true) {
+            reviewReasons.add("Critical Entity Inferred: Đơn vị lâm sàng được suy diễn từ ngữ cảnh (CertaintyLevel.INFERRED, yêu cầu bác sĩ xác nhận)")
+            reviewReasons.addAll(evidence.entityValidation.reviewReasons)
+        }
 
         if (evidence.speakerState == SpeakerState.UNCERTAIN) {
             reviewReasons.add("Speaker Verification Uncertain: Acoustic similarity near boundary")
@@ -236,7 +300,10 @@ class SafetyGate(
                 reasons = reviewReasons,
                 autofillAllowed = false,
                 criticalErrorCount = 0,
-                mode = SafetyGateMode.PRODUCTION
+                mode = SafetyGateMode.PRODUCTION,
+                boundTranscript = evidence.boundTranscript,
+                transcriptVersion = evidence.transcriptVersion,
+                speakerEnrollmentVersion = evidence.speakerEnrollmentVersion
             )
         }
 
@@ -247,7 +314,10 @@ class SafetyGate(
             reasons = listOf("All clinical safety evidence validated: speaker accepted, entities confirmed clean, optimal acoustics"),
             autofillAllowed = true,
             criticalErrorCount = 0,
-            mode = SafetyGateMode.PRODUCTION
+            mode = SafetyGateMode.PRODUCTION,
+            boundTranscript = evidence.boundTranscript,
+            transcriptVersion = evidence.transcriptVersion,
+            speakerEnrollmentVersion = evidence.speakerEnrollmentVersion
         )
     }
 
@@ -261,6 +331,9 @@ class SafetyGate(
         evidence: SafetyEvidence? = null
     ): SafetyGateDecision {
         val reasons = mutableListOf<String>()
+        val boundTranscript = evidence?.boundTranscript ?: ""
+        val transcriptVersion = evidence?.transcriptVersion ?: 0L
+        val speakerEnrollmentVersion = evidence?.speakerEnrollmentVersion ?: 0L
 
         // Fail-Closed: Missing benchmark report cannot be SAFE
         if (report == null) {
@@ -270,7 +343,10 @@ class SafetyGate(
                 reasons = listOf("Missing EvaluationReport: Benchmark evaluation requires ground-truth comparison"),
                 autofillAllowed = false,
                 criticalErrorCount = 0,
-                mode = SafetyGateMode.BENCHMARK
+                mode = SafetyGateMode.BENCHMARK,
+                boundTranscript = boundTranscript,
+                transcriptVersion = transcriptVersion,
+                speakerEnrollmentVersion = speakerEnrollmentVersion
             )
         }
 
@@ -282,7 +358,10 @@ class SafetyGate(
                 reasons = listOf("Voice Lock: Speaker rejected as unauthorized background voice"),
                 autofillAllowed = false,
                 criticalErrorCount = 0,
-                mode = SafetyGateMode.BENCHMARK
+                mode = SafetyGateMode.BENCHMARK,
+                boundTranscript = boundTranscript,
+                transcriptVersion = transcriptVersion,
+                speakerEnrollmentVersion = speakerEnrollmentVersion
             )
         }
 
@@ -316,7 +395,10 @@ class SafetyGate(
                 reasons = reasons,
                 autofillAllowed = false,
                 criticalErrorCount = criticalCount,
-                mode = SafetyGateMode.BENCHMARK
+                mode = SafetyGateMode.BENCHMARK,
+                boundTranscript = boundTranscript,
+                transcriptVersion = transcriptVersion,
+                speakerEnrollmentVersion = speakerEnrollmentVersion
             )
         }
 
@@ -330,7 +412,10 @@ class SafetyGate(
                 reasons = reasons,
                 autofillAllowed = false,
                 criticalErrorCount = 0,
-                mode = SafetyGateMode.BENCHMARK
+                mode = SafetyGateMode.BENCHMARK,
+                boundTranscript = boundTranscript,
+                transcriptVersion = transcriptVersion,
+                speakerEnrollmentVersion = speakerEnrollmentVersion
             )
         }
 
@@ -342,7 +427,10 @@ class SafetyGate(
                 reasons = reasons,
                 autofillAllowed = false,
                 criticalErrorCount = 0,
-                mode = SafetyGateMode.BENCHMARK
+                mode = SafetyGateMode.BENCHMARK,
+                boundTranscript = boundTranscript,
+                transcriptVersion = transcriptVersion,
+                speakerEnrollmentVersion = speakerEnrollmentVersion
             )
         }
 
@@ -352,7 +440,10 @@ class SafetyGate(
             reasons = listOf("Zero critical errors, CER within tolerance (${(cer * 1000).toInt() / 10.0}%)"),
             autofillAllowed = true,
             criticalErrorCount = 0,
-            mode = SafetyGateMode.BENCHMARK
+            mode = SafetyGateMode.BENCHMARK,
+            boundTranscript = boundTranscript,
+            transcriptVersion = transcriptVersion,
+            speakerEnrollmentVersion = speakerEnrollmentVersion
         )
     }
 

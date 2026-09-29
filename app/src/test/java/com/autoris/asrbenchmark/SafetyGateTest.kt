@@ -3,8 +3,11 @@ package com.autoris.asrbenchmark
 import com.autoris.asrbenchmark.audio.VoiceLockResult
 import com.autoris.asrbenchmark.audio.VoiceLockState
 import com.autoris.asrbenchmark.benchmark.EvaluationReport
+import com.autoris.asrbenchmark.normalizer.MedicalTextNormalizer
 import com.autoris.asrbenchmark.safety.AcousticQuality
 import com.autoris.asrbenchmark.safety.AcousticQualityLevel
+import com.autoris.asrbenchmark.safety.CriticalEntityValidationResult
+import com.autoris.asrbenchmark.safety.CriticalEntityValidator
 import com.autoris.asrbenchmark.safety.EvidenceStatus
 import com.autoris.asrbenchmark.safety.ParserStatus
 import com.autoris.asrbenchmark.safety.SafetyEvidence
@@ -265,5 +268,156 @@ class SafetyGateTest {
         val decision = gate.evaluate(report = null)
         assertEquals(SafetyGateStatus.REJECTED, decision.status)
         assertFalse(decision.autofillAllowed)
+    }
+
+    // =========================================================================
+    // PHASE A AUDIT HARDENING TESTS
+    // =========================================================================
+
+    @Test
+    fun testProductionInferredEntityRequiresReview() {
+        // A5: INFERRED critical entities must evaluate to REVIEW_REQUIRED, never SAFE_TO_AUTOFILL
+        val entityResult = CriticalEntityValidationResult(
+            status = EvidenceStatus.VALID,
+            validatorExecuted = true,
+            hasInferredCriticalEntities = true,
+            hasAmbiguousEntities = false,
+            reviewReasons = listOf("Số đo suy diễn đơn vị lâm sàng: 15 mm")
+        )
+        val evidence = SafetyEvidence(
+            speakerState = SpeakerState.ACCEPTED,
+            transcriptConfidence = 0.95f,
+            acousticQuality = AcousticQuality(level = AcousticQualityLevel.OPTIMAL),
+            parserStatus = ParserStatus.CONFIRMED_CLEAN,
+            criticalEntitiesStatus = EvidenceStatus.VALID,
+            entityValidation = entityResult
+        )
+
+        val decision = gate.evaluateProduction(evidence)
+        assertEquals(SafetyGateStatus.REVIEW_REQUIRED, decision.status)
+        assertFalse(decision.autofillAllowed)
+        assertTrue(decision.reasons.any { it.contains("CertaintyLevel.INFERRED") })
+    }
+
+    @Test
+    fun testProductionAmbiguousEntityRejected() {
+        // A5: AMBIGUOUS critical entities must evaluate to REJECTED
+        val entityResult = CriticalEntityValidationResult(
+            status = EvidenceStatus.INVALID,
+            validatorExecuted = true,
+            hasInferredCriticalEntities = false,
+            hasAmbiguousEntities = true,
+            criticalErrors = listOf("Số đo thiếu đơn vị lâm sàng: 15")
+        )
+        val evidence = SafetyEvidence(
+            speakerState = SpeakerState.ACCEPTED,
+            transcriptConfidence = 0.95f,
+            acousticQuality = AcousticQuality(level = AcousticQualityLevel.OPTIMAL),
+            parserStatus = ParserStatus.HAS_AMBIGUITY,
+            criticalEntitiesStatus = EvidenceStatus.INVALID,
+            entityValidation = entityResult
+        )
+
+        val decision = gate.evaluateProduction(evidence)
+        assertEquals(SafetyGateStatus.REJECTED, decision.status)
+        assertFalse(decision.autofillAllowed)
+        assertTrue(decision.reasons.any { it.contains("CertaintyLevel.AMBIGUOUS") })
+    }
+
+    @Test
+    fun testProductionUnexecutedValidatorRejected() {
+        // A7: Unexecuted validator must FAIL-CLOSED
+        val entityResult = CriticalEntityValidationResult(
+            status = EvidenceStatus.UNKNOWN,
+            validatorExecuted = false
+        )
+        val evidence = SafetyEvidence(
+            speakerState = SpeakerState.ACCEPTED,
+            transcriptConfidence = 0.95f,
+            acousticQuality = AcousticQuality(level = AcousticQualityLevel.OPTIMAL),
+            criticalEntitiesStatus = EvidenceStatus.VALID,
+            entityValidation = entityResult
+        )
+
+        val decision = gate.evaluateProduction(evidence)
+        assertEquals(SafetyGateStatus.REJECTED, decision.status)
+        assertFalse(decision.autofillAllowed)
+        assertTrue(decision.reasons.any { it.contains("Validator was not executed") })
+    }
+
+    @Test
+    fun testProductionAcousticUnknownRequiresReview() {
+        // A6: Acoustic quality UNKNOWN must NOT result in SAFE
+        val evidence = SafetyEvidence(
+            speakerState = SpeakerState.ACCEPTED,
+            transcriptConfidence = 0.95f,
+            acousticQuality = AcousticQuality(level = AcousticQualityLevel.UNKNOWN),
+            parserStatus = ParserStatus.CONFIRMED_CLEAN,
+            criticalEntitiesStatus = EvidenceStatus.VALID
+        )
+
+        val decision = gate.evaluateProduction(evidence)
+        assertEquals(SafetyGateStatus.REVIEW_REQUIRED, decision.status)
+        assertFalse(decision.autofillAllowed)
+        assertTrue(decision.reasons.any { it.contains("Acoustic Environment UNKNOWN") })
+    }
+
+    @Test
+    fun testProductionParserUnknownRequiresReview() {
+        // A6: Parser status UNKNOWN must NOT result in SAFE
+        val evidence = SafetyEvidence(
+            speakerState = SpeakerState.ACCEPTED,
+            transcriptConfidence = 0.95f,
+            acousticQuality = AcousticQuality(level = AcousticQualityLevel.OPTIMAL),
+            parserStatus = ParserStatus.UNKNOWN,
+            criticalEntitiesStatus = EvidenceStatus.VALID
+        )
+
+        val decision = gate.evaluateProduction(evidence)
+        assertEquals(SafetyGateStatus.REVIEW_REQUIRED, decision.status)
+        assertFalse(decision.autofillAllowed)
+        assertTrue(decision.reasons.any { it.contains("Parser Status UNKNOWN") })
+    }
+
+    @Test
+    fun testVersionTokenBindingPreservedInDecision() {
+        // A4: Bound text and version tokens must be preserved in SafetyGateDecision
+        val evidence = SafetyEvidence(
+            speakerState = SpeakerState.ACCEPTED,
+            transcriptConfidence = 0.95f,
+            acousticQuality = AcousticQuality(level = AcousticQualityLevel.OPTIMAL),
+            parserStatus = ParserStatus.CONFIRMED_CLEAN,
+            criticalEntitiesStatus = EvidenceStatus.VALID,
+            boundTranscript = "Dày thành môn vị 21 mm",
+            transcriptVersion = 42L,
+            speakerEnrollmentVersion = 7L
+        )
+
+        val decision = gate.evaluateProduction(evidence)
+        assertEquals(SafetyGateStatus.SAFE_TO_AUTOFILL, decision.status)
+        assertEquals("Dày thành môn vị 21 mm", decision.boundTranscript)
+        assertEquals(42L, decision.transcriptVersion)
+        assertEquals(7L, decision.speakerEnrollmentVersion)
+    }
+
+    @Test
+    fun testCriticalEntityValidatorWithInferredMeasurement() {
+        val norm = MedicalTextNormalizer.process("đường kính 15")
+        val validation = CriticalEntityValidator.validate(norm)
+
+        assertTrue("Should detect inferred unit", validation.hasInferredCriticalEntities)
+        assertFalse("Should not be ambiguous when inferred", validation.hasAmbiguousEntities)
+        assertEquals(EvidenceStatus.VALID, validation.status)
+        assertTrue(validation.reviewReasons.isNotEmpty())
+    }
+
+    @Test
+    fun testCriticalEntityValidatorWithAmbiguousMeasurement() {
+        val norm = MedicalTextNormalizer.process("nốt đặc 15")
+        val validation = CriticalEntityValidator.validate(norm)
+
+        assertTrue("Isolated number without context must be ambiguous", validation.hasAmbiguousEntities)
+        assertEquals(EvidenceStatus.INVALID, validation.status)
+        assertTrue(validation.criticalErrors.isNotEmpty())
     }
 }

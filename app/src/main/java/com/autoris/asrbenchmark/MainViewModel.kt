@@ -44,6 +44,7 @@ import com.autoris.asrbenchmark.safety.SafetyGate
 import com.autoris.asrbenchmark.safety.SafetyGateDecision
 import com.autoris.asrbenchmark.safety.SafetyGateStatus
 import com.autoris.asrbenchmark.safety.SpeakerState
+import com.autoris.asrbenchmark.safety.CriticalEntityValidator
 import com.autoris.asrbenchmark.normalizer.CertaintyLevel
 import com.autoris.asrbenchmark.vad.VadConfig
 import com.autoris.asrbenchmark.vad.VadState
@@ -208,12 +209,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _voiceLockState = MutableStateFlow(VoiceLockState.ACCEPT)
     val voiceLockState: StateFlow<VoiceLockState> = _voiceLockState.asStateFlow()
 
+    // Decision versioning tokens for immutable safety binding (Phase A4)
+    var currentTranscriptVersion: Long = 0L
+        private set
+    var currentSpeakerEnrollmentVersion: Long = 0L
+        private set
+
+    // Invalidate safety gate decision helper (Phase A2)
+    fun invalidateSafetyDecision(reason: String) {
+        _safetyGateDecision.value = null
+        Log.d(TAG, "Safety decision invalidated: $reason")
+    }
+
     // Mode Separation: Clinical Safe Mode vs Benchmark Mode
     private val _operatingMode = MutableStateFlow(AppOperatingMode.CLINICAL_SAFE)
     val operatingMode: StateFlow<AppOperatingMode> = _operatingMode.asStateFlow()
 
     fun setOperatingMode(mode: AppOperatingMode) {
         _operatingMode.value = mode
+        invalidateSafetyDecision("Operating mode changed to $mode")
         recomputeSafetyGate()
     }
 
@@ -223,18 +237,47 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun exportToRis(): Boolean {
         val decision = _safetyGateDecision.value
-        if (decision?.status == SafetyGateStatus.REJECTED) {
+        val currentText = _finalTranscript.value.ifBlank { _livePartial.value }
+
+        if (decision == null) {
+            _statusMessage.value = "Từ chối gửi RIS: Chưa có kết quả đánh giá an toàn hợp lệ!"
+            return false
+        }
+
+        // A4: Validate version tokens and bound text
+        if (decision.boundTranscript != currentText ||
+            decision.transcriptVersion != currentTranscriptVersion ||
+            decision.speakerEnrollmentVersion != currentSpeakerEnrollmentVersion ||
+            currentText.isBlank()
+        ) {
+            _statusMessage.value = "Từ chối gửi RIS: Kết quả đánh giá an toàn đã hết hạn (văn bản hoặc cấu hình đã thay đổi)!"
+            return false
+        }
+
+        // A1: Fail-closed gate: ONLY SAFE_TO_AUTOFILL + autofillAllowed == true
+        if (decision.status == SafetyGateStatus.REJECTED) {
             _statusMessage.value = "Từ chối gửi RIS: Kết quả bị khoá an toàn do có vi phạm nguy hiểm!"
             return false
         }
+
+        if (decision.status == SafetyGateStatus.REVIEW_REQUIRED || !decision.autofillAllowed) {
+            _statusMessage.value = "Từ chối gửi RIS: Bản ghi yêu cầu bác sĩ CĐHA kiểm tra và xác nhận thủ công trước khi đẩy vào RIS/PACS."
+            return false
+        }
+
+        if (decision.status != SafetyGateStatus.SAFE_TO_AUTOFILL) {
+            _statusMessage.value = "Từ chối gửi RIS: Trạng thái an toàn không hợp lệ (${decision.status})."
+            return false
+        }
+
         _statusMessage.value = "Đã gửi bản tường trình sang hệ thống RIS/PACS thành công!"
         return true
     }
 
     fun recomputeSafetyGate() {
-        val norm = _normalizedResult.value ?: return
+        val norm = _normalizedResult.value
         val text = _finalTranscript.value.ifBlank { _livePartial.value }
-        if (text.isBlank()) {
+        if (text.isBlank() || norm == null) {
             _safetyGateDecision.value = null
             return
         }
@@ -252,33 +295,35 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             else -> AcousticQualityLevel.ACCEPTABLE
         }
 
-        val hasAmbiguity = norm.hasAmbiguityOrConflict || norm.measurements.any { it.certainty == CertaintyLevel.AMBIGUOUS }
-        val parserStatus = if (hasAmbiguity) ParserStatus.HAS_AMBIGUITY else ParserStatus.CONFIRMED_CLEAN
+        // A7: Explicit structured entity validation
+        val entityValidation = CriticalEntityValidator.validate(norm)
 
-        val criticalErrors = mutableListOf<String>()
-        val unresolved = mutableListOf<String>()
+        val parserStatus = when {
+            entityValidation.status == EvidenceStatus.INVALID -> ParserStatus.SYNTAX_ERROR
+            entityValidation.hasAmbiguousEntities -> ParserStatus.HAS_AMBIGUITY
+            norm.hasAmbiguityOrConflict -> ParserStatus.HAS_AMBIGUITY
+            else -> ParserStatus.CONFIRMED_CLEAN
+        }
 
-        if (norm.lateralities.any { it.isContradictory }) {
-            criticalErrors.add("Mâu thuẫn định vị bên (phải/trái)")
-        }
-        for (m in norm.measurements) {
-            if (m.certainty == CertaintyLevel.AMBIGUOUS) {
-                unresolved.add("Số đo ${m.raw} thiếu đơn vị lâm sàng (mm/cm)")
-            }
-        }
+        // A3: No fake confidence score. null evaluates to REVIEW_REQUIRED
+        val asrConfidence: Float? = null
 
         val evidence = SafetyEvidence(
             speakerState = speakerState,
-            transcriptConfidence = 0.95f,
+            transcriptConfidence = asrConfidence,
             acousticQuality = AcousticQuality(
                 level = acousticLevel,
                 snrDb = _noiseProfile.value.snrDb,
                 noiseFloorDb = _noiseProfile.value.noiseFloorDb
             ),
             parserStatus = parserStatus,
-            criticalEntitiesStatus = if (criticalErrors.isNotEmpty()) EvidenceStatus.INVALID else EvidenceStatus.VALID,
-            unresolvedAmbiguities = unresolved,
-            criticalErrors = criticalErrors
+            criticalEntitiesStatus = entityValidation.status,
+            entityValidation = entityValidation,
+            boundTranscript = text,
+            transcriptVersion = currentTranscriptVersion,
+            speakerEnrollmentVersion = currentSpeakerEnrollmentVersion,
+            unresolvedAmbiguities = entityValidation.reviewReasons,
+            criticalErrors = entityValidation.criticalErrors
         )
 
         val decision = if (_operatingMode.value == AppOperatingMode.CLINICAL_SAFE) {
@@ -338,11 +383,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun setRoomConfig(roomId: String, roomType: String) {
         _roomId.value = roomId
         _roomType.value = roomType
+        invalidateSafetyDecision("Room config changed: $roomId")
+        recomputeSafetyGate()
     }
 
     fun setNoiseConfig(noiseType: String, noiseLevel: String) {
         _noiseType.value = noiseType
         _noiseLevel.value = noiseLevel
+        invalidateSafetyDecision("Noise config changed: $noiseType, $noiseLevel")
+        recomputeSafetyGate()
     }
 
     fun setSpeakerDistanceCm(cm: Int) {
@@ -355,10 +404,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setPreprocessingProfile(profile: String) {
         _preprocessingProfile.value = profile
+        invalidateSafetyDecision("Preprocessing profile changed: $profile")
+        recomputeSafetyGate()
     }
 
     fun setSpeakerLockEnabled(enabled: Boolean) {
         _speakerLockEnabled.value = enabled
+        invalidateSafetyDecision("Speaker lock setting changed: $enabled")
+        recomputeSafetyGate()
     }
 
     // Biometric Speaker Verifier (Fail-closed Voice Lock)
@@ -366,12 +419,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun clearSpeakerEnrollment() {
         speakerVerifier.clearEnrollment()
+        currentSpeakerEnrollmentVersion++
         _voiceLockState.value = VoiceLockState.ACCEPT
         _voiceLockConfidence.value = 1.0f
+        invalidateSafetyDecision("Speaker enrollment cleared")
+        recomputeSafetyGate()
     }
 
     fun enrollSpeakerUtterances(utterances: List<FloatArray>): com.autoris.asrbenchmark.audio.EnrollmentQualityResult {
-        return speakerVerifier.enroll(utterances)
+        val result = speakerVerifier.enroll(utterances)
+        if (result.isValid) {
+            currentSpeakerEnrollmentVersion++
+            invalidateSafetyDecision("Speaker utterances enrolled")
+            recomputeSafetyGate()
+        }
+        return result
     }
 
     // Timings
@@ -434,6 +496,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun selectModel(type: ASRModelType) {
         if (_selectedModelType.value == type && asrEngine.isReady) return
+        invalidateSafetyDecision("Model changed to $type")
         _selectedModelType.value = type
         prefs.edit().putString("selected_model_type", type.id).apply()
         resetTest()
@@ -500,6 +563,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         // Reset display
+        currentTranscriptVersion++
+        invalidateSafetyDecision("Recording started")
         _livePartial.value = ""
         _finalTranscript.value = ""
         _normalizedResult.value = null
@@ -531,6 +596,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             },
             onPartialResult = { partial, firstLatencyMs ->
                 viewModelScope.launch(Dispatchers.Main) {
+                    currentTranscriptVersion++
                     _livePartial.value = partial
                     _finalTranscript.value = partial
                     val norm = MedicalTextNormalizer.process(partial)
@@ -588,6 +654,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun stopRecording() {
         stopRequestedTimeNs = SystemClock.elapsedRealtimeNanos()
+        invalidateSafetyDecision("Recording stop requested")
         _statusMessage.value = "Đang chốt kết quả và lưu..."
         val manager = audioRecorderManager ?: return
         viewModelScope.launch(Dispatchers.Default) {
@@ -607,6 +674,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             maxOf(totalProcMs, 150L)
         }
 
+        currentTranscriptVersion++
         _finalTranscript.value = finalText
 
         // Compute RTF
@@ -879,11 +947,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun resetTest() {
         audioRecorderManager?.stopRecording()
+        currentTranscriptVersion++
         _livePartial.value = ""
         _finalTranscript.value = ""
         _normalizedResult.value = null
         _evaluationReport.value = null
-        _safetyGateDecision.value = null
+        invalidateSafetyDecision("Test reset")
         _metrics.value = UiBenchmarkMetrics()
         _statusMessage.value = "Sẵn sàng"
     }
