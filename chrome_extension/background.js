@@ -89,9 +89,11 @@ function broadcastDictationToRISTabs(dictationItem) {
     for (const tab of tabs) {
       if (!tab.url) continue;
       const url = tab.url.toLowerCase();
-      // Nhận diện tab RIS (192.168.50.105 hoặc url chứa ris/report)
+      // Nhận diện tab RIS (192.168.50.105, pacs.benhviendaihocyhanoi.com hoặc url chứa ris/report)
       const isTarget = url.includes("192.168.50.105") ||
+                       url.includes("benhviendaihocyhanoi.com") ||
                        url.includes("192.168.50.110") ||
+                       url.includes("study/reading") ||
                        url.includes("ris") ||
                        url.includes("diagnosis") ||
                        url.includes("report");
