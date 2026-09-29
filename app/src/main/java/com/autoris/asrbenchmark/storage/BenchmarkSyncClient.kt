@@ -85,7 +85,8 @@ object BenchmarkSyncClient {
         }
 
         try {
-            val normalizedUrl = serverUrl.trimEnd('/') + "/api/benchmark/upload_audio?id=$sessionId&filename=${audioFile.name}"
+            val encodedName = java.net.URLEncoder.encode(audioFile.name, "UTF-8")
+            val normalizedUrl = serverUrl.trimEnd('/') + "/api/benchmark/upload_audio?id=$sessionId&filename=$encodedName"
             val url = URL(normalizedUrl)
 
             val connection = (url.openConnection() as HttpURLConnection).apply {

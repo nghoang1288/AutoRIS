@@ -171,44 +171,50 @@ class SpectralEmbeddingSpeakerVerifier(
         val embedding = FloatArray(EMBEDDING_DIM) { 0.0f }
         if (samples.size < 160) return embedding
 
-        // 1. Total energy
-        var totalEnergy = 0.0
+        val sampleCount = samples.size
+        val windowSize = min(sampleCount, 3200) // Consistent 200ms analysis window
+
+        // 1. Total energy over analysis window
+        var windowEnergy = 0.0
         var zeroCrossings = 0
-        for (i in samples.indices) {
+        for (i in 0 until windowSize) {
             val s = samples[i].toDouble()
-            totalEnergy += (s * s)
+            windowEnergy += (s * s)
             if (i > 0 && ((samples[i] >= 0f && samples[i - 1] < 0f) || (samples[i] < 0f && samples[i - 1] >= 0f))) {
                 zeroCrossings++
             }
         }
-        if (totalEnergy < 1e-9) return embedding
+        if (windowEnergy < 1e-9) return embedding
 
-        val sampleCount = samples.size
         // 2. Short-time autocorrelation lags (1..64) -> vocal tract formant envelope
         for (tau in 1..64) {
             var sum = 0.0
-            val limit = min(sampleCount - tau, 3200) // calculate over up to 3200 samples for speed
-            for (i in 0 until limit) {
-                sum += samples[i] * samples[i + tau]
+            val limit = windowSize - tau
+            if (limit > 0) {
+                for (i in 0 until limit) {
+                    sum += samples[i] * samples[i + tau]
+                }
+                embedding[tau - 1] = (sum / windowEnergy).toFloat()
             }
-            embedding[tau - 1] = (sum / totalEnergy).toFloat()
         }
 
         // 3. Pitch harmonic lags (65..190, step 4) -> fundamental frequency F0 signature
         for (idx in 0 until 32) {
             val tau = 65 + (idx * 4)
-            if (tau < sampleCount) {
+            if (tau < windowSize) {
                 var sum = 0.0
-                val limit = min(sampleCount - tau, 3200)
-                for (i in 0 until limit) {
-                    sum += samples[i] * samples[i + tau]
+                val limit = windowSize - tau
+                if (limit > 0) {
+                    for (i in 0 until limit) {
+                        sum += samples[i] * samples[i + tau]
+                    }
+                    embedding[64 + idx] = (sum / windowEnergy).toFloat()
                 }
-                embedding[64 + idx] = (sum / totalEnergy).toFloat()
             }
         }
 
         // 4. Temporal sub-band energy dynamics (96..111)
-        val chunkLen = sampleCount / 16
+        val chunkLen = windowSize / 16
         if (chunkLen > 0) {
             for (c in 0 until 16) {
                 var chunkE = 0.0
@@ -217,20 +223,20 @@ class SpectralEmbeddingSpeakerVerifier(
                     val s = samples[i]
                     chunkE += (s * s)
                 }
-                embedding[96 + c] = (chunkE / totalEnergy).toFloat()
+                embedding[96 + c] = (chunkE / windowEnergy).toFloat()
             }
         }
 
         // 5. Zero-crossing rate & high-frequency delta energy (112..127)
-        val zcr = zeroCrossings.toFloat() / sampleCount
+        val zcr = zeroCrossings.toFloat() / windowSize
         embedding[112] = zcr * 10f
 
         var deltaE = 0.0
-        for (i in 1 until min(sampleCount, 3200)) {
+        for (i in 1 until windowSize) {
             val d = samples[i] - samples[i - 1]
             deltaE += (d * d)
         }
-        embedding[113] = (deltaE / totalEnergy).toFloat()
+        embedding[113] = (deltaE / windowEnergy).toFloat()
 
         return l2Normalize(embedding)
     }

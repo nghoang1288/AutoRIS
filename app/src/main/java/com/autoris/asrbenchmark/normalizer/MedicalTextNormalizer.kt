@@ -154,15 +154,18 @@ object MedicalTextNormalizer {
         }.toList()
 
         // 16. Semantic parsing: Measurements
-        val measRegex = Regex("\\b(\\d+(?:\\.\\d+)?)\\s*(mm|cm|m|%|ml|HU)\\b")
+        val measRegex = Regex("\\b(\\d+(?:\\.\\d+)?)\\s*(mm|cm|m|%|ml|HU)(?=[^a-zA-ZÀ-ỹ0-9]|$)")
         val parsedMeasurements = mutableListOf<ParsedMeasurement>()
         measRegex.findAll(normalized).forEach { match ->
-            val v = match.groupValues[1].toFloatOrNull()
-            val u = match.groupValues[2]
-            val certainty = if (isUnitExplicitlyPresent(rawText, u)) CertaintyLevel.EXPLICIT else CertaintyLevel.INFERRED
-            parsedMeasurements.add(
-                ParsedMeasurement(raw = match.value, normalized = match.value, value = v, unit = u, certainty = certainty)
-            )
+            val isPartOfDim = parsedDims.any { it.normalized.endsWith(match.value.trim()) }
+            if (!isPartOfDim) {
+                val v = match.groupValues[1].toFloatOrNull()
+                val u = match.groupValues[2]
+                val certainty = if (isUnitExplicitlyPresent(rawText, u)) CertaintyLevel.EXPLICIT else CertaintyLevel.INFERRED
+                parsedMeasurements.add(
+                    ParsedMeasurement(raw = match.value, normalized = match.value, value = v, unit = u, certainty = certainty)
+                )
+            }
         }
 
         // Check for ambiguous isolated numbers without unit
@@ -170,10 +173,10 @@ object MedicalTextNormalizer {
         var hasAmbiguity = hasLateralityConflict
         bareNumberRegex.findAll(normalized).forEach { match ->
             val numStr = match.value
-            val isPartOfDim = parsedDims.any { it.normalized.contains(numStr) }
-            val isPartOfMeas = parsedMeasurements.any { it.normalized.contains(numStr) }
-            val isPartOfSpine = parsedSpineLevels.any { it.normalized.contains(numStr) }
-            val isPartOfScore = parsedScores.any { it.raw.contains(numStr) }
+            val isPartOfDim = parsedDims.any { Regex("\\b" + Regex.escape(numStr) + "\\b").containsMatchIn(it.normalized) }
+            val isPartOfMeas = parsedMeasurements.any { Regex("\\b" + Regex.escape(numStr) + "\\b").containsMatchIn(it.normalized) }
+            val isPartOfSpine = parsedSpineLevels.any { Regex("\\b" + Regex.escape(numStr) + "\\b").containsMatchIn(it.normalized) }
+            val isPartOfScore = parsedScores.any { Regex("\\b" + Regex.escape(numStr) + "\\b").containsMatchIn(it.raw) }
 
             if (!isPartOfDim && !isPartOfMeas && !isPartOfSpine && !isPartOfScore) {
                 parsedMeasurements.add(
@@ -191,7 +194,7 @@ object MedicalTextNormalizer {
         }
 
         val foundNumbers = mutableListOf<String>()
-        val numberMatchRegex = Regex("\\b\\d+(?:\\.\\d+)?(?:\\s*×\\s*\\d+(?:\\.\\d+)?)*(?:\\s*(?:mm|cm|m|%|ml|HU))?\\b")
+        val numberMatchRegex = Regex("\\b\\d+(?:\\.\\d+)?(?:\\s*×\\s*\\d+(?:\\.\\d+)?)*(?:\\s*(?:mm|cm|m|%|ml|HU))?(?=[^a-zA-ZÀ-ỹ0-9]|$)")
         numberMatchRegex.findAll(normalized).forEach {
             foundNumbers.add(it.value.trim())
         }

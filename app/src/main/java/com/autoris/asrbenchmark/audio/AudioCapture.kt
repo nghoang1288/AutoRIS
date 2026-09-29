@@ -220,8 +220,19 @@ class AudioCapture(
 
     fun stop() {
         isRecording = false
-        captureJob?.cancel()
+        val job = captureJob
         captureJob = null
+
+        if (job != null && job.isActive) {
+            job.cancel()
+            try {
+                kotlinx.coroutines.runBlocking {
+                    kotlinx.coroutines.withTimeoutOrNull(250L) {
+                        job.join()
+                    }
+                }
+            } catch (_: Throwable) {}
+        }
 
         val record = audioRecord
         audioRecord = null

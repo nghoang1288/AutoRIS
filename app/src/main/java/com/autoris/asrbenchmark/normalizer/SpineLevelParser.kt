@@ -35,11 +35,11 @@ object SpineLevelParser {
         }
 
         // 2. Dual spine levels already in digit form: "L4 L5", "L4/L5", "L4 - L5", "L4-5" -> "L4-L5"
-        val dualDigitSpine = Regex("\\b([LCDST])(\\d+)\\s*(?:/|-|–|gạch|đến|\\s+)\\s*(?:([LCDST]))?(\\d+)\\b")
+        val dualDigitSpine = Regex("\\b([LCDST])(\\d+)\\s*(?:/|-|–|gạch|đến|\\s+)\\s*(?:([LCDST]))?(\\d+)\\b", RegexOption.IGNORE_CASE)
         result = dualDigitSpine.replace(result) { m ->
-            val p1 = m.groupValues[1]
+            val p1 = m.groupValues[1].uppercase(Locale.ROOT)
             val d1 = m.groupValues[2]
-            val p2Raw = m.groupValues[3]
+            val p2Raw = m.groupValues[3].uppercase(Locale.ROOT)
             val d2 = m.groupValues[4]
             val p2 = if (p2Raw.isNotEmpty()) p2Raw else p1
             "$p1$d1-$p2$d2"

@@ -29,6 +29,8 @@ class MedicalNormalizerTest {
         assertEquals("D12-L1", SpineLevelParser.parse("D mười hai L một"))
         assertEquals("L4-L5", SpineLevelParser.parse("L4 L5"))
         assertEquals("L4-L5", SpineLevelParser.parse("L4/L5"))
+        assertEquals("L4-L5", SpineLevelParser.parse("l4 l5"))
+        assertEquals("L4-L5", SpineLevelParser.parse("l4-l5"))
         assertEquals("C5", SpineLevelParser.parse("C năm"))
     }
 
@@ -41,6 +43,8 @@ class MedicalNormalizerTest {
         assertEquals("2.5", VietnameseNumberParser.parse("hai phẩy năm"))
         assertEquals("15.2", VietnameseNumberParser.parse("mười lăm chấm hai"))
         assertEquals("-5", VietnameseNumberParser.parse("âm năm"))
+        assertEquals("kết quả âm tính", VietnameseNumberParser.parse("kết quả âm tính"))
+        assertEquals("âm vang đồng nhất", VietnameseNumberParser.parse("âm vang đồng nhất"))
     }
 
     @Test

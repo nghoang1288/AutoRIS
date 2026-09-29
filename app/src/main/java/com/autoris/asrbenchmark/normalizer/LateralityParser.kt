@@ -80,19 +80,22 @@ object LateralityParser {
 
         // Fallback: If no specific paired organ matched, but explicit directional cue exists
         if (results.isEmpty()) {
-            val hasRight = RIGHT_REGEX.containsMatchIn(lower)
-            val hasLeft = LEFT_REGEX.containsMatchIn(lower)
-            val hasBilateral = BILATERAL_REGEX.containsMatchIn(lower)
+            val clauses = lower.split(Regex("[,.;\\n]")).map { it.trim() }.filter { it.isNotEmpty() }
+            for (clause in clauses) {
+                val hasRight = RIGHT_REGEX.containsMatchIn(clause)
+                val hasLeft = LEFT_REGEX.containsMatchIn(clause)
+                val hasBilateral = BILATERAL_REGEX.containsMatchIn(clause)
 
-            if (hasBilateral) {
-                results.add(ParsedLaterality(LateralityType.BILATERAL, "chung", lower, isContradictory = false))
-            } else if (hasRight && hasLeft) {
-                results.add(ParsedLaterality(LateralityType.UNSPECIFIED, "chung", lower, isContradictory = true))
-                hasConflict = true
-            } else if (hasRight) {
-                results.add(ParsedLaterality(LateralityType.RIGHT, "chung", lower, isContradictory = false))
-            } else if (hasLeft) {
-                results.add(ParsedLaterality(LateralityType.LEFT, "chung", lower, isContradictory = false))
+                if (hasBilateral) {
+                    results.add(ParsedLaterality(LateralityType.BILATERAL, "chung", clause, isContradictory = false))
+                } else if (hasRight && hasLeft) {
+                    results.add(ParsedLaterality(LateralityType.UNSPECIFIED, "chung", clause, isContradictory = true))
+                    hasConflict = true
+                } else if (hasRight) {
+                    results.add(ParsedLaterality(LateralityType.RIGHT, "chung", clause, isContradictory = false))
+                } else if (hasLeft) {
+                    results.add(ParsedLaterality(LateralityType.LEFT, "chung", clause, isContradictory = false))
+                }
             }
         }
 

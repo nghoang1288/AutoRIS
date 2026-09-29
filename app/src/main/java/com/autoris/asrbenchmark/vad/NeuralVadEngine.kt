@@ -82,6 +82,8 @@ class NeuralVadEngine(
         }
     }
 
+    private var residualBuffer = FloatArray(0)
+
     override fun process(pcmChunk: FloatArray): Boolean {
         if (!isModelLoaded || nativeVad == null) {
             val detected = fallbackEngine.process(pcmChunk)
@@ -91,16 +93,33 @@ class NeuralVadEngine(
 
         return try {
             val vad = nativeVad!!
+            // Combine with residual samples from previous chunk to ensure no samples are discarded
+            val combined = if (residualBuffer.isNotEmpty()) {
+                val arr = FloatArray(residualBuffer.size + pcmChunk.size)
+                System.arraycopy(residualBuffer, 0, arr, 0, residualBuffer.size)
+                System.arraycopy(pcmChunk, 0, arr, residualBuffer.size, pcmChunk.size)
+                arr
+            } else {
+                pcmChunk
+            }
+
             // Frame into 512-sample slices
             var maxProb = 0.0f
             var offset = 0
-            while (offset + SILERO_FRAME_SIZE <= pcmChunk.size) {
-                val slice = FloatArray(SILERO_FRAME_SIZE) { pcmChunk[offset + it] }
+            while (offset + SILERO_FRAME_SIZE <= combined.size) {
+                val slice = FloatArray(SILERO_FRAME_SIZE) { combined[offset + it] }
                 val prob = vad.compute(slice)
                 if (prob > maxProb) {
                     maxProb = prob
                 }
                 offset += SILERO_FRAME_SIZE
+            }
+
+            val remaining = combined.size - offset
+            residualBuffer = if (remaining > 0) {
+                combined.copyOfRange(offset, combined.size)
+            } else {
+                FloatArray(0)
             }
 
             currentProb = maxProb
@@ -116,6 +135,7 @@ class NeuralVadEngine(
     override fun getSpeechProbability(): Float = currentProb
 
     override fun reset() {
+        residualBuffer = FloatArray(0)
         fallbackEngine.reset()
         currentProb = 0.0f
         try {

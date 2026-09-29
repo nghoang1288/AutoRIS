@@ -1,6 +1,7 @@
 package com.autoris.asrbenchmark
 
 import com.autoris.asrbenchmark.benchmark.AccuracyEvaluator
+import com.autoris.asrbenchmark.benchmark.MedicalTestSentence
 import com.autoris.asrbenchmark.benchmark.MedicalTestSet
 import com.autoris.asrbenchmark.normalizer.MedicalTextNormalizer
 import org.junit.Assert.assertEquals
@@ -177,5 +178,16 @@ class AccuracyEvaluatorTest {
 
         assertTrue("Swapping lateralities between organs must trigger criticalLateralityError", eval.criticalLateralityError)
         assertTrue(eval.hasCriticalError())
+    }
+
+    @Test
+    fun testPercentageMatchingInAccuracyEvaluator() {
+        val ref = "EF 60% bình thường"
+        val hyp = "EF 60% bình thường"
+        val testSentence = MedicalTestSentence(id = "TEST_PCT", category = "Test", referenceText = ref, keyNumbers = listOf("60%"))
+        val eval = AccuracyEvaluator.evaluate(ref, hyp, testSentence = testSentence)
+        assertEquals(0, eval.missedNumbers.size)
+        assertEquals(listOf("60%"), eval.matchedNumbers)
+        assertEquals(false, eval.criticalNumericError)
     }
 }

@@ -76,4 +76,24 @@ class CrossEngineConsistencyCheckerTest {
         assertFalse("Negation mismatch (có sỏi vs không có sỏi) must flag inconsistent", result.isConsistent)
         assertTrue(result.mismatches.any { it.contains("Bất đồng phủ định") })
     }
+
+    @Test
+    fun testNegationSameTriggerDifferentScopeFlagsInconsistent() {
+        val streaming = "không có sỏi túi mật"
+        val offline = "không thấy thâm nhiễm mô mềm"
+        val result = CrossEngineConsistencyChecker.check(streaming, offline)
+
+        assertFalse("Same trigger with different scope must flag inconsistent", result.isConsistent)
+        assertTrue(result.mismatches.any { it.contains("Bất đồng phủ định") })
+    }
+
+    @Test
+    fun testDimensionOrderInvariancePasses() {
+        val streaming = "nang gan kích thước 15 x 20 mm"
+        val offline = "nang gan kích thước 20 x 15 mm"
+        val result = CrossEngineConsistencyChecker.check(streaming, offline)
+
+        assertTrue("Dimension order difference (15x20 vs 20x15 mm) should be consistent", result.isConsistent)
+        assertTrue(result.mismatches.isEmpty())
+    }
 }

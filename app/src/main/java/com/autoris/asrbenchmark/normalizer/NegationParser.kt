@@ -38,10 +38,8 @@ object NegationParser {
                 if (idx == -1) break
 
                 val scopeStart = idx + trigger.length
-                val scopeEnd = minOf(lower.length, scopeStart + 40)
-                val rawScope = lower.substring(scopeStart, scopeEnd).trim()
-                // Stop scope at punctuation if present
-                val cleanedScope = rawScope.split(Regex("[,.;]"))[0].trim()
+                val nextPunct = lower.indexOfAny(charArrayOf(',', ';', '.', '\n'), scopeStart).let { if (it == -1) lower.length else it }
+                val cleanedScope = lower.substring(scopeStart, nextPunct).trim()
 
                 negations.add(
                     ParsedNegation(

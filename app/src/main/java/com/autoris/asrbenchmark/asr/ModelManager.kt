@@ -263,7 +263,7 @@ object ModelManager {
                                 }
                             }
 
-                            if (tempFile.exists() && tempFile.length() > 0) {
+                            if (tempFile.exists() && tempFile.length() > 0 && (totalSize <= 0 || tempFile.length() == totalSize)) {
                                 if (targetFile.exists()) targetFile.delete()
                                 tempFile.renameTo(targetFile)
                                 downloadSuccess = true
@@ -338,7 +338,7 @@ object ModelManager {
             } else true
 
             val sizeMatch = if (info.expectedSize > 0L) {
-                size >= (info.expectedSize * 0.9)
+                size >= info.expectedSize
             } else size > 1000L
 
             val isValid = exists && sizeMatch && hashMatch

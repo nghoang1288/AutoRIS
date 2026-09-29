@@ -106,8 +106,14 @@ object VietnameseNumberParser {
         val negPattern = Regex("\\bâm\\s+([a-zA-ZÀ-ỹ0-9]+)\\b", RegexOption.IGNORE_CASE)
         result = negPattern.replace(result) { m ->
             val v = m.groupValues[1].lowercase(Locale.ROOT)
-            val d = DIGIT_STR_MAP[v] ?: v
-            "-$d"
+            val d = DIGIT_STR_MAP[v]
+            if (d != null) {
+                "-$d"
+            } else if (v.toIntOrNull() != null || v.toFloatOrNull() != null) {
+                "-$v"
+            } else {
+                m.value // Retain clinical terms like "âm tính", "âm vang", "âm đạo"
+            }
         }
 
         // 6. Single digit words immediately before measurement units: e.g. "năm mm" -> "5 mm"

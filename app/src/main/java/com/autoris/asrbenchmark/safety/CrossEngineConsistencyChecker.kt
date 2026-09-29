@@ -42,7 +42,7 @@ object CrossEngineConsistencyChecker {
         for (offDim in normOffline.dimensions) {
             checkedCount++
             val match = normStreaming.dimensions.any { strDim ->
-                strDim.dims == offDim.dims && strDim.unit.equals(offDim.unit, ignoreCase = true)
+                strDim.dims.sorted() == offDim.dims.sorted() && strDim.unit.equals(offDim.unit, ignoreCase = true)
             }
             if (!match) {
                 mismatches.add("Bất đồng kích thước giữa 30M ('${normStreaming.dimensions.map { it.raw }}') và 150M ('${offDim.raw}')")
@@ -50,7 +50,7 @@ object CrossEngineConsistencyChecker {
         }
         for (strDim in normStreaming.dimensions) {
             val match = normOffline.dimensions.any { offDim ->
-                offDim.dims == strDim.dims && offDim.unit.equals(strDim.unit, ignoreCase = true)
+                offDim.dims.sorted() == strDim.dims.sorted() && offDim.unit.equals(strDim.unit, ignoreCase = true)
             }
             if (!match && !mismatches.any { it.contains("Bất đồng kích thước") }) {
                 mismatches.add("Bất đồng kích thước: 30M có '${strDim.raw}' nhưng 150M không có")
@@ -124,7 +124,8 @@ object CrossEngineConsistencyChecker {
         for (offNeg in normOffline.negations) {
             checkedCount++
             val match = normStreaming.negations.any { strNeg ->
-                strNeg.trigger == offNeg.trigger || strNeg.scopeText.contains(offNeg.scopeText) || offNeg.scopeText.contains(strNeg.scopeText)
+                (strNeg.trigger == offNeg.trigger || strNeg.trigger.contains(offNeg.trigger) || offNeg.trigger.contains(strNeg.trigger)) &&
+                (strNeg.scopeText.contains(offNeg.scopeText) || offNeg.scopeText.contains(strNeg.scopeText) || strNeg.scopeText.isEmpty() || offNeg.scopeText.isEmpty())
             }
             if (!match) {
                 mismatches.add("Bất đồng phủ định lâm sàng: 150M có '${offNeg.trigger}' nhưng 30M không có")
@@ -132,7 +133,8 @@ object CrossEngineConsistencyChecker {
         }
         for (strNeg in normStreaming.negations) {
             val match = normOffline.negations.any { offNeg ->
-                offNeg.trigger == strNeg.trigger || offNeg.scopeText.contains(strNeg.scopeText) || strNeg.scopeText.contains(offNeg.scopeText)
+                (offNeg.trigger == strNeg.trigger || offNeg.trigger.contains(strNeg.trigger) || strNeg.trigger.contains(offNeg.trigger)) &&
+                (offNeg.scopeText.contains(strNeg.scopeText) || strNeg.scopeText.contains(offNeg.scopeText) || offNeg.scopeText.isEmpty() || strNeg.scopeText.isEmpty())
             }
             if (!match && !mismatches.any { it.contains("Bất đồng phủ định lâm sàng") }) {
                 mismatches.add("Bất đồng phủ định lâm sàng: 30M có '${strNeg.trigger}' nhưng 150M không có")

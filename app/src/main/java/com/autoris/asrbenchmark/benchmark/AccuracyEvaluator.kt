@@ -148,7 +148,7 @@ object AccuracyEvaluator {
         val missedNumbers = mutableListOf<String>()
         for (num in keyNumbers) {
             val trimmedNum = num.trim()
-            val numPattern = Regex("\\b" + Regex.escape(trimmedNum) + "\\b")
+            val numPattern = Regex("(?<=^|[^\\w%])" + Regex.escape(trimmedNum) + "(?=[^\\w%]|$)")
             if (numPattern.containsMatchIn(hypothesis) || numPattern.containsMatchIn(cleanHyp)) {
                 matchedNumbers.add(num)
             } else {

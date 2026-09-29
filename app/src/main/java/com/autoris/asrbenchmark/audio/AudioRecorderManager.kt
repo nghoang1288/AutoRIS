@@ -235,6 +235,10 @@ class AudioRecorderManager(
         synchronized(currentSegmentPcm) {
             when (currentState) {
                 EndpointState.SILENCE -> {
+                    // P0-3: If transitioned back to SILENCE from a false trigger (POSSIBLE_SPEECH) without reaching speech, clear phantom audio
+                    if (previousState == EndpointState.POSSIBLE_SPEECH) {
+                        currentSegmentPcm.clear()
+                    }
                     if (preSpeechRingBuffer.size >= 3) {
                         preSpeechRingBuffer.removeFirst()
                     }

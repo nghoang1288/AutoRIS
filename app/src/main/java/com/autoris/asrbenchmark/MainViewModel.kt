@@ -218,6 +218,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     // Invalidate safety gate decision helper (Phase A2)
     fun invalidateSafetyDecision(reason: String) {
+        currentTranscriptVersion++
         _safetyGateDecision.value = null
         Log.d(TAG, "Safety decision invalidated: $reason")
     }
@@ -237,6 +238,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val safetyGateDecision: StateFlow<SafetyGateDecision?> = _safetyGateDecision.asStateFlow()
 
     fun exportToRis(): Boolean {
+        if (_operatingMode.value == AppOperatingMode.BENCHMARK) {
+            _statusMessage.value = "Từ chối gửi RIS: Không thể xuất dữ liệu thử nghiệm (chế độ Benchmark) sang RIS/PACS thật!"
+            return false
+        }
+
         val decision = _safetyGateDecision.value
         val currentText = _finalTranscript.value.ifBlank { _livePartial.value }
 

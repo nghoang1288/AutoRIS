@@ -30,7 +30,8 @@ class Zipformer150MOfflineEngine(
     private var _isReady: Boolean = false
     override val isReady: Boolean get() = _isReady
 
-    private val audioBuffer = mutableListOf<Float>()
+    private val audioChunks = mutableListOf<FloatArray>()
+    private var totalSamplesBuffered: Int = 0
     private var resultText: String = ""
     private var lastProcessingTimeMs: Long = 0L
 
@@ -81,8 +82,9 @@ class Zipformer150MOfflineEngine(
 
     override fun start(): Boolean {
         if (!_isReady || recognizer == null) return false
-        synchronized(audioBuffer) {
-            audioBuffer.clear()
+        synchronized(audioChunks) {
+            audioChunks.clear()
+            totalSamplesBuffered = 0
         }
         resultText = ""
         lastProcessingTimeMs = 0L
@@ -90,10 +92,10 @@ class Zipformer150MOfflineEngine(
     }
 
     override fun acceptAudio(samples: FloatArray) {
-        synchronized(audioBuffer) {
-            for (s in samples) {
-                audioBuffer.add(s)
-            }
+        if (samples.isEmpty()) return
+        synchronized(audioChunks) {
+            audioChunks.add(samples.clone())
+            totalSamplesBuffered += samples.size
         }
     }
 
@@ -105,8 +107,8 @@ class Zipformer150MOfflineEngine(
     override fun isEndpoint(): Boolean = false
 
     override fun getPartialResult(): String {
-        return if (audioBuffer.isNotEmpty()) {
-            val sec = audioBuffer.size / 16000.0f
+        return if (totalSamplesBuffered > 0) {
+            val sec = totalSamplesBuffered / 16000.0f
             String.format("🎙️ Đang ghi âm (%.1fs)... Sẽ nhận diện chính xác khi dừng nói", sec)
         } else ""
     }
@@ -114,8 +116,9 @@ class Zipformer150MOfflineEngine(
     override fun getFinalResult(): String = resultText
 
     override fun reset() {
-        synchronized(audioBuffer) {
-            audioBuffer.clear()
+        synchronized(audioChunks) {
+            audioChunks.clear()
+            totalSamplesBuffered = 0
         }
         resultText = ""
         lastProcessingTimeMs = 0L
@@ -124,8 +127,14 @@ class Zipformer150MOfflineEngine(
     override fun stop() {
         val rec = recognizer ?: return
         val samples: FloatArray
-        synchronized(audioBuffer) {
-            samples = audioBuffer.toFloatArray()
+        synchronized(audioChunks) {
+            if (totalSamplesBuffered == 0) return
+            samples = FloatArray(totalSamplesBuffered)
+            var offset = 0
+            for (chunk in audioChunks) {
+                System.arraycopy(chunk, 0, samples, offset, chunk.size)
+                offset += chunk.size
+            }
         }
         if (samples.isEmpty()) return
 
@@ -167,8 +176,9 @@ class Zipformer150MOfflineEngine(
         recognizer?.release()
         recognizer = null
         _isReady = false
-        synchronized(audioBuffer) {
-            audioBuffer.clear()
+        synchronized(audioChunks) {
+            audioChunks.clear()
+            totalSamplesBuffered = 0
         }
     }
 }
