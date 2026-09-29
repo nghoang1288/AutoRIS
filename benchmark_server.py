@@ -13,7 +13,10 @@ import time
 import socket
 from datetime import datetime
 from urllib.parse import urlparse, parse_qs
-from http.server import HTTPServer, BaseHTTPRequestHandler
+try:
+    from http.server import ThreadingHTTPServer as BaseServer, BaseHTTPRequestHandler
+except ImportError:
+    from http.server import HTTPServer as BaseServer, BaseHTTPRequestHandler
 
 try:
     if hasattr(sys.stdout, 'reconfigure'):
@@ -23,16 +26,17 @@ try:
 except Exception:
     pass
 
-PORT = 8080
-STORAGE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "benchmark_results_device")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PORT = int(os.environ.get("PORT", 8080))
+STORAGE_DIR = os.environ.get("STORAGE_DIR", os.path.join(BASE_DIR, "benchmark_results_device"))
 SESSIONS_DIR = os.path.join(STORAGE_DIR, "sessions")
 AUDIO_DIR = os.path.join(STORAGE_DIR, "audio")
 CSV_FILE = os.path.join(STORAGE_DIR, "device_benchmark_aggregate.csv")
 ALL_SESSIONS_JSON = os.path.join(STORAGE_DIR, "all_device_sessions.json")
-RELEASE_APK_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "release_apk")
+RELEASE_APK_DIR = os.environ.get("RELEASE_APK_DIR", os.path.join(BASE_DIR, "release_apk"))
 
 # Benchmark V2 Storage
-STORAGE_DIR_V2 = os.path.join(os.path.dirname(os.path.abspath(__file__)), "benchmark_results_v2")
+STORAGE_DIR_V2 = os.environ.get("STORAGE_DIR_V2", os.path.join(BASE_DIR, "benchmark_results_v2"))
 SESSIONS_DIR_V2 = os.path.join(STORAGE_DIR_V2, "sessions")
 AUDIO_DIR_V2 = os.path.join(STORAGE_DIR_V2, "audio")
 CSV_FILE_V2 = os.path.join(STORAGE_DIR_V2, "device_benchmark_v2_aggregate.csv")
@@ -494,7 +498,7 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
             self.end_headers()
             resp = {
                 "status": "success",
-                "audio_saved": os.path.basename(dest_file),
+                "audio_saved": os.path.basename(dest_file_v2),
                 "size_bytes": content_length
             }
             self.wfile.write(json.dumps(resp, ensure_ascii=False).encode("utf-8"))
@@ -752,11 +756,10 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
 
 def run_server():
     server_address = ("0.0.0.0", PORT)
-    httpd = HTTPServer(server_address, BenchmarkHandler)
+    httpd = BaseServer(server_address, BenchmarkHandler)
     print("=" * 70)
-    print(f" [AutoRIS Local Benchmark Ingestion Server]")
+    print(f" [AutoRIS Benchmark Ingestion & Analytics Server]")
     print(f" - Listening on: http://0.0.0.0:{PORT}")
-    print(f" - Phone APK URL: http://192.168.50.100:{PORT}/")
     print(f" - Web Dashboard: http://localhost:{PORT}/dashboard")
     print(f" - Storage dir  : {STORAGE_DIR}")
     print("=" * 70)

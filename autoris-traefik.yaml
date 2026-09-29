@@ -1,0 +1,32 @@
+http:
+  routers:
+    autoris-http:
+      entryPoints:
+        - http
+      rule: Host(`autoris.hoang.qzz.io`)
+      middlewares:
+        - autoris-https-redirect
+      service: autoris-svc
+
+    autoris-https:
+      entryPoints:
+        - https
+      rule: Host(`autoris.hoang.qzz.io`)
+      middlewares:
+        - global-compress@file
+      tls:
+        certResolver: letsencrypt
+      service: autoris-svc
+
+  middlewares:
+    autoris-https-redirect:
+      redirectScheme:
+        scheme: https
+        permanent: true
+
+  services:
+    autoris-svc:
+      loadBalancer:
+        passHostHeader: true
+        servers:
+          - url: http://autoris-server:8080

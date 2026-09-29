@@ -343,7 +343,7 @@ fun SettingsScreen(
                         unfocusedBorderColor = BorderColor
                     ),
                     singleLine = true,
-                    placeholder = { Text("http://192.168.50.100:8080", color = TextMuted) }
+                    placeholder = { Text("https://autoris.hoang.qzz.io", color = TextMuted) }
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))

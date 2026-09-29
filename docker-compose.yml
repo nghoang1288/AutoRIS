@@ -1,0 +1,21 @@
+name: autoris
+
+services:
+  autoris-server:
+    build: .
+    container_name: autoris-server
+    restart: unless-stopped
+    volumes:
+      - ./data/benchmark_results_device:/app/benchmark_results_device
+      - ./data/benchmark_results_v2:/app/benchmark_results_v2
+      - ./data/release_apk:/app/release_apk
+    networks:
+      - default
+      - coolify
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PORT=8080
+
+networks:
+  coolify:
+    external: true
