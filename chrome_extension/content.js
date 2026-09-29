@@ -183,88 +183,95 @@
     const isCE = editorEl.isContentEditable || editorEl.getAttribute("contenteditable") === "true";
     const isInput = editorEl.tagName === "TEXTAREA" || editorEl.tagName === "INPUT";
 
-    const organ = synthResult.affected_organ || "";
-    const updatedLine = synthResult.updated_organ_line || "";
-    const isNew = !!synthResult.is_new_organ;
-    const insertAfter = synthResult.insert_after || "Lách";
-    const hachLine = synthResult.hach_line;
+    const organFindings = synthResult.organs || [];
+    // Hỗ trợ trường hợp cũ nếu synthResult chỉ trả về affected_organ đơn lẻ
+    if (organFindings.length === 0 && synthResult.affected_organ) {
+      organFindings.push({
+        organ: synthResult.affected_organ,
+        findingText: synthResult.updated_organ_line || "",
+        label: synthResult.affected_organ,
+        lesionType: "tổn thương"
+      });
+    }
+
     const conclusion = synthResult.ketluan || "";
-
-    const organRegexMap = {
-      gan: /(?:Gan|nhu\s*mô\s*gan)\b/i,
-      tui_mat: /(?:Túi\s*mật|Túi\s*mật)\b/i,
-      duong_mat: /Đường\s*mật\b/i,
-      tuy: /Tụy\b/i,
-      lach: /(?:Lách|Lách)\b/i,
-      than: /(?:Hai\s*thận|Hai\s*thận|Thận\s*phải|Thận\s*phải|Thận\s*trái|Thận\s*trái|Thận)\b/i,
-      than_phai: /(?:Thận\s*phải|Thận\s*phải|Hai\s*thận)\b/i,
-      than_trai: /(?:Thận\s*trái|Thận\s*trái|Hai\s*thận)\b/i,
-      bang_quang: /Bàng\s*quang\b/i,
-      tien_liet_tuyen: /(?:Tuyến\s*tiền\s*liệt|Tiền\s*liệt\s*tuyến)\b/i,
-      hach: /(?:Không\s*thấy\s*hạch|Không\s*thấy\s*hạch|Hạch)\b/i,
-      dich: /(?:Không\s*thấy\s*dịch|Dịch\s*tự\s*do|Dịch\s*ổ\s*bụng)\b/i,
-      da_day: /Dạ\s*dày\b/i
-    };
-
     let modified = false;
 
     if (isCE) {
       let html = editorEl.innerHTML.normalize("NFC");
 
-      // Tách Header/Body vs Footer (Bảng chữ ký, table, script)
-      const footerIdx = html.search(/(?:<h1\b|<table\b)/i);
-      let bodyHTML = footerIdx !== -1 ? html.slice(0, footerIdx) : html;
-      const footerHTML = footerIdx !== -1 ? html.slice(footerIdx) : "";
-
-      // 1. Sửa dòng cơ quan tổn thương nếu có
-      if (updatedLine && !isNew && organ && organRegexMap[organ]) {
-        const pat = new RegExp(
-          '((?:<p\\b[^>]*>)?\\s*(?:<strong>|<b>)?\\s*(?:--|—|-)?\\s*(?:<\\/(?:strong|b)>\\s*)?(?:<(?:strong|b)>\\s*)?' +
-          organRegexMap[organ].source +
-          '(?:<\\/(?:strong|b)>\\s*)?[^<\\n\\r]*(?:<(?!br\\b|\\/p\\b|\\/div\\b)[^>]*>[^<\\n\\r]*)*)(?=(?:<br\\s*\\/?>|<\\/p>|<\\/div>|\\n|$))',
-          'i'
-        );
-
-        if (pat.test(bodyHTML)) {
-          bodyHTML = bodyHTML.replace(pat, (matched) => {
-            const hasP = /<p\b[^>]*>/i.test(matched);
-            return (hasP ? "<p>" : "") + escapeHTML(updatedLine);
-          });
-          modified = true;
-        }
+      // 1. Tách Header/Body vs Footer (Bảng chữ ký, table, script, Người ký Alt+1...)
+      const footerRegex = /(?:<table\b|<h1\b|(?:<p\b[^>]*>)?\s*(?:<strong>|<b>)?\s*(?:Người\s*ký|Kỹ\s*thuật\s*viên|Bác\s*sĩ\s*đọc|Chữ\s*ký|Alt\s*\+\s*1|Alt\s*\+\s*2))/i;
+      const footerMatch = html.match(footerRegex);
+      let bodyHTML = html;
+      let footerHTML = "";
+      if (footerMatch) {
+        bodyHTML = html.slice(0, footerMatch.index);
+        footerHTML = html.slice(footerMatch.index);
       }
 
-      // 2. Chèn cơ quan mới (ví dụ Dạ dày) sau cơ quan neo (Lách hoặc Tụy)
-      if (isNew && updatedLine) {
-        const anchorPat = new RegExp('(<p\\b[^>]*>.*?' + insertAfter + '.*?<\\/p>)', 'i');
-        if (anchorPat.test(bodyHTML)) {
-          bodyHTML = bodyHTML.replace(anchorPat, `$1\n<p>${escapeHTML(updatedLine)}</p>`);
+      // 2. Thay thế phẫu thuật từng cơ quan trong bodyHTML
+      for (const item of organFindings) {
+        let organLineRegex = null;
+        let newClause = "";
+
+        if (item.organ === "than_phai") {
+          organLineRegex = /((?:<p\b[^>]*>)?\s*(?:--|—|-)?\s*(?:<(?:\/)?(?:strong|b|span)[^>]*>)*\s*(?:Thận\s*phải|Thận\s*phải)\b\s*(?:<(?:\/)?(?:strong|b|span)[^>]*>)*\s*:?\s*)([\s\S]*?)(?=<\/p>|<br\s*\/?>|\n|$)/i;
+          newClause = `có ${item.findingText}`.replace(/^có\s+có\s*/i, "có ");
+        } else if (item.organ === "than_trai") {
+          organLineRegex = /((?:<p\b[^>]*>)?\s*(?:--|—|-)?\s*(?:<(?:\/)?(?:strong|b|span)[^>]*>)*\s*(?:Thận\s*trái|Thận\s*trái)\b\s*(?:<(?:\/)?(?:strong|b|span)[^>]*>)*\s*:?\s*)([\s\S]*?)(?=<\/p>|<br\s*\/?>|\n|$)/i;
+          newClause = `có ${item.findingText}`.replace(/^có\s+có\s*/i, "có ");
+        } else if (item.organ === "than_hai_ben") {
+          organLineRegex = /((?:<p\b[^>]*>)?\s*(?:--|—|-)?\s*(?:<(?:\/)?(?:strong|b|span)[^>]*>)*\s*(?:Hai\s*thận|Hai\s*thận)\b\s*(?:<(?:\/)?(?:strong|b|span)[^>]*>)*\s*:?\s*)([\s\S]*?)(?=<\/p>|<br\s*\/?>|\n|$)/i;
+          newClause = `có ${item.findingText}`.replace(/^có\s+có\s*/i, "có ");
+        } else if (item.organ === "gan") {
+          organLineRegex = /((?:<p\b[^>]*>)?\s*(?:--|—|-)?\s*(?:<(?:\/)?(?:strong|b|span)[^>]*>)*\s*(?:Gan|Nhu\s*mô\s*gan)\b\s*(?:<(?:\/)?(?:strong|b|span)[^>]*>)*\s*:?\s*)([\s\S]*?)(?=<\/p>|<br\s*\/?>|\n|$)/i;
+          let cleanFinding = item.findingText.replace(/^[.,;: ]+/, "").trim();
+          cleanFinding = cleanFinding.replace(/\b(nang|sỏi)\s+(nang|sỏi)\s+(lớn|nhỏ)\b/i, "$1, $2 $3");
+          if (/^(?:trái|phải)\b/i.test(cleanFinding)) {
+            newClause = `gan ${cleanFinding}`;
+          } else if (/^(?:hạ\s*phân\s*thùy|hpt|thùy|nhu\s*mô)/i.test(cleanFinding)) {
+            newClause = cleanFinding.replace(/^nhu\s*mô\s*/i, "");
+          } else if (!cleanFinding.startsWith("nhu mô")) {
+            newClause = cleanFinding.startsWith("có") ? cleanFinding : `có ${cleanFinding}`;
+          } else {
+            newClause = cleanFinding;
+          }
+        } else if (item.organ === "da_day") {
+          organLineRegex = /((?:<p\b[^>]*>)?\s*(?:--|—|-)?\s*(?:<(?:\/)?(?:strong|b|span)[^>]*>)*\s*Dạ\s*dày\b\s*(?:<(?:\/)?(?:strong|b|span)[^>]*>)*\s*:?\s*)([\s\S]*?)(?=<\/p>|<br\s*\/?>|\n|$)/i;
+          newClause = item.findingText;
+        } else if (item.organ === "tui_mat") {
+          organLineRegex = /((?:<p\b[^>]*>)?\s*(?:--|—|-)?\s*(?:<(?:\/)?(?:strong|b|span)[^>]*>)*\s*(?:Túi\s*mật|Túi\s*mật)\b\s*(?:<(?:\/)?(?:strong|b|span)[^>]*>)*\s*:?\s*)([\s\S]*?)(?=<\/p>|<br\s*\/?>|\n|$)/i;
+          newClause = item.findingText;
+        }
+
+        if (organLineRegex && organLineRegex.test(bodyHTML)) {
+          bodyHTML = bodyHTML.replace(organLineRegex, (fullMatch, prefix, content) => {
+            let updatedContent = content;
+            const normalParenchymaRegex = /(Nhu\s*mô\s*(?:đồng\s*nhất[,\s]*)?)(?:không\s*thấy\s*(?:khối|tổn\s*thương)[^.]*|đều[,\s]*không\s*thấy\s*(?:khối|tổn\s*thương)[^.]*|không\s*thấy\s*khối[^.]*|bình\s*thường[^.]*)(\.?)/i;
+            if (normalParenchymaRegex.test(content)) {
+              updatedContent = content.replace(normalParenchymaRegex, `Nhu mô ${newClause}$2`);
+            } else if (content.includes("không to") || content.includes("hình thái, kích thước bình thường")) {
+              updatedContent = content.replace(/Nhu\s*mô[^.]*\.?/i, `Nhu mô ${newClause}.`);
+            } else {
+              updatedContent = `${content.trim()} Nhu mô ${newClause}.`;
+            }
+            return `${prefix}${updatedContent}`;
+          });
           modified = true;
-        } else {
-          // Thêm trước KẾT LUẬN
-          const klAnchor = /(?:<p\b[^>]*>)?\s*(?:<strong>|<b>)?\s*KẾT\s*LUẬN/i;
-          if (klAnchor.test(bodyHTML)) {
-            bodyHTML = bodyHTML.replace(klAnchor, `<p>${escapeHTML(updatedLine)}</p>\n$&`);
+        } else if (item.organ === "da_day") {
+          // Nếu chưa có Dạ dày trong mẫu, chèn sau Lách hoặc Tụy
+          const anchorPat = /(<p\b[^>]*>.*?(?:Lách|Lách|Tụy|Tụy).*?<\/p>)/i;
+          if (anchorPat.test(bodyHTML)) {
+            bodyHTML = bodyHTML.replace(anchorPat, `$1\n<p>-- <strong>Dạ dày:</strong> ${escapeHTML(item.findingText)}</p>`);
             modified = true;
           }
         }
       }
 
-      // 3. Cập nhật dòng Hạch lân cận nếu có
-      if (hachLine) {
-        const hachPat = /((?:<p\b[^>]*>)?\s*(?:--|—|-)?\s*(?:Không\s*thấy\s*hạch|Không\s*thấy\s*hạch|Hạch)[^<\n\r]*(?:<(?!br\b|\/p\b|\/div\b)[^>]*>[^<\n\r]*)*)(?=(?:<br\s*\/?>|<\/p>|<\/div>|\n|$))/i;
-        if (hachPat.test(bodyHTML)) {
-          bodyHTML = bodyHTML.replace(hachPat, (matched) => {
-            const hasP = /<p\b[^>]*>/i.test(matched);
-            return (hasP ? "<p>" : "") + escapeHTML(hachLine);
-          });
-          modified = true;
-        }
-      }
-
-      // 4. Thay thế phẫu thuật duy nhất phần KẾT LUẬN (Bắt đầu bằng "Hình ảnh", không lặp)
+      // 3. Thay thế phẫu thuật duy nhất phần KẾT LUẬN (Bắt đầu bằng "Hình ảnh", không lặp)
       if (conclusion) {
-        const klRegex = /((?:<p\b[^>]*>)?\s*(?:<strong>|<b>)?\s*KẾT\s*LUẬN\s*(?:<\/strong>|<\/b>)?\s*:\s*(?:<\/strong>|<\/b>)?\s*(?:<\/p>)?\s*(?:<br\s*\/?>|\s*|\n)*)(?:<p\b[^>]*>)?[\s\S]*?(?:<\/p>)?(?=\s*(?:<table|<h1|$))/i;
+        const klRegex = /((?:<p\b[^>]*>)?\s*(?:<strong>|<b>)?\s*(?:--|—|-)?\s*KẾT\s*LUẬN\s*(?:<\/strong>|<\/b>)?\s*:\s*(?:<\/strong>|<\/b>)?\s*(?:<\/p>)?\s*(?:<br\s*\/?>|\s*|\n)*)[\s\S]*/i;
         if (klRegex.test(bodyHTML)) {
           bodyHTML = bodyHTML.replace(klRegex, (_, p1) => {
             const cleanP1 = p1.replace(/(?:<br\s*\/?>|\s)+$/i, "");
@@ -272,58 +279,47 @@
           });
           modified = true;
         } else {
-          bodyHTML += `<br><p><strong>KẾT LUẬN:</strong></p>\n<p>${escapeHTML(conclusion)}</p>\n`;
+          bodyHTML += `\n<p><strong>KẾT LUẬN:</strong></p>\n<p>${escapeHTML(conclusion)}</p>\n`;
           modified = true;
         }
       }
 
       if (modified) {
-        editorEl.innerHTML = bodyHTML + footerHTML;
+        editorEl.innerHTML = (bodyHTML.trim() + "\n" + footerHTML).trim();
       }
     } else if (isInput) {
       let text = (editorEl.value || "").normalize("NFC");
 
-      // 1. Sửa dòng cơ quan
-      if (updatedLine && !isNew && organ && organRegexMap[organ]) {
-        const linePat = new RegExp('(?:^|\\n)\\s*(?:--|—|-)?\\s*' + organRegexMap[organ].source + '[^\\n]*', 'i');
-        if (linePat.test(text)) {
-          text = text.replace(linePat, `\n${updatedLine}`);
-          modified = true;
-        }
+      // 1. Tách Header/Body vs Footer
+      const footerRegex = /(?:^|\n)\s*(?:Người\s*ký|Kỹ\s*thuật\s*viên|Bác\s*sĩ\s*đọc|Chữ\s*ký|Alt\s*\+\s*1|Alt\s*\+\s*2)[^\n]*/i;
+      const footerMatch = text.match(footerRegex);
+      let bodyText = text;
+      let footerText = "";
+      if (footerMatch) {
+        bodyText = text.slice(0, footerMatch.index);
+        footerText = text.slice(footerMatch.index);
       }
 
-      // 2. Chèn cơ quan mới
-      if (isNew && updatedLine) {
-        const anchorPat = new RegExp('([\\s\\S]*?' + insertAfter + '[^\\n]*\\n)', 'i');
-        if (anchorPat.test(text)) {
-          text = text.replace(anchorPat, `$1${updatedLine}\n`);
-          modified = true;
-        }
+      // 2. Sửa từng cơ quan trong bodyText
+      if (synthResult.mota) {
+        bodyText = synthResult.mota;
+        modified = true;
       }
 
-      // 3. Sửa Hạch
-      if (hachLine) {
-        const hachPat = /(?:^|\n)\s*(?:--|—|-)?\s*(?:Không\s*thấy\s*hạch|Hạch)[^\n]*/i;
-        if (hachPat.test(text)) {
-          text = text.replace(hachPat, `\n${hachLine}`);
-          modified = true;
-        }
-      }
-
-      // 4. Sửa Kết luận
+      // 3. Sửa Kết luận
       if (conclusion) {
-        const klExp = /((?:--|—|-)?\s*KẾT\s*LUẬN\s*:\s*\n?)[\s\S]*/i;
-        if (klExp.test(text)) {
-          text = text.replace(klExp, `$1${conclusion}`);
+        const klExp = /((?:^|\n)\s*(?:--|—|-)?\s*KẾT\s*LUẬN\s*:\s*\n?)[\s\S]*/i;
+        if (klExp.test(bodyText)) {
+          bodyText = bodyText.replace(klExp, `$1${conclusion}\n`);
           modified = true;
         } else {
-          text += `\n\nKẾT LUẬN:\n${conclusion}`;
+          bodyText += `\n\nKẾT LUẬN:\n${conclusion}\n`;
           modified = true;
         }
       }
 
       if (modified) {
-        editorEl.value = text;
+        editorEl.value = (bodyText.trim() + (footerText ? "\n\n" + footerText.trim() : "")).trim();
       }
     }
 
@@ -524,8 +520,13 @@
 
     let applied = false;
     if (editor) {
+      saveUndoSnapshot(null, null, editor);
       applied = applySurgicalDictationToRISEditor(editor, synthesizedResult);
+      if (applied && undoStack.length > 0) {
+        undoStack[undoStack.length - 1].appliedVal = editor.isContentEditable ? editor.innerHTML : editor.value;
+      }
     } else if (sep) {
+      saveUndoSnapshot(sep.motaEl, sep.ketluanEl, null);
       if (sep.motaEl && synthesizedResult.mota) {
         sep.motaEl.value = synthesizedResult.mota;
         triggerInputEvents(sep.motaEl);
@@ -536,18 +537,27 @@
         triggerInputEvents(sep.ketluanEl);
         applied = true;
       }
+      if (applied && undoStack.length > 0) {
+        undoStack[undoStack.length - 1].appliedMota = sep.motaEl ? sep.motaEl.value : null;
+        undoStack[undoStack.length - 1].appliedKL = sep.ketluanEl ? sep.ketluanEl.value : null;
+      }
     }
 
     if (storedConfig[STORAGE_KEYS.AUTO_COPY] !== false) {
       copyToClipboard(`${synthesizedResult.mota || ""}\n\nKẾT LUẬN:\n${synthesizedResult.ketluan || ""}`);
     }
 
-    if (storedConfig[STORAGE_KEYS.PLAY_CHIME] !== false) {
-      playChimeSound();
+    const timeStr = new Date().toLocaleTimeString();
+    if (applied) {
+      if (storedConfig[STORAGE_KEYS.PLAY_CHIME] !== false) {
+        playChimeSound();
+      }
+      updateFloatingPreview(cleanDictation, synthesizedResult);
+      showToast(`✅ AutoRIS (${timeStr}): ${synthesizedResult.summary || "Đã phân bổ mô tả & kết luận vào RIS!"}`);
+    } else {
+      updateFloatingPreview(cleanDictation, synthesizedResult, `⚠️ Không tìm thấy ô nhập RIS (Đã tự động copy Ctrl+V)`);
+      showToast(`⚠️ AutoRIS: Không tìm thấy ô nhập RIS hoặc mẫu không khớp! (Đã copy sẵn Ctrl+V)`, true);
     }
-
-    updateFloatingPreview(cleanDictation, synthesizedResult);
-    showToast(`✅ AutoRIS: ${synthesizedResult.summary || "Đã phân bổ mô tả & kết luận vào RIS!"}`);
     return applied;
   }
 
@@ -574,6 +584,37 @@
     }
 
     const lastState = undoStack.pop();
+
+    // Kiểm tra xem bác sĩ có vừa gõ tay chỉnh sửa sau lần tự động điền không
+    let hasManualEdits = false;
+    if (lastState.unifiedEl) {
+      const cur = lastState.unifiedEl.isContentEditable ? lastState.unifiedEl.innerHTML : lastState.unifiedEl.value;
+      if (lastState.appliedVal && cur !== lastState.appliedVal && cur !== lastState.unifiedVal) {
+        hasManualEdits = true;
+      }
+    } else {
+      if (lastState.motaEl) {
+        const curMota = lastState.motaEl.isContentEditable ? lastState.motaEl.innerHTML : lastState.motaEl.value;
+        if (lastState.appliedMota && curMota !== lastState.appliedMota && curMota !== lastState.motaVal) {
+          hasManualEdits = true;
+        }
+      }
+      if (lastState.ketluanEl) {
+        const curKL = lastState.ketluanEl.isContentEditable ? lastState.ketluanEl.innerHTML : lastState.ketluanEl.value;
+        if (lastState.appliedKL && curKL !== lastState.appliedKL && curKL !== lastState.ketluanVal) {
+          hasManualEdits = true;
+        }
+      }
+    }
+
+    if (hasManualEdits) {
+      const confirmUndo = window.confirm("⚠️ CẢNH BÁO: Bác sĩ đã chỉnh sửa thủ công văn bản sau lần tự động điền.\nHoàn tác sẽ xóa các chỉnh sửa tay này. Bác sĩ có chắc chắn muốn hoàn tác?");
+      if (!confirmUndo) {
+        undoStack.push(lastState);
+        return;
+      }
+    }
+
     if (lastState.unifiedEl) {
       if (lastState.unifiedEl.isContentEditable) {
         lastState.unifiedEl.innerHTML = lastState.unifiedVal;
@@ -636,6 +677,9 @@
         <div class="autoris-controls">
           <button id="autoris-btn-apply" class="autoris-btn-primary" title="Điền lại câu này vào RIS">
             ✍️ Điền lại
+          </button>
+          <button id="autoris-btn-copy" class="autoris-btn-secondary" title="Sao chép toàn bộ kết quả vào Clipboard">
+            📋 Copy
           </button>
           <button id="autoris-btn-undo" class="autoris-btn-secondary" title="Hoàn tác nội dung vừa điền (Ctrl+Z)">
             ↩️ Hoàn tác
@@ -720,20 +764,7 @@
       });
     } catch (e) {}
 
-    // Khi người dùng click hoặc focus vào tab này, nếu tab chưa bị uncheck thì tự động kích hoạt
-    function claimTabOnFocus() {
-      if (!userExplicitlyUnchecked) {
-        chrome.storage.local.get([STORAGE_KEYS.ACTIVE_TARGET_TAB], (res) => {
-          if (res && res[STORAGE_KEYS.ACTIVE_TARGET_TAB] !== TAB_INSTANCE_ID) {
-            chrome.storage.local.set({ [STORAGE_KEYS.ACTIVE_TARGET_TAB]: TAB_INSTANCE_ID });
-            updateTabActiveUI(true);
-          }
-        });
-      }
-    }
-
-    window.addEventListener("focus", claimTabOnFocus);
-    bar.addEventListener("click", claimTabOnFocus);
+    // Bác sĩ hoàn toàn chủ động chọn tab qua checkbox chkTarget hoặc nút Áp dụng (tránh cướp quyền khi chuyển tab xem bệnh án)
 
     document.getElementById("autoris-btn-apply").addEventListener("click", () => {
       if (!chkTarget.checked) {
@@ -745,6 +776,27 @@
         processAndApplyDictation(lastDictationText);
       } else {
         showToast("ℹ️ Chưa có câu đọc nào từ điện thoại!");
+      }
+    });
+
+    document.getElementById("autoris-btn-copy").addEventListener("click", async () => {
+      let textToCopy = "";
+      if (lastSynthesizedData) {
+        if (lastSynthesizedData.mota && lastSynthesizedData.ketluan) {
+          textToCopy = `${lastSynthesizedData.mota}\n\nKẾT LUẬN:\n${lastSynthesizedData.ketluan}`;
+        } else {
+          textToCopy = lastSynthesizedData.ketluan || lastSynthesizedData.mota || "";
+        }
+      }
+      if (!textToCopy) {
+        const previewEl = document.getElementById("autoris-preview-text");
+        textToCopy = previewEl ? (previewEl.innerText || previewEl.textContent || "").trim() : "";
+      }
+      if (textToCopy) {
+        await copyToClipboard(textToCopy);
+        showToast("📋 Đã copy kết quả vào clipboard!");
+      } else {
+        showToast("ℹ️ Chưa có nội dung để sao chép!");
       }
     });
 
@@ -909,12 +961,13 @@
     return false;
   }
 
-  // Lắng nghe phím tắt F9 trên PACS
+  // Lắng nghe phím tắt F9 trên PACS (chỉ kích hoạt khi khung báo cáo PACS đang sẵn sàng)
   window.addEventListener("keydown", (e) => {
     if (e.key === "F9" && isPACSPage()) {
-      e.preventDefault();
       const btn = document.getElementById(BUTTON_ID);
-      if (btn && !btn.disabled) {
+      const reportEl = findPACSElement();
+      if (btn && !btn.disabled && reportEl) {
+        e.preventDefault();
         handlePACSAction(btn);
       }
     }
@@ -928,7 +981,6 @@
     handle.onmousedown = dragMouseDown;
 
     function dragMouseDown(e) {
-      e = e || window.event;
       e.preventDefault();
       pos3 = e.clientX;
       pos4 = e.clientY;
@@ -937,7 +989,6 @@
     }
 
     function elementDrag(e) {
-      e = e || window.event;
       e.preventDefault();
       pos1 = pos3 - e.clientX;
       pos2 = pos4 - e.clientY;
@@ -992,21 +1043,22 @@
       toast.id = TOAST_ID;
       Object.assign(toast.style, {
         position: "fixed",
-        bottom: "24px",
-        right: "24px",
-        maxWidth: "420px",
-        padding: "10px 18px",
+        top: "24px",
+        left: "50%",
+        maxWidth: "460px",
+        padding: "10px 20px",
         borderRadius: "8px",
         fontSize: "13px",
         fontWeight: "600",
         color: "#ffffff",
         zIndex: "2147483647",
-        boxShadow: "0 4px 14px rgba(0,0,0,0.35)",
+        boxShadow: "0 6px 18px rgba(0,0,0,0.35)",
         transition: "opacity 0.25s ease, transform 0.25s ease",
         cursor: "pointer",
         display: "none",
         opacity: "0",
-        transform: "translateY(10px)"
+        transform: "translateX(-50%) translateY(-10px)",
+        textAlign: "center"
       });
       toast.title = "Bấm để tắt";
       toast.addEventListener("click", () => {
@@ -1022,11 +1074,11 @@
     toast.style.display = "block";
     void toast.offsetWidth;
     toast.style.opacity = "1";
-    toast.style.transform = "translateY(0)";
+    toast.style.transform = "translateX(-50%) translateY(0)";
 
     toastTimeout = setTimeout(() => {
       toast.style.opacity = "0";
-      toast.style.transform = "translateY(10px)";
+      toast.style.transform = "translateX(-50%) translateY(-10px)";
       setTimeout(() => { if (toast.style.opacity === "0") toast.style.display = "none"; }, 250);
     }, 3500);
   }
@@ -1059,16 +1111,20 @@
     chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       // A. Nhận lời đọc từ điện thoại (AutoRIS ASR)
       if (msg.action === "ACTION_NEW_DICTATION") {
-        if (!isTabSelectedForFilling()) {
-          console.log("[AutoRIS RIS] Bỏ qua ca đọc vì tab này chưa được tick '🎯 Điền tab này'.");
-          return;
-        }
         const data = msg.data;
         const textToApply = data.normalized_transcript || data.raw_transcript;
+        if (!isTabSelectedForFilling()) {
+          console.log("[AutoRIS RIS] Bỏ qua ca đọc vì tab này chưa được tick '🎯 Điền tab này'.");
+          if (textToApply) {
+            updateFloatingPreview(textToApply, null, "⚪ Tab này đang tắt tick '🎯 Điền tab này' (Bỏ qua)");
+          }
+          sendResponse({ success: false, skipped: true });
+          return;
+        }
         console.log("[AutoRIS RIS] Nhận ca đọc từ điện thoại:", textToApply);
         if (textToApply) {
-          processAndApplyDictation(textToApply);
-          sendResponse({ success: true });
+          const applied = processAndApplyDictation(textToApply);
+          sendResponse({ success: applied });
         }
       }
 

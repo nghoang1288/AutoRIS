@@ -69,6 +69,9 @@ object MedicalTextNormalizer {
         val suggestionsLog = mutableListOf<String>()
         var normalized = rawText.lowercase(Locale("vi", "VN"))
 
+        // 0. Clean leading acoustic pops/click fillers
+        normalized = MedicalPhraseNormalizer.cleanLeadingFillers(normalized)
+
         // 1. Radiology Phonetic & Dialect fixes
         val afterPhonetics = MedicalPhraseNormalizer.fixPhonetics(normalized, suggestionsLog)
         normalized = afterPhonetics
@@ -113,7 +116,8 @@ object MedicalTextNormalizer {
         val afterMeas = MeasurementParser.parse(normalized)
         normalized = afterMeas
 
-        // 10. Clean trailing verbal fillers & capitalize
+        // 10. Clean leading & trailing verbal fillers & capitalize
+        normalized = MedicalPhraseNormalizer.cleanLeadingFillers(normalized)
         normalized = MedicalPhraseNormalizer.cleanTrailingFillers(normalized)
         normalized = MedicalPhraseNormalizer.capitalizeFirstLetter(normalized)
 

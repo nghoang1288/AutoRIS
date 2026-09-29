@@ -25,6 +25,20 @@ object HapticHelper {
         vibrate(context, durationMs = 60L, amplitude = 120)
     }
 
+    /**
+     * Joyful double tick when sent successfully to RIS
+     */
+    fun vibrateSuccess(context: Context) {
+        vibrate(context, durationMs = 35L, amplitude = 100)
+    }
+
+    /**
+     * Warning buzz when sync fails
+     */
+    fun vibrateError(context: Context) {
+        vibrate(context, durationMs = 120L, amplitude = 180)
+    }
+
     private fun vibrate(context: Context, durationMs: Long, amplitude: Int) {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {

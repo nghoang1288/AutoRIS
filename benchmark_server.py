@@ -55,6 +55,10 @@ RECENT_DICTATIONS = []
 RECENT_LOCK = threading.Lock()
 DICTATION_LISTENERS = []
 LISTENERS_LOCK = threading.Lock()
+FILE_LOCK = threading.Lock()
+
+MAX_UPLOAD_SIZE = 10 * 1024 * 1024   # 10 MB
+MAX_AUDIO_SIZE = 50 * 1024 * 1024    # 50 MB
 
 def broadcast_dictation(session_data):
     sid = session_data.get("id") or session_data.get("sessionId") or int(time.time() * 1000)
@@ -114,46 +118,49 @@ def load_all_sessions():
     try:
         with open(ALL_SESSIONS_JSON, "r", encoding="utf-8") as f:
             return json.load(f)
-    except Exception:
-        return []
+    except Exception as e:
+        print(f"[AutoRIS Server Error] Failed to read {ALL_SESSIONS_JSON}: {e}")
+        raise IOError(f"Corrupt sessions file {ALL_SESSIONS_JSON}: {e}")
 
 def save_all_sessions(sessions):
-    with open(ALL_SESSIONS_JSON, "w", encoding="utf-8") as f:
-        json.dump(sessions, f, ensure_ascii=False, indent=2)
+    with FILE_LOCK:
+        with open(ALL_SESSIONS_JSON, "w", encoding="utf-8") as f:
+            json.dump(sessions, f, ensure_ascii=False, indent=2)
 
 def append_to_csv(sessions):
-    file_exists = os.path.exists(CSV_FILE) and os.path.getsize(CSV_FILE) > 0
-    with open(CSV_FILE, "a", newline="", encoding="utf-8-sig") as f:
-        writer = csv.writer(f)
-        if not file_exists:
-            writer.writerow(CSV_HEADERS)
-        for s in sessions:
-            writer.writerow([
-                s.get("id", ""),
-                s.get("timestamp", ""),
-                s.get("device", ""),
-                s.get("model", ""),
-                s.get("testId", ""),
-                s.get("category", ""),
-                s.get("audioDurationSec", 0),
-                s.get("firstPartialMs", 0),
-                s.get("finalLatencyMs", 0),
-                s.get("processingMs", 0),
-                s.get("rtf", 0),
-                s.get("ramPeakMb", 0),
-                s.get("batteryPercent", 0),
-                s.get("batteryTemp", 0),
-                s.get("cer", ""),
-                s.get("wer", ""),
-                s.get("medicalTermAccuracy", ""),
-                s.get("numericAccuracy", ""),
-                s.get("anatomyAccuracy", ""),
-                s.get("negationAccuracy", ""),
-                s.get("rawTranscript", ""),
-                s.get("normalizedTranscript", ""),
-                s.get("referenceText", ""),
-                s.get("audioPath", "")
-            ])
+    with FILE_LOCK:
+        file_exists = os.path.exists(CSV_FILE) and os.path.getsize(CSV_FILE) > 0
+        with open(CSV_FILE, "a", newline="", encoding="utf-8-sig") as f:
+            writer = csv.writer(f)
+            if not file_exists:
+                writer.writerow(CSV_HEADERS)
+            for s in sessions:
+                writer.writerow([
+                    s.get("id", ""),
+                    s.get("timestamp", ""),
+                    s.get("device", ""),
+                    s.get("model", ""),
+                    s.get("testId", ""),
+                    s.get("category", ""),
+                    s.get("audioDurationSec", 0),
+                    s.get("firstPartialMs", 0),
+                    s.get("finalLatencyMs", 0),
+                    s.get("processingMs", 0),
+                    s.get("rtf", 0),
+                    s.get("ramPeakMb", 0),
+                    s.get("batteryPercent", 0),
+                    s.get("batteryTemp", 0),
+                    s.get("cer", ""),
+                    s.get("wer", ""),
+                    s.get("medicalTermAccuracy", ""),
+                    s.get("numericAccuracy", ""),
+                    s.get("anatomyAccuracy", ""),
+                    s.get("negationAccuracy", ""),
+                    s.get("rawTranscript", ""),
+                    s.get("normalizedTranscript", ""),
+                    s.get("referenceText", ""),
+                    s.get("audioPath", "")
+                ])
 
 def is_v2_session(s):
     return any(k in s for k in ("roomId", "room_id", "preprocessingProfile", "preprocessing_profile", "criticalNumericError", "sessionId"))
@@ -164,21 +171,31 @@ def load_all_sessions_v2():
     try:
         with open(ALL_SESSIONS_JSON_V2, "r", encoding="utf-8") as f:
             return json.load(f)
-    except Exception:
-        return []
+    except Exception as e:
+        print(f"[AutoRIS Server Error] Failed to read {ALL_SESSIONS_JSON_V2}: {e}")
+        raise IOError(f"Corrupt sessions file {ALL_SESSIONS_JSON_V2}: {e}")
 
 def get_all_sessions():
-    v1 = load_all_sessions()
-    v2 = load_all_sessions_v2()
+    try:
+        v1 = load_all_sessions()
+    except Exception as e:
+        print(f"[AutoRIS Server Warning] Failed to load v1 sessions: {e}")
+        v1 = []
+    try:
+        v2 = load_all_sessions_v2()
+    except Exception as e:
+        print(f"[AutoRIS Server Warning] Failed to load v2 sessions: {e}")
+        v2 = []
     seen_ids = set()
     combined = []
     # Process V2 (newer schema) first, then V1
     for s in v2 + v1:
         sid = s.get("id") or s.get("sessionId")
-        if sid and sid in seen_ids:
-            continue
-        if sid:
-            seen_ids.add(sid)
+        if sid is not None:
+            sid_str = str(sid)
+            if sid_str in seen_ids:
+                continue
+            seen_ids.add(sid_str)
         
         s_norm = dict(s)
         if s_norm.get("wer") is None and s_norm.get("werNormalized") is not None:
@@ -196,62 +213,64 @@ def get_all_sessions():
     return combined
 
 def save_all_sessions_v2(sessions):
-    with open(ALL_SESSIONS_JSON_V2, "w", encoding="utf-8") as f:
-        json.dump(sessions, f, ensure_ascii=False, indent=2)
+    with FILE_LOCK:
+        with open(ALL_SESSIONS_JSON_V2, "w", encoding="utf-8") as f:
+            json.dump(sessions, f, ensure_ascii=False, indent=2)
 
 def append_to_csv_v2(sessions):
-    file_exists = os.path.exists(CSV_FILE_V2) and os.path.getsize(CSV_FILE_V2) > 0
-    with open(CSV_FILE_V2, "a", newline="", encoding="utf-8-sig") as f:
-        writer = csv.writer(f)
-        if not file_exists:
-            writer.writerow(CSV_HEADERS_V2)
-        for s in sessions:
-            writer.writerow([
-                s.get("id", ""),
-                s.get("sessionId", ""),
-                s.get("timestamp", ""),
-                s.get("deviceModel") or s.get("device", ""),
-                s.get("modelName") or s.get("model", ""),
-                s.get("testId", ""),
-                s.get("category", ""),
-                s.get("roomId", "ROOM_01"),
-                s.get("roomType", "reading_room"),
-                s.get("noiseType", "clean"),
-                s.get("noiseLevel", "quiet"),
-                s.get("speakerDistanceCm", 30),
-                s.get("micOrientationDeg", 0),
-                s.get("preprocessingProfile", "RAW"),
-                s.get("audioDurationSec", 0),
-                s.get("firstSegmentResultLatencyMs") or s.get("firstPartialMs", 0),
-                s.get("truePartialLatencyMs", ""),
-                s.get("firstPartialMs", 0),
-                s.get("finalLatencyMs", 0),
-                s.get("processingMs", 0),
-                s.get("rtf", 0),
-                s.get("ramPeakMb", 0),
-                s.get("batteryPercent", 0),
-                s.get("batteryTemp", 0),
-                s.get("werRaw", ""),
-                s.get("cerRaw", ""),
-                s.get("werNormalized") or s.get("wer", ""),
-                s.get("cerNormalized") or s.get("cer", ""),
-                s.get("medicalTermAccuracy", ""),
-                s.get("numericAccuracy", ""),
-                s.get("measurementAccuracy", "") or s.get("numericAccuracy", ""),
-                s.get("anatomyAccuracy", ""),
-                s.get("lateralityAccuracy", ""),
-                s.get("negationAccuracy", ""),
-                s.get("spineLevelAccuracy", ""),
-                1 if s.get("criticalNumericError") else 0,
-                1 if s.get("criticalMeasurementError") else 0,
-                1 if s.get("criticalNegationError") else 0,
-                1 if s.get("criticalLateralityError") else 0,
-                1 if s.get("criticalSpineError") else 0,
-                s.get("rawTranscript", ""),
-                s.get("normalizedTranscript", ""),
-                s.get("referenceText", ""),
-                s.get("audioPath", "")
-            ])
+    with FILE_LOCK:
+        file_exists = os.path.exists(CSV_FILE_V2) and os.path.getsize(CSV_FILE_V2) > 0
+        with open(CSV_FILE_V2, "a", newline="", encoding="utf-8-sig") as f:
+            writer = csv.writer(f)
+            if not file_exists:
+                writer.writerow(CSV_HEADERS_V2)
+            for s in sessions:
+                writer.writerow([
+                    s.get("id", ""),
+                    s.get("sessionId", ""),
+                    s.get("timestamp", ""),
+                    s.get("deviceModel") or s.get("device", ""),
+                    s.get("modelName") or s.get("model", ""),
+                    s.get("testId", ""),
+                    s.get("category", ""),
+                    s.get("roomId", "ROOM_01"),
+                    s.get("roomType", "reading_room"),
+                    s.get("noiseType", "clean"),
+                    s.get("noiseLevel", "quiet"),
+                    s.get("speakerDistanceCm", 30),
+                    s.get("micOrientationDeg", 0),
+                    s.get("preprocessingProfile", "RAW"),
+                    s.get("audioDurationSec", 0),
+                    s.get("firstSegmentResultLatencyMs") or s.get("firstPartialMs", 0),
+                    s.get("truePartialLatencyMs", ""),
+                    s.get("firstPartialMs", 0),
+                    s.get("finalLatencyMs", 0),
+                    s.get("processingMs", 0),
+                    s.get("rtf", 0),
+                    s.get("ramPeakMb", 0),
+                    s.get("batteryPercent", 0),
+                    s.get("batteryTemp", 0),
+                    s.get("werRaw", ""),
+                    s.get("cerRaw", ""),
+                    s.get("werNormalized") or s.get("wer", ""),
+                    s.get("cerNormalized") or s.get("cer", ""),
+                    s.get("medicalTermAccuracy", ""),
+                    s.get("numericAccuracy", ""),
+                    s.get("measurementAccuracy", "") or s.get("numericAccuracy", ""),
+                    s.get("anatomyAccuracy", ""),
+                    s.get("lateralityAccuracy", ""),
+                    s.get("negationAccuracy", ""),
+                    s.get("spineLevelAccuracy", ""),
+                    1 if s.get("criticalNumericError") else 0,
+                    1 if s.get("criticalMeasurementError") else 0,
+                    1 if s.get("criticalNegationError") else 0,
+                    1 if s.get("criticalLateralityError") else 0,
+                    1 if s.get("criticalSpineError") else 0,
+                    s.get("rawTranscript", ""),
+                    s.get("normalizedTranscript", ""),
+                    s.get("referenceText", ""),
+                    s.get("audioPath", "")
+                ])
 
 def init_recent_dictations():
     sessions = get_all_sessions()
@@ -280,17 +299,17 @@ def calculate_summary_stats(sessions):
         valid = [v for v in vals if v is not None and isinstance(v, (int, float))]
         return sum(valid) / len(valid) if valid else 0.0
 
-    rtfs = [s.get("rtf") for s in sessions]
-    first_partials = [s.get("firstPartialMs") for s in sessions if s.get("firstPartialMs", 0) > 0]
-    final_latencies = [s.get("finalLatencyMs") for s in sessions if s.get("finalLatencyMs", 0) > 0]
+    rtfs = [s.get("rtf") for s in sessions if s.get("rtf") is not None]
+    first_partials = [s.get("firstPartialMs") for s in sessions if (s.get("firstPartialMs") or 0) > 0]
+    final_latencies = [s.get("finalLatencyMs") for s in sessions if (s.get("finalLatencyMs") or 0) > 0]
     wers = [s.get("wer") for s in sessions if s.get("wer") is not None]
     cers = [s.get("cer") for s in sessions if s.get("cer") is not None]
     med_terms = [s.get("medicalTermAccuracy") for s in sessions if s.get("medicalTermAccuracy") is not None]
     numerics = [s.get("numericAccuracy") for s in sessions if s.get("numericAccuracy") is not None]
     anatomies = [s.get("anatomyAccuracy") for s in sessions if s.get("anatomyAccuracy") is not None]
     negations = [s.get("negationAccuracy") for s in sessions if s.get("negationAccuracy") is not None]
-    rams = [s.get("ramPeakMb") for s in sessions if s.get("ramPeakMb", 0) > 0]
-    temps = [s.get("batteryTemp") for s in sessions if s.get("batteryTemp", 0) > 0]
+    rams = [s.get("ramPeakMb") for s in sessions if (s.get("ramPeakMb") or 0) > 0]
+    temps = [s.get("batteryTemp") for s in sessions if (s.get("batteryTemp") or 0) > 0]
 
     # Category breakdown
     cats = {}
@@ -492,7 +511,11 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
 
         elif path.startswith("/models/"):
             rel_path = path[len("/models/"):].lstrip("/")
-            model_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models", rel_path)
+            model_dir = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "models"))
+            model_file = os.path.abspath(os.path.join(model_dir, rel_path))
+            if not model_file.startswith(model_dir):
+                self.send_error(403, "Forbidden")
+                return
             if os.path.exists(model_file) and os.path.isfile(model_file):
                 self.send_response(200)
                 self.send_cors_headers()
@@ -549,6 +572,9 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
             if content_length == 0:
                 self.send_error(400, "Empty payload")
                 return
+            if content_length > MAX_UPLOAD_SIZE:
+                self.send_error(413, f"Payload too large. Maximum is {MAX_UPLOAD_SIZE} bytes.")
+                return
 
             body = self.rfile.read(content_length).decode("utf-8")
             try:
@@ -567,50 +593,51 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
             v2_sessions = [s for s in new_sessions if is_v2_session(s)]
             v1_sessions = [s for s in new_sessions if not is_v2_session(s)]
 
-            for s in new_sessions:
-                sid = s.get("id") or int(time.time() * 1000)
-                target_dir = SESSIONS_DIR_V2 if is_v2_session(s) else SESSIONS_DIR
-                sfile = os.path.join(target_dir, f"session_{now_str}_{sid}.json")
-                with open(sfile, "w", encoding="utf-8") as f:
-                    json.dump(s, f, ensure_ascii=False, indent=2)
+            with FILE_LOCK:
+                for s in new_sessions:
+                    sid = s.get("id") or int(time.time() * 1000)
+                    target_dir = SESSIONS_DIR_V2 if is_v2_session(s) else SESSIONS_DIR
+                    sfile = os.path.join(target_dir, f"session_{now_str}_{sid}.json")
+                    with open(sfile, "w", encoding="utf-8") as f:
+                        json.dump(s, f, ensure_ascii=False, indent=2)
 
-            # Update V2 aggregate data
-            if v2_sessions:
-                existing_v2 = load_all_sessions_v2()
-                existing_ids_v2 = {x.get("id") for x in existing_v2 if x.get("id")}
-                to_append_v2 = []
-                for s in v2_sessions:
-                    sid = s.get("id")
-                    if not sid or sid not in existing_ids_v2:
-                        existing_v2.append(s)
-                        to_append_v2.append(s)
-                    else:
-                        for idx, ex in enumerate(existing_v2):
-                            if ex.get("id") == sid:
-                                existing_v2[idx] = s
-                                break
-                save_all_sessions_v2(existing_v2)
-                append_to_csv_v2(to_append_v2)
+                # Update V2 aggregate data
+                if v2_sessions:
+                    existing_v2 = load_all_sessions_v2()
+                    existing_ids_v2 = {x.get("id") for x in existing_v2 if x.get("id")}
+                    to_append_v2 = []
+                    for s in v2_sessions:
+                        sid = s.get("id")
+                        if not sid or sid not in existing_ids_v2:
+                            existing_v2.append(s)
+                            to_append_v2.append(s)
+                        else:
+                            for idx, ex in enumerate(existing_v2):
+                                if ex.get("id") == sid:
+                                    existing_v2[idx] = s
+                                    break
+                    save_all_sessions_v2(existing_v2)
+                    append_to_csv_v2(to_append_v2)
 
-            # Update V1 aggregate data
-            if v1_sessions:
-                existing_v1 = load_all_sessions()
-                existing_ids_v1 = {x.get("id") for x in existing_v1 if x.get("id")}
-                to_append_v1 = []
-                for s in v1_sessions:
-                    sid = s.get("id")
-                    if not sid or sid not in existing_ids_v1:
-                        existing_v1.append(s)
-                        to_append_v1.append(s)
-                    else:
-                        for idx, ex in enumerate(existing_v1):
-                            if ex.get("id") == sid:
-                                existing_v1[idx] = s
-                                break
-                save_all_sessions(existing_v1)
-                append_to_csv(to_append_v1)
+                # Update V1 aggregate data
+                if v1_sessions:
+                    existing_v1 = load_all_sessions()
+                    existing_ids_v1 = {x.get("id") for x in existing_v1 if x.get("id")}
+                    to_append_v1 = []
+                    for s in v1_sessions:
+                        sid = s.get("id")
+                        if not sid or sid not in existing_ids_v1:
+                            existing_v1.append(s)
+                            to_append_v1.append(s)
+                        else:
+                            for idx, ex in enumerate(existing_v1):
+                                if ex.get("id") == sid:
+                                    existing_v1[idx] = s
+                                    break
+                    save_all_sessions(existing_v1)
+                    append_to_csv(to_append_v1)
 
-            all_combined = load_all_sessions() + load_all_sessions_v2()
+            all_combined = get_all_sessions()
             stats = calculate_summary_stats(all_combined)
             print_terminal_summary(stats, len(new_sessions))
 
@@ -634,16 +661,17 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
             if content_length == 0:
                 self.send_error(400, "Empty audio payload")
                 return
+            if content_length > MAX_AUDIO_SIZE:
+                self.send_error(413, f"Audio payload too large. Maximum is {MAX_AUDIO_SIZE} bytes.")
+                return
 
-            sid = query.get("id", ["unknown"])[0]
-            filename = query.get("filename", [f"audio_{sid}.wav"])[0]
+            raw_sid = query.get("id", ["unknown"])[0]
+            sid = os.path.basename(str(raw_sid))
+            raw_filename = query.get("filename", [f"audio_{sid}.wav"])[0]
+            filename = os.path.basename(raw_filename)
             audio_data = self.rfile.read(content_length)
 
-            dest_file_v1 = os.path.join(AUDIO_DIR, f"{sid}_{filename}")
             dest_file_v2 = os.path.join(AUDIO_DIR_V2, f"{sid}_{filename}")
-
-            with open(dest_file_v1, "wb") as f:
-                f.write(audio_data)
             with open(dest_file_v2, "wb") as f:
                 f.write(audio_data)
 

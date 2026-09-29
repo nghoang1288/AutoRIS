@@ -33,7 +33,7 @@ object LateralityParser {
 
     fun parse(text: String): Pair<List<ParsedLaterality>, Boolean> {
         val lower = text.lowercase(Locale.ROOT)
-        val results = mutableListOf<ParsedLaterality>()
+        val parsedWithIndex = mutableListOf<Pair<Int, ParsedLaterality>>()
         var hasConflict = false
         val matchedSpans = mutableListOf<IntRange>()
 
@@ -47,9 +47,21 @@ object LateralityParser {
                 val targetRange = targetIdx until (targetIdx + target.length)
                 val overlaps = matchedSpans.any { it.first <= targetRange.last && targetRange.first <= it.last }
                 if (!overlaps) {
-                    // Look around the target window (-25 to +25 chars)
-                    val start = maxOf(0, targetIdx - 25)
-                    val end = minOf(lower.length, targetIdx + target.length + 25)
+                    // Look around the target window within the same clause/sentence (bounded by punctuation)
+                    var start = maxOf(0, targetIdx - 25)
+                    for (i in targetIdx - 1 downTo start) {
+                        if (lower[i] in ".,;\n") {
+                            start = i + 1
+                            break
+                        }
+                    }
+                    var end = minOf(lower.length, targetIdx + target.length + 25)
+                    for (i in (targetIdx + target.length) until end) {
+                        if (lower[i] in ".,;\n") {
+                            end = i
+                            break
+                        }
+                    }
                     val window = lower.substring(start, end)
 
                     val hasRight = RIGHT_REGEX.containsMatchIn(window)
@@ -59,24 +71,26 @@ object LateralityParser {
                     val baseTarget = getBaseAnatomyTarget(target)
 
                     if (hasBilateral) {
-                        results.add(ParsedLaterality(LateralityType.BILATERAL, baseTarget, window, isContradictory = false))
+                        parsedWithIndex.add(targetIdx to ParsedLaterality(LateralityType.BILATERAL, baseTarget, window, isContradictory = false))
                         matchedSpans.add(targetRange)
                     } else if (hasRight && hasLeft) {
                         // Contradiction in the same local window for a single anatomy!
                         hasConflict = true
-                        results.add(ParsedLaterality(LateralityType.UNSPECIFIED, baseTarget, window, isContradictory = true))
+                        parsedWithIndex.add(targetIdx to ParsedLaterality(LateralityType.UNSPECIFIED, baseTarget, window, isContradictory = true))
                         matchedSpans.add(targetRange)
                     } else if (hasRight) {
-                        results.add(ParsedLaterality(LateralityType.RIGHT, baseTarget, window, isContradictory = false))
+                        parsedWithIndex.add(targetIdx to ParsedLaterality(LateralityType.RIGHT, baseTarget, window, isContradictory = false))
                         matchedSpans.add(targetRange)
                     } else if (hasLeft) {
-                        results.add(ParsedLaterality(LateralityType.LEFT, baseTarget, window, isContradictory = false))
+                        parsedWithIndex.add(targetIdx to ParsedLaterality(LateralityType.LEFT, baseTarget, window, isContradictory = false))
                         matchedSpans.add(targetRange)
                     }
                 }
                 searchFrom = targetIdx + target.length
             }
         }
+
+        val results = parsedWithIndex.sortedBy { it.first }.map { it.second }.toMutableList()
 
         // Fallback: If no specific paired organ matched, but explicit directional cue exists
         if (results.isEmpty()) {

@@ -70,7 +70,7 @@ class MainActivity : ComponentActivity() {
 
                 Scaffold(
                     snackbarHost = { SnackbarHost(snackbarHostState) },
-                    containerColor = DarkBackground
+                    containerColor = com.autoris.asrbenchmark.ui.theme.WarmLinenBg
                 ) { innerPadding ->
                     Box(
                         modifier = Modifier

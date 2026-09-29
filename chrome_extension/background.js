@@ -253,23 +253,34 @@ async function handlePACSSynthesizeReport(payload) {
   const activeGooglePool = (googleKeysPool && googleKeysPool.length > 0) ? googleKeysPool : DEFAULT_CONFIG.googleKeysPool;
   const activePrompt = systemPrompt || LUNG_RADS_SYSTEM_PROMPT;
 
+  const abortController = new AbortController();
+  let timeoutId = null;
+
   const totalTimeoutPromise = new Promise((_, reject) => {
-    setTimeout(() => reject(new Error(`Tác vụ tổng hợp vượt quá thời gian tối đa (${TIMING.TOTAL_TIMEOUT_MS / 1000}s)`)), TIMING.TOTAL_TIMEOUT_MS);
+    timeoutId = setTimeout(() => {
+      abortController.abort();
+      reject(new Error(`Tác vụ tổng hợp vượt quá thời gian tối đa (${TIMING.TOTAL_TIMEOUT_MS / 1000}s)`));
+    }, TIMING.TOTAL_TIMEOUT_MS);
   });
 
   const executionPromise = (async () => {
-    if (mode === "server") {
-      return await callOpenAICompatibleServer(serverEndpoint, serverKey, preferredModel, activePrompt, `BÁO CÁO ĐẦU VÀO:\n${rawText}`);
-    }
-    if (mode === "direct") {
-      return await callGoogleGeminiDirect(activeGooglePool, preferredModel, activePrompt, `BÁO CÁO ĐẦU VÀO:\n${rawText}`);
-    }
-    // Chế độ "auto": Thử Server -> nếu lỗi chuyển Google Direct
     try {
-      return await callOpenAICompatibleServer(serverEndpoint, serverKey, preferredModel, activePrompt, `BÁO CÁO ĐẦU VÀO:\n${rawText}`);
-    } catch (err) {
-      console.warn("[AutoRIS BG] Server 9router gặp lỗi, tự động chuyển sang Google Direct...", err.message);
-      return await callGoogleGeminiDirect(activeGooglePool, preferredModel, activePrompt, `BÁO CÁO ĐẦU VÀO:\n${rawText}`);
+      if (mode === "server") {
+        return await callOpenAICompatibleServer(serverEndpoint, serverKey, preferredModel, activePrompt, `BÁO CÁO ĐẦU VÀO:\n${rawText}`, 15000, abortController.signal);
+      }
+      if (mode === "direct") {
+        return await callGoogleGeminiDirect(activeGooglePool, preferredModel, activePrompt, `BÁO CÁO ĐẦU VÀO:\n${rawText}`, 15000, abortController.signal);
+      }
+      // Chế độ "auto": Thử Server -> nếu lỗi chuyển Google Direct
+      try {
+        return await callOpenAICompatibleServer(serverEndpoint, serverKey, preferredModel, activePrompt, `BÁO CÁO ĐẦU VÀO:\n${rawText}`, 15000, abortController.signal);
+      } catch (err) {
+        if (abortController.signal.aborted) throw err;
+        console.warn("[AutoRIS BG] Server 9router gặp lỗi, tự động chuyển sang Google Direct...", err.message);
+        return await callGoogleGeminiDirect(activeGooglePool, preferredModel, activePrompt, `BÁO CÁO ĐẦU VÀO:\n${rawText}`, 15000, abortController.signal);
+      }
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
     }
   })();
 
@@ -277,7 +288,7 @@ async function handlePACSSynthesizeReport(payload) {
 }
 
 // 8. Gọi 9router (OpenAI Compatible Format)
-async function callOpenAICompatibleServer(endpoint, apiKey, preferredModel, systemPrompt, userPrompt, timeoutMs = 15000) {
+async function callOpenAICompatibleServer(endpoint, apiKey, preferredModel, systemPrompt, userPrompt, timeoutMs = 15000, externalSignal = null) {
   const candidateModels = [
     preferredModel,
     "gemini-3.5-flash-lite",
@@ -295,8 +306,17 @@ async function callOpenAICompatibleServer(endpoint, apiKey, preferredModel, syst
   let lastError = null;
 
   for (const model of models) {
+    if (externalSignal && externalSignal.aborted) {
+      throw new Error("Tác vụ đã bị hủy");
+    }
+
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    const onAbort = () => controller.abort();
+    if (externalSignal) {
+      externalSignal.addEventListener("abort", onAbort, { once: true });
+    }
 
     try {
       const response = await fetch(`${endpoint}/chat/completions`, {
@@ -315,6 +335,7 @@ async function callOpenAICompatibleServer(endpoint, apiKey, preferredModel, syst
       });
 
       clearTimeout(timeoutId);
+      if (externalSignal) externalSignal.removeEventListener("abort", onAbort);
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
@@ -328,20 +349,22 @@ async function callOpenAICompatibleServer(endpoint, apiKey, preferredModel, syst
       const rawBody = await response.text();
       let outputText = "";
 
-      if (rawBody.trim().startsWith("data:")) {
-        const chunks = rawBody.split(/(?:^|\n)data:\s*/);
-        for (const chunk of chunks) {
-          const trimmed = chunk.trim();
-          if (trimmed && trimmed !== "[DONE]") {
-            try {
-              const data = JSON.parse(trimmed);
-              outputText += data.choices?.[0]?.delta?.content || data.choices?.[0]?.text || "";
-            } catch (e) {}
-          }
-        }
-      } else {
+      try {
         const data = JSON.parse(rawBody);
         outputText = data.choices?.[0]?.message?.content?.trim() || "";
+      } catch (parseErr) {
+        if (rawBody.trim().startsWith("data:")) {
+          const chunks = rawBody.split(/(?:^|\n)data:\s*/);
+          for (const chunk of chunks) {
+            const trimmed = chunk.trim();
+            if (trimmed && trimmed !== "[DONE]") {
+              try {
+                const data = JSON.parse(trimmed);
+                outputText += data.choices?.[0]?.delta?.content || data.choices?.[0]?.text || "";
+              } catch (e) {}
+            }
+          }
+        }
       }
 
       if (outputText) {
@@ -350,6 +373,7 @@ async function callOpenAICompatibleServer(endpoint, apiKey, preferredModel, syst
       throw new Error("Phản hồi rỗng từ 9router");
     } catch (err) {
       clearTimeout(timeoutId);
+      if (externalSignal) externalSignal.removeEventListener("abort", onAbort);
       if (err.fatal) throw err;
       lastError = err;
     }
@@ -359,7 +383,7 @@ async function callOpenAICompatibleServer(endpoint, apiKey, preferredModel, syst
 }
 
 // 9. Gọi trực tiếp Google Gemini API khi dự phòng
-async function callGoogleGeminiDirect(keysPool, preferredModel, systemPrompt, userPrompt, timeoutMs = 15000) {
+async function callGoogleGeminiDirect(keysPool, preferredModel, systemPrompt, userPrompt, timeoutMs = 15000, externalSignal = null) {
   const candidateModels = [
     GOOGLE_MODEL_MAP[preferredModel] || preferredModel || "gemini-2.5-flash-lite",
     "gemini-2.5-flash",
@@ -377,8 +401,17 @@ async function callGoogleGeminiDirect(keysPool, preferredModel, systemPrompt, us
 
   for (const apiKey of keysPool) {
     for (const model of models) {
+      if (externalSignal && externalSignal.aborted) {
+        throw new Error("Tác vụ đã bị hủy");
+      }
+
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+      const onAbort = () => controller.abort();
+      if (externalSignal) {
+        externalSignal.addEventListener("abort", onAbort, { once: true });
+      }
 
       try {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
@@ -393,6 +426,7 @@ async function callGoogleGeminiDirect(keysPool, preferredModel, systemPrompt, us
         });
 
         clearTimeout(timeoutId);
+        if (externalSignal) externalSignal.removeEventListener("abort", onAbort);
 
         if (!response.ok) {
           const errData = await response.json().catch(() => ({}));
@@ -414,6 +448,7 @@ async function callGoogleGeminiDirect(keysPool, preferredModel, systemPrompt, us
         }
       } catch (err) {
         clearTimeout(timeoutId);
+        if (externalSignal) externalSignal.removeEventListener("abort", onAbort);
         lastError = err;
       }
     }
@@ -424,19 +459,14 @@ async function callGoogleGeminiDirect(keysPool, preferredModel, systemPrompt, us
 
 // 10. Hàm bóc tách chuỗi JSON an toàn từ kết quả AI
 function parseAIJsonResult(rawOutput) {
-  let cleaned = rawOutput.trim();
-  if (cleaned.startsWith("```")) {
-    cleaned = cleaned.split("\n", 1)[1] || cleaned;
-    if (cleaned.endsWith("```")) {
-      cleaned = cleaned.slice(0, cleaned.lastIndexOf("```"));
-    }
-    cleaned = cleaned.trim();
-  }
+  let cleaned = (rawOutput || "").trim();
+  // Xóa các code block markdown ```json ... ```
+  cleaned = cleaned.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
 
-  const firstBrace = cleaned.indexOf("{");
-  const lastBrace = cleaned.lastIndexOf("}");
-  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-    cleaned = cleaned.substring(firstBrace, lastBrace + 1);
+  // Bóc tách block JSON ngoặc nhọn ngoài cùng
+  const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    cleaned = jsonMatch[0];
   }
 
   try {

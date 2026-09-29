@@ -20,7 +20,15 @@ object MedicalPhraseNormalizer {
         Regex("\\bnút\\s+đặc\\b", RegexOption.IGNORE_CASE) to "nốt đặc",
         Regex("\\b(?:fly|flai|fe\\s*le)\\b", RegexOption.IGNORE_CASE) to "FLAIR",
         Regex("\\bthuỷ\\s+(trán|thái\\s+dương|đỉnh|chẩm|nhộng|dưới|trên|giữa|gan|thận|phổi)\\b", RegexOption.IGNORE_CASE) to "thùy $1",
-        Regex("\\bhạ\\s+phân\\s+thuỳ\\b", RegexOption.IGNORE_CASE) to "hạ phân thùy",
+        Regex("\\b(?:khai|khải|hai|hại|hạ)\\s+phân\\s+(?:thuỷ|thùy|thuy|thuỳ)\\b", RegexOption.IGNORE_CASE) to "hạ phân thùy",
+        Regex("\\b(?:hạ\\s+phân\\s+thùy|phân\\s+thùy|hpt)\\s+(?:một|1)\\b", RegexOption.IGNORE_CASE) to "hạ phân thùy I",
+        Regex("\\b(?:hạ\\s+phân\\s+thùy|phân\\s+thùy|hpt)\\s+(?:hai|2)\\b", RegexOption.IGNORE_CASE) to "hạ phân thùy II",
+        Regex("\\b(?:hạ\\s+phân\\s+thùy|phân\\s+thùy|hpt)\\s+(?:ba|3)\\b", RegexOption.IGNORE_CASE) to "hạ phân thùy III",
+        Regex("\\b(?:hạ\\s+phân\\s+thùy|phân\\s+thùy|hpt)\\s+(?:bốn|tư|4)\\b", RegexOption.IGNORE_CASE) to "hạ phân thùy IV",
+        Regex("\\b(?:hạ\\s+phân\\s+thùy|phân\\s+thùy|hpt)\\s+(?:năm|5)\\b", RegexOption.IGNORE_CASE) to "hạ phân thùy V",
+        Regex("\\b(?:hạ\\s+phân\\s+thùy|phân\\s+thùy|hpt)\\s+(?:sáu|6)\\b", RegexOption.IGNORE_CASE) to "hạ phân thùy VI",
+        Regex("\\b(?:hạ\\s+phân\\s+thùy|phân\\s+thùy|hpt)\\s+(?:bảy|7)\\b", RegexOption.IGNORE_CASE) to "hạ phân thùy VII",
+        Regex("\\b(?:hạ\\s+phân\\s+thùy|phân\\s+thùy|hpt)\\s+(?:tám|8)\\b", RegexOption.IGNORE_CASE) to "hạ phân thùy VIII",
         Regex("\\bgóc\\s+sơn\\s+lành\\b", RegexOption.IGNORE_CASE) to "góc sườn hoành",
         Regex("\\btràn\\s+dịch\\s+mỏng\\b", RegexOption.IGNORE_CASE) to "tràn dịch màng phổi",
         Regex("\\brãnh\\s+quận(?:\\s+não)?\\b", RegexOption.IGNORE_CASE) to "rãnh cuộn não",
@@ -66,7 +74,12 @@ object MedicalPhraseNormalizer {
     )
 
     private val REPEATED_TRAILING_FILLERS = Regex(
-        "(?:[.,\\s]+(?:đây\\s+này|đó\\s+thôi|bây\\s+giờ|đây|này|đó|thôi|tôi|em|hết|xong|dừng|dừng\\s+lại)[.,\\s]*)+$",
+        "(?:[.,\\s]+(?:đây\\s+này|đó\\s+thôi|bây\\s+giờ|dừng\\s+lại|được\\s+rồi|đây|này|đó|thôi|tôi|em|hết|xong|dừng|có|là|rồi|thì|ạ|nhé|nha)[.,\\s]*)+$",
+        RegexOption.IGNORE_CASE
+    )
+
+    private val LEADING_FILLERS = Regex(
+        "^(?:[.,\\s]*(?:đó|này|thì|à|ừ|ờ|dạ|vâng|rồi|xong)[.,\\s]+)+",
         RegexOption.IGNORE_CASE
     )
 
@@ -83,6 +96,17 @@ object MedicalPhraseNormalizer {
             }
         }
         return result
+    }
+
+    /**
+     * Cleans up leading acoustic click/filler words before dictation starts.
+     */
+    fun cleanLeadingFillers(text: String): String {
+        var result = text.trim()
+        while (LEADING_FILLERS.containsMatchIn(result)) {
+            result = LEADING_FILLERS.replace(result, "")
+        }
+        return result.trim()
     }
 
     /**

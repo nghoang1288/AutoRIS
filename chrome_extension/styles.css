@@ -4,7 +4,7 @@
   position: fixed;
   bottom: 24px;
   right: 24px;
-  width: 330px;
+  width: 350px;
   background: rgba(15, 23, 42, 0.95);
   backdrop-filter: blur(12px);
   border: 1px solid #334155;
@@ -92,11 +92,19 @@
   color: #cbd5e1;
   margin-bottom: 10px;
   word-break: break-word;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  cursor: text;
+}
+
+.autoris-preview-box * {
+  user-select: text !important;
+  -webkit-user-select: text !important;
 }
 
 .autoris-controls {
   display: flex;
-  gap: 8px;
+  gap: 6px;
 }
 
 .autoris-btn-primary {

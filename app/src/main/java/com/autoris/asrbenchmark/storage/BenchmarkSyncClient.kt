@@ -41,42 +41,56 @@ object BenchmarkSyncClient {
         }
     }
 
-    suspend fun uploadSessions(serverUrl: String, sessions: List<BenchmarkSession>): Result<Int> = withContext(Dispatchers.IO) {
+    suspend fun uploadSessions(
+        serverUrl: String, 
+        sessions: List<BenchmarkSession>,
+        maxRetries: Int = 3,
+        onRetry: ((attempt: Int, max: Int, err: Throwable) -> Unit)? = null
+    ): Result<Int> = withContext(Dispatchers.IO) {
         if (sessions.isEmpty()) return@withContext Result.success(0)
 
-        try {
-            val normalizedUrl = serverUrl.trimEnd('/') + "/api/benchmark/upload"
-            val url = URL(normalizedUrl)
-            val jsonPayload = gson.toJson(sessions)
+        var lastError: Exception? = null
+        for (attempt in 1..maxRetries) {
+            try {
+                val normalizedUrl = serverUrl.trimEnd('/') + "/api/benchmark/upload"
+                val url = URL(normalizedUrl)
+                val jsonPayload = gson.toJson(sessions)
 
-            val connection = (url.openConnection() as HttpURLConnection).apply {
-                connectTimeout = 5000
-                readTimeout = 10000
-                requestMethod = "POST"
-                doOutput = true
-                setRequestProperty("Content-Type", "application/json; charset=utf-8")
+                val connection = (url.openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 4000
+                    readTimeout = 8000
+                    requestMethod = "POST"
+                    doOutput = true
+                    setRequestProperty("Content-Type", "application/json; charset=utf-8")
+                }
+
+                OutputStreamWriter(connection.outputStream, "UTF-8").use { writer ->
+                    writer.write(jsonPayload)
+                    writer.flush()
+                }
+
+                val code = connection.responseCode
+                if (code in 200..299) {
+                    val response = connection.inputStream.bufferedReader().use { it.readText() }
+                    connection.disconnect()
+                    Log.i(TAG, "Uploaded ${sessions.size} sessions successfully (attempt $attempt): $response")
+                    return@withContext Result.success(sessions.size)
+                } else {
+                    val err = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
+                    connection.disconnect()
+                    lastError = Exception("Server phản hồi lỗi (HTTP $code): ${err.take(150)}")
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "uploadSessions attempt $attempt/$maxRetries failed: ${e.message}")
+                lastError = e
             }
 
-            OutputStreamWriter(connection.outputStream, "UTF-8").use { writer ->
-                writer.write(jsonPayload)
-                writer.flush()
+            if (attempt < maxRetries) {
+                onRetry?.invoke(attempt, maxRetries, lastError ?: Exception("Unknown error"))
+                kotlinx.coroutines.delay(attempt * 700L)
             }
-
-            val code = connection.responseCode
-            if (code in 200..299) {
-                val response = connection.inputStream.bufferedReader().use { it.readText() }
-                connection.disconnect()
-                Log.i(TAG, "Uploaded ${sessions.size} sessions successfully: $response")
-                Result.success(sessions.size)
-            } else {
-                val err = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
-                connection.disconnect()
-                Result.failure(Exception("Upload thất bại (HTTP $code): $err"))
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "uploadSessions error", e)
-            Result.failure(e)
         }
+        Result.failure(lastError ?: Exception("Upload thất bại sau $maxRetries lần thử"))
     }
 
     suspend fun uploadAudio(serverUrl: String, sessionId: Long, audioFile: File): Result<Boolean> = withContext(Dispatchers.IO) {

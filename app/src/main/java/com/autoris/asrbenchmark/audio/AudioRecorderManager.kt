@@ -187,8 +187,11 @@ class AudioRecorderManager(
         // 1. Save raw audio for review & benchmark reproducibility
         if (isSaveAudioEnabled) {
             synchronized(recordedPcmBuffer) {
-                for (i in 0 until readCount) {
-                    recordedPcmBuffer.add(shortSamples[i])
+                // Cap to max 5 minutes (5 * 60 * 16000 = 4,800,000 samples ~ 9.6MB) to avoid unbounded OOM
+                if (recordedPcmBuffer.size < 16000 * 300) {
+                    for (i in 0 until readCount) {
+                        recordedPcmBuffer.add(shortSamples[i])
+                    }
                 }
             }
         }
@@ -235,8 +238,8 @@ class AudioRecorderManager(
         synchronized(currentSegmentPcm) {
             when (currentState) {
                 EndpointState.SILENCE -> {
-                    // P0-3: If transitioned back to SILENCE from a false trigger (POSSIBLE_SPEECH) without reaching speech, clear phantom audio
-                    if (previousState == EndpointState.POSSIBLE_SPEECH) {
+                    // P0-3: If transitioned back to SILENCE from any non-SILENCE state without completing speech, clear phantom audio
+                    if (previousState != EndpointState.SILENCE) {
                         currentSegmentPcm.clear()
                     }
                     if (preSpeechRingBuffer.size >= 3) {

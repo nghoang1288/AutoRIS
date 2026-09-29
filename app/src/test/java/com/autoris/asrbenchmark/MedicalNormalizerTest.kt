@@ -280,5 +280,13 @@ class MedicalNormalizerTest {
         val contrastRaw = "Khối u ngấm thuốc mạnh sau tiêm đối hoàng tử giới hạn rõ đường kính mười tám mm."
         val contrastRes = MedicalTextNormalizer.process(contrastRaw)
         assertTrue("Đối quang từ must be fixed from đối hoàng tử", contrastRes.normalizedSuggestion.contains("đối quang từ"))
+
+        // Historical case: Doctor dictated with leading click, noise hallucinations, and phonetic misrecognition
+        val noiseRaw = "Đó. khai phân thuỷ tám có nốt tăng âm đường kính 10 mm. bây giờ. này. này. có."
+        val noiseRes = MedicalTextNormalizer.process(noiseRaw)
+        assertEquals("Hạ phân thùy VIII có nốt tăng âm đường kính 10 mm.", noiseRes.normalizedSuggestion)
+        assertFalse("Leading noise must be stripped", noiseRes.normalizedSuggestion.startsWith("Đó"))
+        assertFalse("Trailing noise must be stripped", noiseRes.normalizedSuggestion.contains("bây giờ"))
+        assertFalse("Trailing noise must be stripped", noiseRes.normalizedSuggestion.contains("này"))
     }
 }

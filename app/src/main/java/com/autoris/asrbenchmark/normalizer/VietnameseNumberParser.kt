@@ -103,13 +103,13 @@ object VietnameseNumberParser {
         result = decDigitDigit.replace(result, "$1.$2")
 
         // 5. Negative numbers: "âm [num|word]" -> "-[num]"
-        val negPattern = Regex("\\bâm\\s+([a-zA-ZÀ-ỹ0-9]+)\\b", RegexOption.IGNORE_CASE)
+        val negPattern = Regex("\\bâm\\s+([a-zA-ZÀ-ỹ0-9.]+)\\b", RegexOption.IGNORE_CASE)
         result = negPattern.replace(result) { m ->
             val v = m.groupValues[1].lowercase(Locale.ROOT)
             val d = DIGIT_STR_MAP[v]
             if (d != null) {
                 "-$d"
-            } else if (v.toIntOrNull() != null || v.toFloatOrNull() != null) {
+            } else if (v.toDoubleOrNull() != null) {
                 "-$v"
             } else {
                 m.value // Retain clinical terms like "âm tính", "âm vang", "âm đạo"

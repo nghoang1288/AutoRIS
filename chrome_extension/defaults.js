@@ -61,7 +61,7 @@ const DEFAULT_CONFIG = {
   pollIntervalMs: 800,
   connectionMode: "auto",
   aiEndpoint: "https://9router.hoang.qzz.io/v1",
-  aiKey: "sk-e8ff53fc363b707a-aj81vz-ff55a6d6",
+  aiKey: "",
   aiModel: "gemini-3.5-flash-lite",
   googleKeysPool: []
 };

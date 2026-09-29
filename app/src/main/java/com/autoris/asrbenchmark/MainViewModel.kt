@@ -84,6 +84,14 @@ enum class AppOperatingMode(val displayName: String) {
     BENCHMARK("Nghiên cứu & Benchmark")
 }
 
+sealed class SyncState {
+    object Idle : SyncState()
+    data class Syncing(val message: String = "Đang gửi sang RIS...") : SyncState()
+    data class Retrying(val attempt: Int, val max: Int, val reason: String) : SyncState()
+    data class Success(val message: String, val timestamp: String) : SyncState()
+    data class Error(val error: String, val canRetry: Boolean = true) : SyncState()
+}
+
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     companion object {
@@ -180,6 +188,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _serverStatus = MutableStateFlow<String?>("Chưa kết nối")
     val serverStatus: StateFlow<String?> = _serverStatus.asStateFlow()
 
+    // Trạng thái đồng bộ RIS thời gian thực (Báo thành công / đang gửi / đang thử lại / lỗi)
+    private val _syncState = MutableStateFlow<SyncState>(SyncState.Idle)
+    val syncState: StateFlow<SyncState> = _syncState.asStateFlow()
+
+    // Chế độ tự động gửi sang RIS theo thời gian thực (Đọc đến đâu gửi đến đó)
+    private val _isLiveAutoSendEnabled = MutableStateFlow(prefs.getBoolean("live_auto_send", true))
+    val isLiveAutoSendEnabled: StateFlow<Boolean> = _isLiveAutoSendEnabled.asStateFlow()
+
+    fun toggleLiveAutoSend() {
+        val newVal = !_isLiveAutoSendEnabled.value
+        _isLiveAutoSendEnabled.value = newVal
+        prefs.edit().putBoolean("live_auto_send", newVal).apply()
+        _statusMessage.value = if (newVal) "⚡ Đã BẬT tự động gửi khi đọc" else "⏸️ Đã TẮT tự động gửi (gửi thủ công)"
+    }
+
+    private var liveSendJob: Job? = null
+    private var lastAutoSentText: String = ""
+
     // Scenario & Noise Benchmark Parameters
     private val _selectedScenario = MutableStateFlow(NoiseScenario.ROOM_READING_STANDARD)
     val selectedScenario: StateFlow<NoiseScenario> = _selectedScenario.asStateFlow()
@@ -247,7 +273,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _safetyGateDecision = MutableStateFlow<SafetyGateDecision?>(null)
     val safetyGateDecision: StateFlow<SafetyGateDecision?> = _safetyGateDecision.asStateFlow()
 
-    fun exportToRis(customText: String? = null): Boolean {
+    fun exportToRis(customText: String? = null, isLiveStream: Boolean = false): Boolean {
+        if (_operatingMode.value == AppOperatingMode.BENCHMARK) {
+            _statusMessage.value = "Từ chối gửi RIS: Đang ở chế độ Benchmark kiểm thử!"
+            return false
+        }
+
         val currentText = (customText ?: _finalTranscript.value.ifBlank { _livePartial.value }).trim()
         if (currentText.isBlank()) {
             _statusMessage.value = "Chưa có nội dung để gửi sang RIS/PACS!"
@@ -273,7 +304,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             modelName = asrEngine.name,
             modelVersion = "1.0.0",
             numThreads = 4,
-            testId = ref?.id ?: "CLINICAL_AUTO",
+            testId = ref?.id ?: if (isLiveStream) "CLINICAL_STREAM" else "CLINICAL_DICTATION",
             category = ref?.category ?: "Clinical Dictation",
             roomId = _roomId.value,
             roomType = _roomType.value,
@@ -283,7 +314,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             micOrientationDeg = _micOrientationDeg.value,
             preprocessingProfile = _preprocessingProfile.value,
             actualPreprocessingProfile = _preprocessingProfile.value,
-            audioDurationSec = 0f,
+            audioDurationSec = _captureState.value.audioDurationSec,
             sampleRate = 16000,
             channels = 1,
             rawTranscript = currentText,
@@ -293,14 +324,44 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             audioPath = audioToSave
         )
 
+        _syncState.value = SyncState.Syncing(if (isLiveStream) "⚡ Đang tự động gửi..." else "🚀 Đang gửi sang RIS...")
+
         viewModelScope.launch(Dispatchers.IO) {
             val insertedId = db.insert(session)
             loadHistory()
             val toUpload = session.copy(id = insertedId)
-            BenchmarkSyncClient.uploadSessions(_serverUrl.value, listOf(toUpload))
+            
+            val uploadRes = BenchmarkSyncClient.uploadSessions(
+                serverUrl = _serverUrl.value,
+                sessions = listOf(toUpload),
+                maxRetries = 3,
+                onRetry = { attempt, max, err ->
+                    viewModelScope.launch(Dispatchers.Main) {
+                        val reason = err.message ?: "Mất kết nối mạng"
+                        _syncState.value = SyncState.Retrying(attempt, max, reason)
+                        _statusMessage.value = "⚠️ Đang thử gửi lại ($attempt/$max): ${reason.take(35)}..."
+                    }
+                }
+            )
+
+            withContext(Dispatchers.Main) {
+                uploadRes.fold(
+                    onSuccess = {
+                        val timeStr = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
+                        _syncState.value = SyncState.Success("Đã điền vào RIS thành công", timeStr)
+                        _statusMessage.value = "✅ Đã gửi RIS lúc $timeStr"
+                        com.autoris.asrbenchmark.ui.util.HapticHelper.vibrateSuccess(getApplication())
+                    },
+                    onFailure = { err ->
+                        val errMsg = err.message ?: "Không thể kết nối máy chủ"
+                        _syncState.value = SyncState.Error(errMsg, canRetry = true)
+                        _statusMessage.value = "❌ Lỗi gửi RIS: ${errMsg.take(50)}"
+                        com.autoris.asrbenchmark.ui.util.HapticHelper.vibrateError(getApplication())
+                    }
+                )
+            }
         }
 
-        _statusMessage.value = "Đã gửi bản tường trình sang hệ thống RIS/PACS thành công!"
         return true
     }
 
@@ -622,6 +683,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _normalizedResult.value = null
         _evaluationReport.value = null
         _metrics.value = UiBenchmarkMetrics()
+        liveSendJob?.cancel()
+        lastAutoSentText = ""
 
         val profile = PreprocessingProfile.fromId(_preprocessingProfile.value)
         val preprocessor = AudioPreprocessorFactory.create(profile, getApplication())
@@ -682,6 +745,26 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     }
 
                     recomputeSafetyGate()
+
+                    // TỰ ĐỘNG GỬI SANG RIS THEO THỜI GIAN THỰC (ĐỌC ĐẾN ĐÂU TỰ ĐỘNG GỬI ĐẾN ĐÓ)
+                    if (_operatingMode.value == AppOperatingMode.CLINICAL_SAFE && _isLiveAutoSendEnabled.value) {
+                        val textToStream = norm.normalizedSuggestion.ifBlank { partial }.trim()
+                        if (textToStream.length >= 6 && textToStream != lastAutoSentText) {
+                            liveSendJob?.cancel()
+                            liveSendJob = viewModelScope.launch(Dispatchers.Default) {
+                                delay(850L) // Đợi 850ms sau ngắt giọng để gửi bản cập nhật ổn định
+                                if (isActive && _isLiveAutoSendEnabled.value && _captureState.value.isRecording) {
+                                    val currentClean = _normalizedResult.value?.normalizedSuggestion?.ifBlank { _livePartial.value }?.trim() ?: textToStream
+                                    if (currentClean.isNotBlank() && currentClean != lastAutoSentText) {
+                                        lastAutoSentText = currentClean
+                                        withContext(Dispatchers.Main) {
+                                            exportToRis(currentClean, isLiveStream = true)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             },
             onSpeakerVerificationResult = { result ->
@@ -788,6 +871,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // Automatically persist session to database & upload to PC server on stop
         saveCurrentTestSession()
         _statusMessage.value = "Đã lưu & đồng bộ về PC"
+
+        // Tự động đồng bộ bản chốt cuối cùng sang RIS nếu ở Clinical Safe mode và bật auto-send
+        if (_operatingMode.value == AppOperatingMode.CLINICAL_SAFE && _isLiveAutoSendEnabled.value) {
+            val textToSend = norm.normalizedSuggestion.ifBlank { finalText }.trim()
+            if (textToSend.isNotBlank() && textToSend != lastAutoSentText) {
+                lastAutoSentText = textToSend
+                exportToRis(textToSend, isLiveStream = false)
+            }
+        }
     }
 
     private val testHistoryStack = mutableListOf<MedicalTestSentence>()
