@@ -89,4 +89,20 @@ class BenchmarkMetricsTest {
             tempDir.deleteRecursively()
         }
     }
+
+    @Test
+    fun testNoisePolicyTelemetryFields() {
+        val session = BenchmarkSession(
+            preprocessingProfile = "RAW",
+            actualPreprocessingProfile = "SPEECH_ENHANCE_DPDFNET",
+            policyRecommendedProfile = "SPEECH_ENHANCE_DPDFNET",
+            policyConfidence = 0.92f,
+            policyOverride = true
+        )
+        assertEquals("RAW", session.preprocessingProfile)
+        assertEquals("SPEECH_ENHANCE_DPDFNET", session.actualPreprocessingProfile)
+        assertEquals("SPEECH_ENHANCE_DPDFNET", session.policyRecommendedProfile)
+        assertEquals(0.92f, session.policyConfidence ?: 0f, 0.001f)
+        assertTrue(session.policyOverride)
+    }
 }

@@ -38,6 +38,7 @@ import com.autoris.asrbenchmark.storage.BenchmarkExporter
 import com.autoris.asrbenchmark.safety.AcousticQuality
 import com.autoris.asrbenchmark.safety.AcousticQualityLevel
 import com.autoris.asrbenchmark.safety.EvidenceStatus
+import com.autoris.asrbenchmark.safety.CrossEngineConsistencyChecker
 import com.autoris.asrbenchmark.safety.ParserStatus
 import com.autoris.asrbenchmark.safety.SafetyEvidence
 import com.autoris.asrbenchmark.safety.SafetyGate
@@ -298,8 +299,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // A7: Explicit structured entity validation
         val entityValidation = CriticalEntityValidator.validate(norm)
 
+        // Phase E: Cross-engine consistency check between 30M streaming and 150M offline
+        val streamingText = audioRecorderManager?.lastStreamingTranscript ?: ""
+        val criticalErrors = entityValidation.criticalErrors.toMutableList()
+        var criticalStatus = entityValidation.status
+        val reviewReasons = entityValidation.reviewReasons.toMutableList()
+
+        if (streamingText.isNotBlank() && streamingText != text) {
+            val consistency = CrossEngineConsistencyChecker.check(streamingText, text)
+            if (!consistency.isConsistent) {
+                criticalErrors.addAll(consistency.mismatches)
+                criticalStatus = EvidenceStatus.INVALID
+            }
+        }
+
         val parserStatus = when {
-            entityValidation.status == EvidenceStatus.INVALID -> ParserStatus.SYNTAX_ERROR
+            criticalStatus == EvidenceStatus.INVALID -> ParserStatus.SYNTAX_ERROR
             entityValidation.hasAmbiguousEntities -> ParserStatus.HAS_AMBIGUITY
             norm.hasAmbiguityOrConflict -> ParserStatus.HAS_AMBIGUITY
             else -> ParserStatus.CONFIRMED_CLEAN
@@ -317,13 +332,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 noiseFloorDb = _noiseProfile.value.noiseFloorDb
             ),
             parserStatus = parserStatus,
-            criticalEntitiesStatus = entityValidation.status,
+            criticalEntitiesStatus = criticalStatus,
             entityValidation = entityValidation,
             boundTranscript = text,
             transcriptVersion = currentTranscriptVersion,
             speakerEnrollmentVersion = currentSpeakerEnrollmentVersion,
-            unresolvedAmbiguities = entityValidation.reviewReasons,
-            criticalErrors = entityValidation.criticalErrors
+            unresolvedAmbiguities = reviewReasons,
+            criticalErrors = criticalErrors
         )
 
         val decision = if (_operatingMode.value == AppOperatingMode.CLINICAL_SAFE) {
@@ -659,9 +674,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val manager = audioRecorderManager ?: return
         viewModelScope.launch(Dispatchers.Default) {
             val finalText = manager.stopRecording()
+            val totalProcMs = manager.getTotalProcessingMs()
             val duration = _captureState.value.audioDurationSec
             withContext(Dispatchers.Main) {
-                finalizeResult(finalText, _metrics.value.processingMs, duration)
+                finalizeResult(finalText, totalProcMs, duration)
             }
         }
     }

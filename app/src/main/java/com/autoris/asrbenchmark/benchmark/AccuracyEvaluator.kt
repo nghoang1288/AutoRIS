@@ -47,7 +47,8 @@ data class NegationEntity(
 )
 
 data class LateralityEntity(
-    val side: String
+    val side: String,
+    val anatomyTarget: String = "chung"
 )
 
 data class EvaluationReport(
@@ -188,16 +189,37 @@ object AccuracyEvaluator {
             failureModes.add(FailureMode.NEGATION_FLIP)
         }
 
-        // 5. Laterality (Zero Tolerance: Left vs Right flip)
+        // 5. Laterality (Zero Tolerance: Left vs Right flip with positional anatomical target binding)
         val refSides = extractLaterality(reference)
         val hypSides = extractLaterality(hypothesis)
         var matchedSides = 0
         var criticalLateralityErr = false
-        for (side in refSides) {
-            if (hypSides.any { it.side == side.side }) {
-                matchedSides++
+        val matchedHypIndices = mutableSetOf<Int>()
+
+        for ((idx, side) in refSides.withIndex()) {
+            val candidate = if (idx < hypSides.size && hypSides[idx].anatomyTarget == side.anatomyTarget) {
+                hypSides[idx]
             } else {
-                criticalLateralityErr = true
+                hypSides.firstOrNull { it.anatomyTarget == side.anatomyTarget && !matchedHypIndices.contains(hypSides.indexOf(it)) }
+            }
+
+            if (candidate != null) {
+                val cIdx = hypSides.indexOf(candidate)
+                if (cIdx != -1) matchedHypIndices.add(cIdx)
+                if (candidate.side == side.side) {
+                    matchedSides++
+                } else {
+                    criticalLateralityErr = true
+                }
+            } else {
+                val generalCandidate = hypSides.firstOrNull { it.side == side.side && !matchedHypIndices.contains(hypSides.indexOf(it)) }
+                if (generalCandidate != null) {
+                    val gIdx = hypSides.indexOf(generalCandidate)
+                    if (gIdx != -1) matchedHypIndices.add(gIdx)
+                    matchedSides++
+                } else {
+                    criticalLateralityErr = true
+                }
             }
         }
         val lateralityAcc = if (refSides.isNotEmpty()) matchedSides.toFloat() / refSides.size else 1.0f
@@ -281,20 +303,22 @@ object AccuracyEvaluator {
 
     /**
      * Extracts structured dimensions (e.g. "21 × 8 mm", "10 × 15 × 20 mm", "21 x 8 mm").
+     * Replaces 3D matches first to prevent phantom duplicate 2D sub-matches.
      */
     fun extractDimensions(text: String): List<DimensionEntity> {
         val list = mutableListOf<DimensionEntity>()
         val regex3D = Regex("(\\d+(?:\\.\\d+)?)\\s*[×x]\\s*(\\d+(?:\\.\\d+)?)\\s*[×x]\\s*(\\d+(?:\\.\\d+)?)(?:\\s*(mm|cm|m))?", RegexOption.IGNORE_CASE)
-        regex3D.findAll(text).forEach { m ->
+        val textWithout3D = regex3D.replace(text) { m ->
             val v1 = m.groupValues[1].toFloatOrNull() ?: 0f
             val v2 = m.groupValues[2].toFloatOrNull() ?: 0f
             val v3 = m.groupValues[3].toFloatOrNull() ?: 0f
             val unit = m.groupValues[4].ifEmpty { "mm" }
             list.add(DimensionEntity(listOf(v1, v2, v3), unit))
+            "___DIM3D_CONSUMED___"
         }
 
-        val regex2D = Regex("(\\d+(?:\\.\\d+)?)\\s*[×x]\\s*(\\d+(?:\\.\\d+)?)(?!\\s*[×x])(?:\\s*(mm|cm|m))?", RegexOption.IGNORE_CASE)
-        regex2D.findAll(text).forEach { m ->
+        val regex2D = Regex("(\\d+(?:\\.\\d+)?)\\s*[×x]\\s*(\\d+(?:\\.\\d+)?)(?:\\s*(mm|cm|m))?", RegexOption.IGNORE_CASE)
+        regex2D.findAll(textWithout3D).forEach { m ->
             val v1 = m.groupValues[1].toFloatOrNull() ?: 0f
             val v2 = m.groupValues[2].toFloatOrNull() ?: 0f
             val unit = m.groupValues[3].ifEmpty { "mm" }
@@ -321,19 +345,31 @@ object AccuracyEvaluator {
     }
 
     /**
-     * Extracts laterality entities ("phải", "trái", "hai bên").
+     * Extracts laterality entities ("phải", "trái", "hai bên") with anatomical target binding.
      */
     fun extractLaterality(text: String): List<LateralityEntity> {
+        val (parsed, _) = com.autoris.asrbenchmark.normalizer.LateralityParser.parse(text)
+        if (parsed.isNotEmpty()) {
+            return parsed.map {
+                val sideStr = when (it.side) {
+                    com.autoris.asrbenchmark.normalizer.LateralityType.RIGHT -> "phải"
+                    com.autoris.asrbenchmark.normalizer.LateralityType.LEFT -> "trái"
+                    com.autoris.asrbenchmark.normalizer.LateralityType.BILATERAL -> "hai bên"
+                    else -> "chưa rõ"
+                }
+                LateralityEntity(side = sideStr, anatomyTarget = it.anatomyTarget)
+            }
+        }
         val clean = cleanText(text)
         val list = mutableListOf<LateralityEntity>()
         if (clean.contains("hai bên")) {
-            list.add(LateralityEntity("hai bên"))
+            list.add(LateralityEntity("hai bên", "chung"))
         } else {
             if (Regex("\\b(phải|bên phải)\\b").containsMatchIn(clean)) {
-                list.add(LateralityEntity("phải"))
+                list.add(LateralityEntity("phải", "chung"))
             }
             if (Regex("\\b(trái|bên trái)\\b").containsMatchIn(clean)) {
-                list.add(LateralityEntity("trái"))
+                list.add(LateralityEntity("trái", "chung"))
             }
         }
         return list

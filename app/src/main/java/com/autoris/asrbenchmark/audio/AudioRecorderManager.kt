@@ -80,6 +80,9 @@ class AudioRecorderManager(
     var latestPolicyDecision: PolicyDecision? = null
         private set
 
+    var lastStreamingTranscript: String = ""
+        private set
+
     // In-memory audio buffer for saving WAV
     private val recordedPcmBuffer = ArrayList<Short>(16000 * 60) // up to 60s
     private val currentSegmentPcm = ArrayList<Float>(16000 * 15) // current phrase
@@ -276,6 +279,7 @@ class AudioRecorderManager(
                 if (partial.isNotBlank()) {
                     val prefix = synchronized(accumulatedSegments) { accumulatedSegments.joinToString(" ") }
                     val displayText = if (prefix.isNotBlank()) "$prefix $partial" else partial
+                    lastStreamingTranscript = displayText
                     val latency = (SystemClock.elapsedRealtimeNanos() - (firstSpeechTimeNs.takeIf { it > 0 } ?: sessionStartTimeNs)) / 1_000_000
                     onPartialResult(displayText, latency)
                 }
@@ -460,6 +464,8 @@ class AudioRecorderManager(
             return recordedPcmBuffer.toShortArray()
         }
     }
+
+    fun getTotalProcessingMs(): Long = totalProcessingMs
 
     fun release() {
         stopRecordingInternal()

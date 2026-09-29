@@ -156,8 +156,26 @@ class AccuracyEvaluatorTest {
         val ref = "nang thận kích thước 21 × 8 mm"
         val hypWrongVal = "nang thận kích thước 121 × 8 mm"
         val eval = AccuracyEvaluator.evaluate(ref, hypWrongVal)
-
         assertTrue("Dimension value mismatch must trigger criticalMeasurementError", eval.criticalMeasurementError)
         assertTrue(eval.failureModes.contains(com.autoris.asrbenchmark.benchmark.FailureMode.DIMENSION_MISMATCH))
+    }
+
+    @Test
+    fun test3DDimensionDoesNotCreatePhantom2DSubmatch() {
+        val text = "khối u gan kích thước 21 × 8 × 10 mm"
+        val dims = AccuracyEvaluator.extractDimensions(text)
+        assertEquals(1, dims.size)
+        assertEquals(listOf(21f, 8f, 10f), dims[0].dimensions)
+        assertEquals("mm", dims[0].unit)
+    }
+
+    @Test
+    fun testTargetBoundLateralitySwapDetection() {
+        val ref = "thận phải bình thường, nang thận trái 15 mm"
+        val hypSwapped = "thận trái bình thường, nang thận phải 15 mm"
+        val eval = AccuracyEvaluator.evaluate(ref, hypSwapped)
+
+        assertTrue("Swapping lateralities between organs must trigger criticalLateralityError", eval.criticalLateralityError)
+        assertTrue(eval.hasCriticalError())
     }
 }
