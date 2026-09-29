@@ -415,10 +415,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val manager = AudioRecorderManager(
             asrEngine = asrEngine,
             vadConfig = vadConfig,
+            vadEngine = com.autoris.asrbenchmark.vad.NeuralVadEngine(context = getApplication()),
             preprocessingProfile = profile,
             preprocessor = preprocessor,
             speakerVerifier = speakerVerifier,
             isSpeakerLockEnabled = _speakerLockEnabled.value,
+            onNoiseProfileUpdate = { liveProfile ->
+                viewModelScope.launch(Dispatchers.Main) {
+                    _noiseProfile.value = liveProfile
+                }
+            },
             onPartialResult = { partial, firstLatencyMs ->
                 viewModelScope.launch(Dispatchers.Main) {
                     _livePartial.value = partial
