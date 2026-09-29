@@ -1,8 +1,9 @@
-// popup.js - Quản lý cài đặt Extension và Lịch sử câu đọc
+// popup.js - Quản lý cài đặt Extension và Lịch sử câu đọc AutoRIS
 document.addEventListener("DOMContentLoaded", async () => {
   const serverUrlInput = document.getElementById("server-url");
+  const aiEndpointInput = document.getElementById("ai-endpoint");
   const autoApplyCheck = document.getElementById("auto-apply");
-  const smartSplitCheck = document.getElementById("smart-split");
+  const smartSynthesizeCheck = document.getElementById("smart-synthesize");
   const showFloatingBarCheck = document.getElementById("show-floating-bar");
   const playChimeCheck = document.getElementById("play-chime");
   const statusBadge = document.getElementById("server-status-badge");
@@ -13,16 +14,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Load cấu hình đã lưu
   const stored = await chrome.storage.local.get([
     STORAGE_KEYS.SERVER_URL,
+    STORAGE_KEYS.AI_API_ENDPOINT,
     STORAGE_KEYS.AUTO_APPLY,
-    STORAGE_KEYS.SMART_SPLIT,
+    STORAGE_KEYS.SMART_SYNTHESIZE,
     STORAGE_KEYS.SHOW_FLOATING_BAR,
     STORAGE_KEYS.PLAY_CHIME,
     STORAGE_KEYS.RECENT_HISTORY
   ]);
 
   serverUrlInput.value = stored[STORAGE_KEYS.SERVER_URL] || DEFAULT_CONFIG.serverUrl;
+  aiEndpointInput.value = stored[STORAGE_KEYS.AI_API_ENDPOINT] || DEFAULT_CONFIG.aiEndpoint;
   autoApplyCheck.checked = stored[STORAGE_KEYS.AUTO_APPLY] !== undefined ? stored[STORAGE_KEYS.AUTO_APPLY] : DEFAULT_CONFIG.autoApply;
-  smartSplitCheck.checked = stored[STORAGE_KEYS.SMART_SPLIT] !== undefined ? stored[STORAGE_KEYS.SMART_SPLIT] : DEFAULT_CONFIG.smartSplit;
+  smartSynthesizeCheck.checked = stored[STORAGE_KEYS.SMART_SYNTHESIZE] !== undefined ? stored[STORAGE_KEYS.SMART_SYNTHESIZE] : DEFAULT_CONFIG.smartSynthesize;
   showFloatingBarCheck.checked = stored[STORAGE_KEYS.SHOW_FLOATING_BAR] !== undefined ? stored[STORAGE_KEYS.SHOW_FLOATING_BAR] : DEFAULT_CONFIG.showFloatingBar;
   playChimeCheck.checked = stored[STORAGE_KEYS.PLAY_CHIME] !== undefined ? stored[STORAGE_KEYS.PLAY_CHIME] : DEFAULT_CONFIG.playChime;
 
@@ -34,18 +37,20 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Lưu cấu hình
   saveBtn.addEventListener("click", async () => {
-    const newUrl = serverUrlInput.value.trim().replace(/\/+$/, "");
+    const newServerUrl = serverUrlInput.value.trim().replace(/\/+$/, "");
+    const newAiEndpoint = aiEndpointInput.value.trim().replace(/\/+$/, "");
     await chrome.storage.local.set({
-      [STORAGE_KEYS.SERVER_URL]: newUrl,
+      [STORAGE_KEYS.SERVER_URL]: newServerUrl,
+      [STORAGE_KEYS.AI_API_ENDPOINT]: newAiEndpoint,
       [STORAGE_KEYS.AUTO_APPLY]: autoApplyCheck.checked,
-      [STORAGE_KEYS.SMART_SPLIT]: smartSplitCheck.checked,
+      [STORAGE_KEYS.SMART_SYNTHESIZE]: smartSynthesizeCheck.checked,
       [STORAGE_KEYS.SHOW_FLOATING_BAR]: showFloatingBarCheck.checked,
       [STORAGE_KEYS.PLAY_CHIME]: playChimeCheck.checked
     });
 
     saveBtn.textContent = "✅ Đã lưu!";
     setTimeout(() => { saveBtn.textContent = "💾 Lưu Cấu Hình"; }, 1500);
-    checkConnection(newUrl);
+    checkConnection(newServerUrl);
   });
 
   // Test kết nối

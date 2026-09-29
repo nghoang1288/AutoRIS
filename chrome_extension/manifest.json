@@ -48,6 +48,7 @@
       "match_about_blank": true,
       "js": [
         "defaults.js",
+        "clinical_synthesizer.js",
         "content.js"
       ],
       "css": [

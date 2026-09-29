@@ -4,7 +4,7 @@
   position: fixed;
   bottom: 24px;
   right: 24px;
-  width: 320px;
+  width: 330px;
   background: rgba(15, 23, 42, 0.95);
   backdrop-filter: blur(12px);
   border: 1px solid #334155;
@@ -15,7 +15,7 @@
   color: #f8fafc;
   overflow: hidden;
   user-select: none;
-  transition: box-shadow 0.2s ease;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .autoris-bar-container:hover {
@@ -45,6 +45,12 @@
   background-color: #10b981;
   border-radius: 50%;
   box-shadow: 0 0 8px #10b981;
+  animation: autoris-pulse-dot 2s infinite ease-in-out;
+}
+
+@keyframes autoris-pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.2); }
 }
 
 .autoris-title {
@@ -81,7 +87,7 @@
   padding: 10px;
   font-size: 12px;
   line-height: 1.45;
-  max-height: 110px;
+  max-height: 130px;
   overflow-y: auto;
   color: #cbd5e1;
   margin-bottom: 10px;
@@ -93,7 +99,7 @@
   gap: 8px;
 }
 
-.autoris-mic-btn {
+.autoris-btn-primary {
   flex: 1;
   display: flex;
   align-items: center;
@@ -110,22 +116,15 @@
   transition: all 0.2s ease;
 }
 
-.autoris-mic-btn:hover {
+.autoris-btn-primary:hover {
   background: linear-gradient(135deg, #0369a1 0%, #075985 100%);
 }
 
-.autoris-mic-btn.autoris-recording {
-  background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
-  animation: pulse-red 1.2s infinite;
-}
-
-@keyframes pulse-red {
-  0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); }
-  70% { box-shadow: 0 0 0 8px rgba(220, 38, 38, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
-}
-
 .autoris-btn-secondary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   background: #334155;
   color: #e2e8f0;
   border: 1px solid #475569;
@@ -139,9 +138,17 @@
 
 .autoris-btn-secondary:hover {
   background: #475569;
+  color: #ffffff;
 }
 
-/* Toast Notifications */
+/* Hiệu ứng nhấp nháy làm nổi bật vùng vừa được điền trên RIS */
+.autoris-highlight-pulse {
+  outline: 2px solid #38bdf8 !important;
+  box-shadow: 0 0 15px rgba(56, 189, 248, 0.4) !important;
+  transition: outline 0.5s ease, box-shadow 0.5s ease;
+}
+
+/* Toast thông báo */
 .autoris-toast {
   position: fixed;
   bottom: 24px;

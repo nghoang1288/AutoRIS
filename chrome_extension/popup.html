@@ -59,10 +59,11 @@
       text-transform: uppercase;
       letter-spacing: 0.5px;
       color: #64748b;
+      margin-top: 14px;
       margin-bottom: 8px;
     }
     .form-group {
-      margin-bottom: 12px;
+      margin-bottom: 10px;
     }
     label {
       display: block;
@@ -102,7 +103,7 @@
       font-size: 10px;
       color: #64748b;
     }
-    /* Switch component */
+    /* Switch */
     .switch {
       position: relative;
       display: inline-block;
@@ -201,18 +202,23 @@
 <body>
   <div class="header">
     <div class="title-box">
-      <span class="logo-icon">🎙️</span>
+      <span class="logo-icon">📱</span>
       <h1>AutoRIS Dictation</h1>
     </div>
     <span id="server-status-badge" class="status-badge">Đang kiểm tra...</span>
   </div>
 
   <div class="form-group">
-    <label for="server-url">Địa chỉ máy chủ AutoRIS (VPS/Local):</label>
+    <label for="server-url">Máy chủ AutoRIS (Nhận giọng nói điện thoại):</label>
     <input type="text" id="server-url" placeholder="https://autoris.hoang.qzz.io">
   </div>
 
-  <div class="section-title">Tuỳ chọn điền vào RIS (192.168.50.105)</div>
+  <div class="form-group">
+    <label for="ai-endpoint">Máy chủ AI Synthesizer (9router/Gemini):</label>
+    <input type="text" id="ai-endpoint" placeholder="https://9router.hoang.qzz.io/v1">
+  </div>
+
+  <div class="section-title">Tuỳ chọn phân bổ vào RIS</div>
 
   <div class="toggle-row">
     <div>
@@ -227,11 +233,11 @@
 
   <div class="toggle-row">
     <div>
-      <div class="toggle-label">Tự tách Mô tả & Kết luận</div>
-      <div class="toggle-desc">Nhận diện chữ 'Kết luận' để điền đúng mục</div>
+      <div class="toggle-label">AI Phân bổ Giải phẫu & Tự sinh Kết luận</div>
+      <div class="toggle-desc">Chèn đúng cơ quan, thêm dòng mới, tự sinh kết luận</div>
     </div>
     <label class="switch">
-      <input type="checkbox" id="smart-split">
+      <input type="checkbox" id="smart-synthesize">
       <span class="slider"></span>
     </label>
   </div>
@@ -239,7 +245,7 @@
   <div class="toggle-row">
     <div>
       <div class="toggle-label">Thanh điều khiển nổi (Floating Bar)</div>
-      <div class="toggle-desc">Hiện nút Micro & trạng thái trên màn hình RIS</div>
+      <div class="toggle-desc">Hiện xem trước và nút Hoàn tác trên RIS</div>
     </div>
     <label class="switch">
       <input type="checkbox" id="show-floating-bar">
@@ -260,7 +266,7 @@
 
   <div class="btn-row">
     <button id="btn-save" class="btn-primary">💾 Lưu Cấu Hình</button>
-    <button id="btn-test" class="btn-secondary">⚡ Kiểm Tra Server</button>
+    <button id="btn-test" class="btn-secondary">⚡ Kiểm Tra Kết Nối</button>
   </div>
 
   <div class="history-box">
