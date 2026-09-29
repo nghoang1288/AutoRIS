@@ -158,7 +158,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val historySessions: StateFlow<List<BenchmarkSession>> = _historySessions.asStateFlow()
 
     // Sync to Cloud VPS / Local Server
-    private val _serverUrl = MutableStateFlow(prefs.getString("server_url", "https://autoris.hoang.qzz.io") ?: "https://autoris.hoang.qzz.io")
+    private val _serverUrl = MutableStateFlow(
+        run {
+            val saved = prefs.getString("server_url", null)
+            if (saved.isNullOrBlank() || saved.contains("192.168.50.100") || saved.contains("localhost")) {
+                prefs.edit().putString("server_url", "https://autoris.hoang.qzz.io").apply()
+                "https://autoris.hoang.qzz.io"
+            } else {
+                saved
+            }
+        }
+    )
     val serverUrl: StateFlow<String> = _serverUrl.asStateFlow()
 
     private val _isAutoSyncEnabled = MutableStateFlow(prefs.getBoolean("auto_sync_server", true))
