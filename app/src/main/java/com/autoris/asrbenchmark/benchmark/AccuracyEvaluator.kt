@@ -10,6 +10,16 @@ enum class DiffType {
     SUBSTITUTION
 }
 
+enum class FailureMode {
+    NUMBER_MISMATCH,
+    UNIT_MISMATCH,
+    DIMENSION_MISMATCH,
+    SPINE_LEVEL_MISMATCH,
+    NEGATION_FLIP,
+    LATERALITY_MISMATCH,
+    CRITICAL_ANATOMY_OMISSION
+}
+
 data class TokenDiff(
     val type: DiffType,
     val refWord: String?,
@@ -52,6 +62,8 @@ data class EvaluationReport(
     val medicalTermAccuracy: Float,     // [0.0 - 1.0]
     val numericAccuracy: Float,         // [0.0 - 1.0]
     val measurementAccuracy: Float = numericAccuracy,
+    val dimensionAccuracy: Float = 1.0f,
+    val unitAccuracy: Float = 1.0f,
     val anatomyAccuracy: Float,         // [0.0 - 1.0]
     val lateralityAccuracy: Float = 1.0f,
     val negationAccuracy: Float,        // [0.0 - 1.0]
@@ -67,21 +79,23 @@ data class EvaluationReport(
     val criticalMeasurementError: Boolean = false,
     val criticalNegationError: Boolean = false,
     val criticalLateralityError: Boolean = false,
-    val criticalSpineError: Boolean = false
+    val criticalSpineError: Boolean = false,
+    val failureModes: List<FailureMode> = emptyList()
 ) {
     fun hasCriticalError(): Boolean =
         criticalNumericError ||
         criticalMeasurementError ||
         criticalNegationError ||
         criticalLateralityError ||
-        criticalSpineError
+        criticalSpineError ||
+        failureModes.isNotEmpty()
 }
 
 object AccuracyEvaluator {
 
     private val NEGATION_KEYWORDS = listOf(
         "không thấy", "chưa thấy", "không giãn", "không huyết khối",
-        "không ngấm thuốc", "không dày", "không to", "không có", "không tràn dịch", "không tràn khí"
+        "không ngấm thuốc", "không dày", "không to", "không có", "không tràn dịch", "không tràn khí", "loại trừ"
     )
 
     private val LATERALITY_KEYWORDS = listOf("phải", "trái", "hai bên", "bên phải", "bên trái")
@@ -107,6 +121,8 @@ object AccuracyEvaluator {
         val wer = computeWer(cleanRef, cleanHyp)
         val diffs = computeTokenDiff(cleanRef, cleanHyp)
 
+        val failureModes = mutableListOf<FailureMode>()
+
         // 1. Evaluate key domain terms
         val keyTerms = testSentence?.keyTerms ?: emptyList()
         val keyNumbers = testSentence?.keyNumbers ?: emptyList()
@@ -116,7 +132,9 @@ object AccuracyEvaluator {
         val matchedTerms = mutableListOf<String>()
         val missedTerms = mutableListOf<String>()
         for (term in keyTerms) {
-            if (cleanHyp.contains(cleanText(term))) {
+            val termClean = cleanText(term)
+            val termPattern = Regex("\\b" + Regex.escape(termClean) + "\\b")
+            if (termPattern.containsMatchIn(cleanHyp)) {
                 matchedTerms.add(term)
             } else {
                 missedTerms.add(term)
@@ -124,12 +142,13 @@ object AccuracyEvaluator {
         }
         val termAcc = if (keyTerms.isNotEmpty()) matchedTerms.size.toFloat() / keyTerms.size else 1.0f
 
-        // 2. Numeric comparison
+        // 2. Numeric comparison: STRICT token-level word boundary match (NO loose substring match)
         val matchedNumbers = mutableListOf<String>()
         val missedNumbers = mutableListOf<String>()
         for (num in keyNumbers) {
-            val cleanNum = cleanText(num)
-            if (cleanHyp.contains(cleanNum) || hypothesis.contains(num)) {
+            val trimmedNum = num.trim()
+            val numPattern = Regex("\\b" + Regex.escape(trimmedNum) + "\\b")
+            if (numPattern.containsMatchIn(hypothesis) || numPattern.containsMatchIn(cleanHyp)) {
                 matchedNumbers.add(num)
             } else {
                 missedNumbers.add(num)
@@ -137,26 +156,37 @@ object AccuracyEvaluator {
         }
         val numAcc = if (keyNumbers.isNotEmpty()) matchedNumbers.size.toFloat() / keyNumbers.size else 1.0f
         val criticalNumericErr = missedNumbers.isNotEmpty()
+        if (criticalNumericErr) {
+            failureModes.add(FailureMode.NUMBER_MISMATCH)
+        }
 
         // 3. Anatomy
         var matchedAnatomy = 0
         for (a in keyAnatomy) {
-            if (cleanHyp.contains(cleanText(a))) matchedAnatomy++
+            val aPattern = Regex("\\b" + Regex.escape(cleanText(a)) + "\\b")
+            if (aPattern.containsMatchIn(cleanHyp)) matchedAnatomy++
         }
         val anatomyAcc = if (keyAnatomy.isNotEmpty()) matchedAnatomy.toFloat() / keyAnatomy.size else 1.0f
+        if (keyAnatomy.isNotEmpty() && matchedAnatomy < keyAnatomy.size) {
+            failureModes.add(FailureMode.CRITICAL_ANATOMY_OMISSION)
+        }
 
         // 4. Negations (Zero Tolerance)
         val refNegations = if (keyNegations.isNotEmpty()) keyNegations else extractNegations(reference)
         var matchedNegations = 0
         var criticalNegationErr = false
         for (n in refNegations) {
-            if (cleanHyp.contains(cleanText(n))) {
+            val nPattern = Regex("\\b" + Regex.escape(cleanText(n)) + "\\b")
+            if (nPattern.containsMatchIn(cleanHyp)) {
                 matchedNegations++
             } else {
                 criticalNegationErr = true
             }
         }
         val negationAcc = if (refNegations.isNotEmpty()) matchedNegations.toFloat() / refNegations.size else 1.0f
+        if (criticalNegationErr) {
+            failureModes.add(FailureMode.NEGATION_FLIP)
+        }
 
         // 5. Laterality (Zero Tolerance: Left vs Right flip)
         val refSides = extractLaterality(reference)
@@ -171,6 +201,9 @@ object AccuracyEvaluator {
             }
         }
         val lateralityAcc = if (refSides.isNotEmpty()) matchedSides.toFloat() / refSides.size else 1.0f
+        if (criticalLateralityErr) {
+            failureModes.add(FailureMode.LATERALITY_MISMATCH)
+        }
 
         // 6. Spine Levels (Zero Tolerance: L4-L5 vs L5-S1)
         val refSpine = extractSpineLevels(reference)
@@ -185,20 +218,34 @@ object AccuracyEvaluator {
             }
         }
         val spineAcc = if (refSpine.isNotEmpty()) matchedSpine.toFloat() / refSpine.size else 1.0f
+        if (criticalSpineErr) {
+            failureModes.add(FailureMode.SPINE_LEVEL_MISMATCH)
+        }
 
-        // 7. Structured Dimensions and Measurements
+        // 7. Structured Dimensions and Units (Zero Tolerance: 21x8 cm vs 21x8 mm)
         val refDims = extractDimensions(reference)
         val hypDims = extractDimensions(hypothesis)
         var matchedDims = 0
+        var matchedUnits = 0
         var criticalMeasurementErr = false
         for (dim in refDims) {
-            if (hypDims.any { it.dimensions == dim.dimensions && it.unit.equals(dim.unit, ignoreCase = true) }) {
+            val exactMatch = hypDims.firstOrNull { it.dimensions == dim.dimensions && it.unit.equals(dim.unit, ignoreCase = true) }
+            if (exactMatch != null) {
                 matchedDims++
+                matchedUnits++
             } else {
                 criticalMeasurementErr = true
+                val unitMismatch = hypDims.firstOrNull { it.dimensions == dim.dimensions && !it.unit.equals(dim.unit, ignoreCase = true) }
+                if (unitMismatch != null) {
+                    failureModes.add(FailureMode.UNIT_MISMATCH)
+                } else {
+                    failureModes.add(FailureMode.DIMENSION_MISMATCH)
+                }
             }
         }
-        val measurementAcc = if (refDims.isNotEmpty()) matchedDims.toFloat() / refDims.size else numAcc
+        val dimensionAcc = if (refDims.isNotEmpty()) matchedDims.toFloat() / refDims.size else 1.0f
+        val unitAcc = if (refDims.isNotEmpty()) matchedUnits.toFloat() / refDims.size else 1.0f
+        val measurementAcc = if (refDims.isNotEmpty()) dimensionAcc else numAcc
 
         return EvaluationReport(
             referenceText = reference,
@@ -212,6 +259,8 @@ object AccuracyEvaluator {
             medicalTermAccuracy = termAcc,
             numericAccuracy = numAcc,
             measurementAccuracy = measurementAcc,
+            dimensionAccuracy = dimensionAcc,
+            unitAccuracy = unitAcc,
             anatomyAccuracy = anatomyAcc,
             lateralityAccuracy = lateralityAcc,
             negationAccuracy = negationAcc,
@@ -225,16 +274,17 @@ object AccuracyEvaluator {
             criticalMeasurementError = criticalMeasurementErr,
             criticalNegationError = criticalNegationErr,
             criticalLateralityError = criticalLateralityErr,
-            criticalSpineError = criticalSpineErr
+            criticalSpineError = criticalSpineErr,
+            failureModes = failureModes
         )
     }
 
     /**
-     * Extracts structured dimensions (e.g. "21 × 8 mm", "10 × 15 × 20 mm").
+     * Extracts structured dimensions (e.g. "21 × 8 mm", "10 × 15 × 20 mm", "21 x 8 mm").
      */
     fun extractDimensions(text: String): List<DimensionEntity> {
         val list = mutableListOf<DimensionEntity>()
-        val regex3D = Regex("(\\d+(?:\\.\\d+)?)\\s*×\\s*(\\d+(?:\\.\\d+)?)\\s*×\\s*(\\d+(?:\\.\\d+)?)(?:\\s*(mm|cm|m))?", RegexOption.IGNORE_CASE)
+        val regex3D = Regex("(\\d+(?:\\.\\d+)?)\\s*[×x]\\s*(\\d+(?:\\.\\d+)?)\\s*[×x]\\s*(\\d+(?:\\.\\d+)?)(?:\\s*(mm|cm|m))?", RegexOption.IGNORE_CASE)
         regex3D.findAll(text).forEach { m ->
             val v1 = m.groupValues[1].toFloatOrNull() ?: 0f
             val v2 = m.groupValues[2].toFloatOrNull() ?: 0f
@@ -243,7 +293,7 @@ object AccuracyEvaluator {
             list.add(DimensionEntity(listOf(v1, v2, v3), unit))
         }
 
-        val regex2D = Regex("(\\d+(?:\\.\\d+)?)\\s*×\\s*(\\d+(?:\\.\\d+)?)(?!\\s*×)(?:\\s*(mm|cm|m))?", RegexOption.IGNORE_CASE)
+        val regex2D = Regex("(\\d+(?:\\.\\d+)?)\\s*[×x]\\s*(\\d+(?:\\.\\d+)?)(?!\\s*[×x])(?:\\s*(mm|cm|m))?", RegexOption.IGNORE_CASE)
         regex2D.findAll(text).forEach { m ->
             val v1 = m.groupValues[1].toFloatOrNull() ?: 0f
             val v2 = m.groupValues[2].toFloatOrNull() ?: 0f

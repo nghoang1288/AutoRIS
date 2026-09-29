@@ -121,4 +121,43 @@ class AccuracyEvaluatorTest {
         assertTrue("Mutating lesion size must trigger criticalMeasurementError", eval.criticalMeasurementError)
         assertTrue(eval.hasCriticalError())
     }
+
+    @Test
+    fun testExactNumberMatchingDoesNotMatchSubstrings() {
+        val testSentence = com.autoris.asrbenchmark.benchmark.MedicalTestSentence(
+            id = "TEST_01",
+            category = "Số đo",
+            referenceText = "kích thước hai mươi mốt milimet",
+            keyNumbers = listOf("21"),
+            keyTerms = listOf("kích thước")
+        )
+
+        // Substring trap: "121" contains "21", but exact token match must NOT match
+        val hypSubstringTrap = "kích thước 121 mm"
+        val eval = AccuracyEvaluator.evaluate(testSentence.referenceText, hypSubstringTrap, testSentence)
+
+        assertTrue("Number 21 must NOT match 121", eval.criticalNumericError)
+        assertTrue(eval.missedNumbers.contains("21"))
+        assertTrue(eval.failureModes.contains(com.autoris.asrbenchmark.benchmark.FailureMode.NUMBER_MISMATCH))
+    }
+
+    @Test
+    fun testUnitMismatchFailureMode() {
+        val ref = "nang thận kích thước 21 × 8 mm"
+        val hypWrongUnit = "nang thận kích thước 21 × 8 cm" // Fatal unit change mm -> cm!
+        val eval = AccuracyEvaluator.evaluate(ref, hypWrongUnit)
+
+        assertTrue("Unit mismatch must trigger criticalMeasurementError", eval.criticalMeasurementError)
+        assertTrue(eval.failureModes.contains(com.autoris.asrbenchmark.benchmark.FailureMode.UNIT_MISMATCH))
+    }
+
+    @Test
+    fun testDimensionValueMismatchFailureMode() {
+        val ref = "nang thận kích thước 21 × 8 mm"
+        val hypWrongVal = "nang thận kích thước 121 × 8 mm"
+        val eval = AccuracyEvaluator.evaluate(ref, hypWrongVal)
+
+        assertTrue("Dimension value mismatch must trigger criticalMeasurementError", eval.criticalMeasurementError)
+        assertTrue(eval.failureModes.contains(com.autoris.asrbenchmark.benchmark.FailureMode.DIMENSION_MISMATCH))
+    }
 }
