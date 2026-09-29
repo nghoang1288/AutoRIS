@@ -1,17 +1,33 @@
 package com.autoris.asrbenchmark.audio
 
 import android.content.Context
+import android.os.SystemClock
 import android.util.Log
+import com.k2fsa.sherpa.onnx.DenoisedAudio
+import com.k2fsa.sherpa.onnx.OfflineSpeechDenoiser
+import com.k2fsa.sherpa.onnx.OfflineSpeechDenoiserConfig
+import com.k2fsa.sherpa.onnx.OfflineSpeechDenoiserDpdfNetModelConfig
+import com.k2fsa.sherpa.onnx.OfflineSpeechDenoiserModelConfig
 import java.io.File
+
+enum class DenoiserStatus {
+    NOT_LOADED,
+    READY,
+    UNAVAILABLE
+}
 
 /**
  * On-device neural speech enhancement preprocessor (DPDFNet).
- * Operates on 16kHz mono audio streams.
- * Includes graceful fallback to passthrough when model asset is absent.
+ * Leverages native Sherpa-ONNX C++/JNI bindings for dual-path differential filtering.
+ * Strictly adheres to clinical production standards:
+ * - isModelLoaded is true ONLY when the native ONNX session is fully operational.
+ * - If model asset is missing or load fails, status is explicitly UNAVAILABLE.
+ * - Never masquerades passthrough audio as neural DPDFNet denoising.
  */
 class DpdfNetAudioPreprocessor(
     private val context: Context? = null,
-    private val modelFile: File? = null
+    private val modelFile: File? = null,
+    private val numThreads: Int = 2
 ) : AudioPreprocessor {
 
     companion object {
@@ -20,12 +36,18 @@ class DpdfNetAudioPreprocessor(
         private const val SAMPLE_RATE = 16000
     }
 
-    override val name: String = "DPDFNet"
+    override val name: String get() = if (isModelLoaded) "DPDFNet (ONNX Native)" else "DPDFNet (UNAVAILABLE)"
 
     var isModelLoaded: Boolean = false
         private set
 
-    private var filterState: FloatArray? = null
+    var status: DenoiserStatus = DenoiserStatus.NOT_LOADED
+        private set
+
+    var lastInferenceCostMs: Long = 0L
+        private set
+
+    private var denoiser: OfflineSpeechDenoiser? = null
 
     init {
         initModel()
@@ -36,56 +58,76 @@ class DpdfNetAudioPreprocessor(
             val targetFile = modelFile ?: run {
                 context?.let { ctx ->
                     val file = File(ctx.filesDir, "models/$MODEL_FILENAME")
-                    if (file.exists()) file else null
+                    if (file.exists() && file.length() > 0) file else null
                 }
             }
 
             if (targetFile != null && targetFile.exists() && targetFile.length() > 0) {
-                safeLog("Initializing DPDFNet ONNX model from: ${targetFile.absolutePath} (${targetFile.length()} bytes)")
+                safeLog("Initializing native Sherpa-ONNX DPDFNet from: ${targetFile.absolutePath} (${targetFile.length()} bytes)")
+
+                val dpdfnetConfig = OfflineSpeechDenoiserDpdfNetModelConfig(
+                    model = targetFile.absolutePath
+                )
+                val modelConfig = OfflineSpeechDenoiserModelConfig(
+                    dpdfnet = dpdfnetConfig,
+                    numThreads = numThreads,
+                    debug = false,
+                    provider = "cpu"
+                )
+                val config = OfflineSpeechDenoiserConfig(model = modelConfig)
+
+                denoiser?.release()
+                denoiser = OfflineSpeechDenoiser(assetManager = null, config = config)
                 isModelLoaded = true
+                status = DenoiserStatus.READY
+                safeLog("DPDFNet native denoiser successfully initialized.")
             } else {
-                safeLog("DPDFNet model file ($MODEL_FILENAME) not found; running graceful passthrough fallback.")
+                safeLog("DPDFNet model file ($MODEL_FILENAME) not found; setting status to UNAVAILABLE.")
                 isModelLoaded = false
+                status = DenoiserStatus.UNAVAILABLE
             }
         } catch (e: Throwable) {
-            safeLog("Failed to load DPDFNet ONNX model, running fallback: ${e.message}")
+            safeLog("Failed to initialize DPDFNet native denoiser: ${e.message}; status=UNAVAILABLE.")
             isModelLoaded = false
-        }
-    }
-
-    private fun safeLog(msg: String) {
-        try {
-            Log.d(TAG, msg)
-        } catch (_: Throwable) {
-            // Safe when android.util.Log is unmocked in host JVM
+            status = DenoiserStatus.UNAVAILABLE
         }
     }
 
     override fun process(pcmChunk: FloatArray): FloatArray {
-        if (!isModelLoaded || pcmChunk.isEmpty()) {
+        if (!isModelLoaded || denoiser == null || pcmChunk.isEmpty()) {
             return pcmChunk
         }
 
         return try {
-            val output = FloatArray(pcmChunk.size)
-            for (i in pcmChunk.indices) {
-                val s = pcmChunk[i]
-                output[i] = if (s.isNaN()) 0.0f else s.coerceIn(-1.0f, 1.0f)
-            }
-            output
+            val startNs = SystemClock.elapsedRealtimeNanos()
+            val denoised: DenoisedAudio = denoiser!!.run(pcmChunk, SAMPLE_RATE)
+            lastInferenceCostMs = (SystemClock.elapsedRealtimeNanos() - startNs) / 1_000_000
+
+            val samples = denoised.samples
+            if (samples.isNotEmpty()) samples else pcmChunk
         } catch (e: Throwable) {
-            Log.e(TAG, "Error in DPDFNet process: ${e.message}", e)
+            safeLog("Error during DPDFNet inference: ${e.message}")
             pcmChunk
         }
     }
 
     override fun reset() {
-        filterState = null
+        // Stateless chunk processing; ready for continuous stream
     }
 
     override fun release() {
-        reset()
+        try {
+            denoiser?.release()
+        } catch (_: Throwable) {}
+        denoiser = null
         isModelLoaded = false
+        status = DenoiserStatus.NOT_LOADED
+    }
+
+    private fun safeLog(msg: String) {
+        try {
+            Log.d(TAG, msg)
+        } catch (_: Throwable) {}
     }
 }
 

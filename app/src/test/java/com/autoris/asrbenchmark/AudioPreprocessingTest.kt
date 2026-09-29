@@ -52,8 +52,9 @@ class AudioPreprocessingTest {
         val nonExistentFile = java.io.File("non_existent_dpdfnet.onnx")
         val dpdf = com.autoris.asrbenchmark.audio.DpdfNetAudioPreprocessor(modelFile = nonExistentFile)
 
-        assertEquals("DPDFNet", dpdf.name)
+        assertEquals(com.autoris.asrbenchmark.audio.DenoiserStatus.UNAVAILABLE, dpdf.status)
         org.junit.Assert.assertFalse(dpdf.isModelLoaded)
+        org.junit.Assert.assertTrue(dpdf.name.contains("UNAVAILABLE"))
 
         val input = floatArrayOf(0.05f, -0.1f, 0.4f)
         val output = dpdf.process(input)
@@ -72,9 +73,9 @@ class AudioPreprocessingTest {
         assertEquals("Passthrough", nsPrep.name)
 
         val dpdfPrep = com.autoris.asrbenchmark.audio.AudioPreprocessorFactory.create(PreprocessingProfile.DPDFNET)
-        assertEquals("DPDFNet", dpdfPrep.name)
+        org.junit.Assert.assertTrue(dpdfPrep.name.contains("DPDFNet"))
 
         val cascadePrep = com.autoris.asrbenchmark.audio.AudioPreprocessorFactory.create(PreprocessingProfile.ANDROID_NS_DPDFNET)
-        assertEquals("DPDFNet", cascadePrep.name)
+        org.junit.Assert.assertTrue(cascadePrep.name.contains("DPDFNet"))
     }
 }
