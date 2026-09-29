@@ -1,0 +1,60 @@
+{
+  "manifest_version": 3,
+  "name": "AutoRIS - Voice Dictation for RIS",
+  "version": "1.0.0",
+  "author": "AutoRIS Team",
+  "description": "Tự động điền Mô tả và Kết luận vào hệ thống RIS khi bác sĩ đọc (từ điện thoại hoặc micro PC) - Tích hợp AutoRIS ASR",
+  "permissions": [
+    "storage",
+    "clipboardWrite",
+    "tabs",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "http://192.168.50.105/*",
+    "http://192.168.50.110:30979/*",
+    "https://autoris.hoang.qzz.io/*",
+    "http://192.168.50.100:8080/*",
+    "http://localhost:8080/*",
+    "<all_urls>"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "AutoRIS - Cài đặt Dictation vào RIS"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "http://192.168.50.105/*",
+        "http://192.168.50.110:30979/*",
+        "http://*/*ris*",
+        "https://*/*ris*",
+        "http://*/*RIS*",
+        "https://*/*RIS*",
+        "http://*/*diagnosis*",
+        "https://*/*diagnosis*",
+        "http://*/*report*",
+        "https://*/*report*",
+        "<all_urls>"
+      ],
+      "all_frames": true,
+      "match_about_blank": true,
+      "js": [
+        "defaults.js",
+        "content.js"
+      ],
+      "css": [
+        "styles.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
