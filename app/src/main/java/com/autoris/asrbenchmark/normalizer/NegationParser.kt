@@ -18,6 +18,8 @@ object NegationParser {
         "chưa phát hiện",
         "không sỏi",
         "không dày",
+        "không to",
+        "chưa to",
         "không giãn",
         "không vôi hóa",
         "không tràn dịch",

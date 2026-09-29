@@ -67,7 +67,7 @@ object MedicalTextNormalizer {
         }
 
         val suggestionsLog = mutableListOf<String>()
-        var normalized = rawText
+        var normalized = rawText.lowercase(Locale("vi", "VN"))
 
         // 1. Radiology Phonetic & Dialect fixes
         val afterPhonetics = MedicalPhraseNormalizer.fixPhonetics(normalized, suggestionsLog)
@@ -130,9 +130,10 @@ object MedicalTextNormalizer {
         val parsedNegations = NegationParser.parse(normalized)
 
         // 14. Semantic parsing: Spine Levels
-        val spineRegex = Regex("\\b([LCDST]\\d+(?:-[LCDST]\\d+)?)\\b")
+        val spineRegex = Regex("\\b([LCDST]\\d+(?:-[LCDST]\\d+)?)\\b", RegexOption.IGNORE_CASE)
         val parsedSpineLevels = spineRegex.findAll(normalized).map {
-            ParsedSpineLevel(raw = it.value, normalized = it.value, certainty = CertaintyLevel.EXPLICIT)
+            val upper = it.value.uppercase(Locale.ROOT)
+            ParsedSpineLevel(raw = it.value, normalized = upper, certainty = CertaintyLevel.EXPLICIT)
         }.toList()
 
         // 15. Semantic parsing: Dimensions
@@ -148,7 +149,7 @@ object MedicalTextNormalizer {
                 normalized = match.value,
                 dims = dimsList,
                 unit = unit,
-                certainty = if (rawText.contains(unit, ignoreCase = true)) CertaintyLevel.EXPLICIT else CertaintyLevel.INFERRED
+                certainty = if (isUnitExplicitlyPresent(rawText, unit)) CertaintyLevel.EXPLICIT else CertaintyLevel.INFERRED
             )
         }.toList()
 
@@ -158,7 +159,7 @@ object MedicalTextNormalizer {
         measRegex.findAll(normalized).forEach { match ->
             val v = match.groupValues[1].toFloatOrNull()
             val u = match.groupValues[2]
-            val certainty = if (rawText.contains(u, ignoreCase = true)) CertaintyLevel.EXPLICIT else CertaintyLevel.INFERRED
+            val certainty = if (isUnitExplicitlyPresent(rawText, u)) CertaintyLevel.EXPLICIT else CertaintyLevel.INFERRED
             parsedMeasurements.add(
                 ParsedMeasurement(raw = match.value, normalized = match.value, value = v, unit = u, certainty = certainty)
             )
@@ -211,5 +212,18 @@ object MedicalTextNormalizer {
             clinicalScores = parsedScores,
             hasAmbiguityOrConflict = hasAmbiguity
         )
+    }
+
+    private fun isUnitExplicitlyPresent(rawText: String, unit: String): Boolean {
+        if (rawText.contains(unit, ignoreCase = true)) return true
+        val lower = rawText.lowercase(Locale("vi", "VN"))
+        return when (unit.lowercase(Locale.ROOT)) {
+            "mm" -> lower.contains("mili")
+            "cm" -> lower.contains("centi") || lower.contains("xenti")
+            "ml" -> lower.contains("mililit") || lower.contains("mili lít")
+            "l" -> lower.contains("lít")
+            "%" -> lower.contains("phần trăm")
+            else -> false
+        }
     }
 }

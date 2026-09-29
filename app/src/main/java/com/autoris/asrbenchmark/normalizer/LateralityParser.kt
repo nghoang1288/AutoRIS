@@ -11,7 +11,9 @@ object LateralityParser {
     private val PAIRED_ANATOMY = listOf(
         "thận", "thận phải", "thận trái",
         "phổi", "phổi phải", "phổi trái",
-        "thùy gan", "buồng trứng", "tuyến thượng thận",
+        "gan", "gan phải", "gan trái", "thùy gan",
+        "rễ", "rễ thần kinh", "đĩa đệm",
+        "buồng trứng", "tuyến thượng thận",
         "khớp háng", "khớp gối", "khớp vai",
         "niệu quản", "bán cầu đại não", "động mạch cảnh",
         "động mạch khoeo", "tĩnh mạch đùi", "mắt", "tai", "tay", "chân"
@@ -50,6 +52,24 @@ object LateralityParser {
                 } else if (hasLeft) {
                     results.add(ParsedLaterality(LateralityType.LEFT, target, window, isContradictory = false))
                 }
+            }
+        }
+
+        // Fallback: If no specific paired organ matched, but explicit directional cue exists
+        if (results.isEmpty()) {
+            val hasRight = RIGHT_REGEX.containsMatchIn(lower)
+            val hasLeft = LEFT_REGEX.containsMatchIn(lower)
+            val hasBilateral = BILATERAL_REGEX.containsMatchIn(lower)
+
+            if (hasBilateral) {
+                results.add(ParsedLaterality(LateralityType.BILATERAL, "chung", lower, isContradictory = false))
+            } else if (hasRight && hasLeft) {
+                results.add(ParsedLaterality(LateralityType.UNSPECIFIED, "chung", lower, isContradictory = true))
+                hasConflict = true
+            } else if (hasRight) {
+                results.add(ParsedLaterality(LateralityType.RIGHT, "chung", lower, isContradictory = false))
+            } else if (hasLeft) {
+                results.add(ParsedLaterality(LateralityType.LEFT, "chung", lower, isContradictory = false))
             }
         }
 

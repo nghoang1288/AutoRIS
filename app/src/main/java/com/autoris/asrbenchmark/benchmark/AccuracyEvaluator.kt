@@ -344,7 +344,18 @@ object AccuracyEvaluator {
      */
     fun extractNegations(text: String): List<String> {
         val clean = cleanText(text)
-        return NEGATION_KEYWORDS.filter { clean.contains(it) }
+        val matches = mutableListOf<String>()
+        for (kw in NEGATION_KEYWORDS) {
+            if (clean.contains(kw)) matches.add(kw)
+        }
+        val genericNegationRegex = Regex("\\b(không|chưa)\\s+([a-zA-ZÀ-ỹ0-9]+(?:\\s+[a-zA-ZÀ-ỹ0-9]+)?)\\b")
+        genericNegationRegex.findAll(clean).forEach { m ->
+            val phrase = m.value.trim()
+            if (matches.none { it.contains(phrase) || phrase.contains(it) }) {
+                matches.add(phrase)
+            }
+        }
+        return matches
     }
 
     /**
