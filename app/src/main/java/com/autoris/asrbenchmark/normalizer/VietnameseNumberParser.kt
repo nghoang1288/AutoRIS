@@ -123,8 +123,10 @@ object VietnameseNumberParser {
         }
 
         // 7. Single digit words after clinical dimension keywords: e.g. "đường kính chín" -> "đường kính 9"
+        // MUST skip "không" (0) because "dày không đều", "không to", "không ngấm thuốc" are clinical negations, never 0 mm!
         val dimKeywords = "(?:đường\\s+kính|kích\\s+thước|dày|sâu|rộng|dài|cao|nhỏ\\s+hơn|lớn\\s+hơn)"
         for ((dWord, dVal) in DIGIT_WORDS) {
+            if (dVal == 0) continue // Skip "không"
             val dimPattern = Regex("\\b($dimKeywords)\\s+$dWord\\b", RegexOption.IGNORE_CASE)
             result = dimPattern.replace(result, "$1 $dVal")
         }

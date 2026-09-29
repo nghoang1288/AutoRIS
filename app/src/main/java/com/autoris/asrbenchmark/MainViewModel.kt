@@ -569,7 +569,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         resetTest()
     }
 
+    private var lastToggleTimeMs: Long = 0L
+
     fun toggleRecording() {
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastToggleTimeMs < 400L) {
+            Log.d(TAG, "Ignoring toggleRecording debounce (${now - lastToggleTimeMs}ms)")
+            return
+        }
+        lastToggleTimeMs = now
         if (_captureState.value.isRecording) {
             stopRecording()
         } else {
@@ -833,9 +841,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (raw.isBlank()) return
 
         val m = _metrics.value
+        val norm = _normalizedResult.value
+        val cleaned = (norm?.normalizedSuggestion ?: raw).trim().trimEnd('.', '?', '!', ',')
+        // Ignore ghost recordings with only filler words or under 0.4s duration
+        if (cleaned.isBlank() || m.audioDurationSec < 0.4f) {
+            Log.w(TAG, "Skipping saving ghost recording session: duration=${m.audioDurationSec}s text='$raw'")
+            return
+        }
+
         val ref = _selectedTestSentence.value
         val eval = _evaluationReport.value
-        val norm = _normalizedResult.value
         val audioToSave = lastSavedAudioPath
         val policyDecision = audioRecorderManager?.latestPolicyDecision
 

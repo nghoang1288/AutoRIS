@@ -22,7 +22,7 @@ object MeasurementParser {
         // 2. Contextual radiology defaults without unit -> append "mm"
         // e.g. "đường kính 12", "dày 3", "sâu 5", "kích thước 15"
         val contextualRegex = Regex(
-            "\\b(đường\\s+kính|dày|sâu|kích\\s+thước|rộng|dài|cao|nhỏ\\s+hơn|lớn\\s+hơn)\\s+(\\d+(?:\\.\\d+)?)(?!\\s*(?:mm|cm|m|%|ml|HU|×|x|nhân|chiều|tầng|bên|đoạn|vị\\s+trí))\\b",
+            "\\b(đường\\s+kính|dày|sâu|kích\\s+thước|rộng|dài|cao|nhỏ\\s+hơn|lớn\\s+hơn)\\s+(\\d+(?:\\.\\d+)?)(?!\\s*(?:mm|cm|m|%|ml|HU|×|x|nhân|chiều|tầng|bên|đoạn|vị\\s+trí|đều))\\b",
             RegexOption.IGNORE_CASE
         )
         result = contextualRegex.replace(result) { m ->

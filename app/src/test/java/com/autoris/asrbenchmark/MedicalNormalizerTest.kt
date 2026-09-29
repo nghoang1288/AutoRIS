@@ -177,7 +177,7 @@ class MedicalNormalizerTest {
         assertTrue("Normalized text must contain proper anatomy and dimensions", result.normalizedSuggestion.contains("21 × 8 mm"))
         assertTrue("Normalized text must have capitalized first letter", result.normalizedSuggestion.startsWith("Dày"))
         assertTrue("Trailing filler 'đó thôi' must be stripped", !result.normalizedSuggestion.contains("đó thôi"))
-        assertTrue("Hang môn vị must be detected in anatomy", result.detectedAnatomy.contains("hang môn vị"))
+        assertTrue("Hang môn vị must be detected in anatomy", result.detectedAnatomy.contains("hang - môn vị") || result.detectedAnatomy.contains("hang môn vị"))
     }
 
     @Test
@@ -226,5 +226,35 @@ class MedicalNormalizerTest {
         val fillerRes = MedicalTextNormalizer.process(fillerRaw)
         assertFalse("Trailing fillers 'đây' and 'này' must be removed", fillerRes.normalizedSuggestion.contains("đây", ignoreCase = true))
         assertFalse("Trailing fillers 'đây' and 'này' must be removed", fillerRes.normalizedSuggestion.contains("này", ignoreCase = true))
+
+        // 7. Stomach antrum - môn vị (never 0 mm)
+        val stomachRaw = "Dày không đều thành hang môn vị dạ dày chỗ dày nhất hai mốt mm. Gây hẹp lòng muôn vị."
+        val stomachRes = MedicalTextNormalizer.process(stomachRaw)
+        assertFalse("Dày không đều must NEVER turn into 0 mm", stomachRes.normalizedSuggestion.contains("0 mm"))
+        assertTrue("Dày không đều must be preserved", stomachRes.normalizedSuggestion.contains("Dày không đều"))
+        assertTrue("Môn vị must be fixed from muôn vị", stomachRes.normalizedSuggestion.contains("môn vị"))
+        assertTrue("21 mm must be parsed", stomachRes.normalizedSuggestion.contains("21 mm"))
+
+        // 8. Gallbladder and Wirsung duct
+        val gbRaw = "Từ mặt thành mỏng dịch mật đồng nhất không thấy sỏi chẳng qua."
+        val gbRes = MedicalTextNormalizer.process(gbRaw)
+        assertTrue("Túi mật must be fixed from từ mặt", gbRes.normalizedSuggestion.contains("Túi mật"))
+        assertTrue("Sỏi cản quang must be fixed from sỏi chẳng qua", gbRes.normalizedSuggestion.contains("sỏi cản quang"))
+
+        val pancRaw = "Tuỳ kích thước trong giới hạn bình thường ngấm thuốc đồng nhất ống christong không giãn."
+        val pancRes = MedicalTextNormalizer.process(pancRaw)
+        assertTrue("Tụy must be fixed from tuỳ", pancRes.normalizedSuggestion.contains("Tụy"))
+        assertTrue("Wirsung must be fixed from christong", pancRes.normalizedSuggestion.contains("Wirsung"))
+
+        // 9. Lung nodule retracting pleura and pleural cavity
+        val lungRaw = "Nốt kính mờ thì dưới phổi phải kích thước tám mm không thấy co keo màng phổi lân cận."
+        val lungRes = MedicalTextNormalizer.process(lungRaw)
+        assertTrue("Thùy dưới must be fixed from thì dưới", lungRes.normalizedSuggestion.contains("thùy dưới"))
+        assertTrue("Co kéo must be fixed from co keo", lungRes.normalizedSuggestion.contains("co kéo"))
+        assertTrue("8 mm must be parsed", lungRes.normalizedSuggestion.contains("8 mm"))
+
+        val pleuraRaw = "Không thấy tràn dịch tràn khí qua màng phổi hai bên."
+        val pleuraRes = MedicalTextNormalizer.process(pleuraRaw)
+        assertTrue("Khoang màng phổi must be fixed from qua màng phổi", pleuraRes.normalizedSuggestion.contains("khoang màng phổi"))
     }
 }

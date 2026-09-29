@@ -23,7 +23,7 @@ object MedicalTextNormalizer {
 
     // Common Diagnostic Imaging (CĐHA) Anatomical Locations
     val ANATOMY_TERMS = listOf(
-        "hang môn vị", "hang vị", "môn vị", "tá tràng", "hỗng tràng", "hồi tràng", "đại tràng", "trực tràng", "dạ dày",
+        "hang - môn vị", "hang môn vị", "hang vị", "môn vị", "tá tràng", "hỗng tràng", "hồi tràng", "đại tràng", "trực tràng", "dạ dày",
         "gan", "nhu mô gan", "thùy gan", "hạ phân thùy", "tĩnh mạch cửa", "tĩnh mạch chủ dưới",
         "đường mật", "ống mật chủ", "túi mật", "đường mật trong gan", "đường mật ngoài gan",
         "tụy", "đầu tụy", "thân tụy", "đuôi tụy", "lách",
