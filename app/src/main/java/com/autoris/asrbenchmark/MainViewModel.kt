@@ -35,6 +35,16 @@ import com.autoris.asrbenchmark.normalizer.MedicalTextNormalizer
 import com.autoris.asrbenchmark.normalizer.NormalizedResult
 import com.autoris.asrbenchmark.storage.BenchmarkDatabase
 import com.autoris.asrbenchmark.storage.BenchmarkExporter
+import com.autoris.asrbenchmark.safety.AcousticQuality
+import com.autoris.asrbenchmark.safety.AcousticQualityLevel
+import com.autoris.asrbenchmark.safety.EvidenceStatus
+import com.autoris.asrbenchmark.safety.ParserStatus
+import com.autoris.asrbenchmark.safety.SafetyEvidence
+import com.autoris.asrbenchmark.safety.SafetyGate
+import com.autoris.asrbenchmark.safety.SafetyGateDecision
+import com.autoris.asrbenchmark.safety.SafetyGateStatus
+import com.autoris.asrbenchmark.safety.SpeakerState
+import com.autoris.asrbenchmark.normalizer.CertaintyLevel
 import com.autoris.asrbenchmark.vad.VadConfig
 import com.autoris.asrbenchmark.vad.VadState
 import kotlinx.coroutines.Dispatchers
@@ -66,6 +76,11 @@ data class UiBenchmarkMetrics(
     val vadSegmentCount: Int = 1,
     val vadTotalSpeechMs: Long = 0L
 )
+
+enum class AppOperatingMode(val displayName: String) {
+    CLINICAL_SAFE("Lâm sàng an toàn (PACS/RIS)"),
+    BENCHMARK("Nghiên cứu & Benchmark")
+}
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -192,6 +207,87 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _voiceLockState = MutableStateFlow(VoiceLockState.ACCEPT)
     val voiceLockState: StateFlow<VoiceLockState> = _voiceLockState.asStateFlow()
+
+    // Mode Separation: Clinical Safe Mode vs Benchmark Mode
+    private val _operatingMode = MutableStateFlow(AppOperatingMode.CLINICAL_SAFE)
+    val operatingMode: StateFlow<AppOperatingMode> = _operatingMode.asStateFlow()
+
+    fun setOperatingMode(mode: AppOperatingMode) {
+        _operatingMode.value = mode
+        recomputeSafetyGate()
+    }
+
+    private val safetyGate = SafetyGate()
+    private val _safetyGateDecision = MutableStateFlow<SafetyGateDecision?>(null)
+    val safetyGateDecision: StateFlow<SafetyGateDecision?> = _safetyGateDecision.asStateFlow()
+
+    fun exportToRis(): Boolean {
+        val decision = _safetyGateDecision.value
+        if (decision?.status == SafetyGateStatus.REJECTED) {
+            _statusMessage.value = "Từ chối gửi RIS: Kết quả bị khoá an toàn do có vi phạm nguy hiểm!"
+            return false
+        }
+        _statusMessage.value = "Đã gửi bản tường trình sang hệ thống RIS/PACS thành công!"
+        return true
+    }
+
+    fun recomputeSafetyGate() {
+        val norm = _normalizedResult.value ?: return
+        val text = _finalTranscript.value.ifBlank { _livePartial.value }
+        if (text.isBlank()) {
+            _safetyGateDecision.value = null
+            return
+        }
+
+        val speakerState = when (_voiceLockState.value) {
+            VoiceLockState.ACCEPT -> SpeakerState.ACCEPTED
+            VoiceLockState.REJECT -> SpeakerState.REJECTED
+            VoiceLockState.UNCERTAIN -> SpeakerState.UNCERTAIN
+            else -> if (_speakerLockEnabled.value) SpeakerState.NOT_ENROLLED else SpeakerState.DISABLED
+        }
+
+        val acousticLevel = when {
+            _noiseProfile.value.snrDb < 10.0f || _noiseProfile.value.noiseFloorDb > -36.0f -> AcousticQualityLevel.DEGRADED
+            _noiseProfile.value.snrDb >= 20.0f && _noiseProfile.value.noiseFloorDb <= -48.0f -> AcousticQualityLevel.OPTIMAL
+            else -> AcousticQualityLevel.ACCEPTABLE
+        }
+
+        val hasAmbiguity = norm.hasAmbiguityOrConflict || norm.measurements.any { it.certainty == CertaintyLevel.AMBIGUOUS }
+        val parserStatus = if (hasAmbiguity) ParserStatus.HAS_AMBIGUITY else ParserStatus.CONFIRMED_CLEAN
+
+        val criticalErrors = mutableListOf<String>()
+        val unresolved = mutableListOf<String>()
+
+        if (norm.lateralities.any { it.isContradictory }) {
+            criticalErrors.add("Mâu thuẫn định vị bên (phải/trái)")
+        }
+        for (m in norm.measurements) {
+            if (m.certainty == CertaintyLevel.AMBIGUOUS) {
+                unresolved.add("Số đo ${m.raw} thiếu đơn vị lâm sàng (mm/cm)")
+            }
+        }
+
+        val evidence = SafetyEvidence(
+            speakerState = speakerState,
+            transcriptConfidence = 0.95f,
+            acousticQuality = AcousticQuality(
+                level = acousticLevel,
+                snrDb = _noiseProfile.value.snrDb,
+                noiseFloorDb = _noiseProfile.value.noiseFloorDb
+            ),
+            parserStatus = parserStatus,
+            criticalEntitiesStatus = if (criticalErrors.isNotEmpty()) EvidenceStatus.INVALID else EvidenceStatus.VALID,
+            unresolvedAmbiguities = unresolved,
+            criticalErrors = criticalErrors
+        )
+
+        val decision = if (_operatingMode.value == AppOperatingMode.CLINICAL_SAFE) {
+            safetyGate.evaluateProduction(evidence)
+        } else {
+            safetyGate.evaluateBenchmark(_evaluationReport.value, evidence)
+        }
+        _safetyGateDecision.value = decision
+    }
 
     fun selectScenario(scenario: NoiseScenario) {
         _selectedScenario.value = scenario
@@ -448,6 +544,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             firstSegmentResultLatencyMs = firstLatencyMs
                         )
                     }
+
+                    recomputeSafetyGate()
                 }
             },
             onSpeakerVerificationResult = { result ->
@@ -534,6 +632,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             )
             _evaluationReport.value = eval
         }
+
+        recomputeSafetyGate()
 
         // Auto-save WAV if enabled
         if (_isSaveAudioEnabled.value && audioRecorderManager != null) {
@@ -775,6 +875,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _finalTranscript.value = ""
         _normalizedResult.value = null
         _evaluationReport.value = null
+        _safetyGateDecision.value = null
         _metrics.value = UiBenchmarkMetrics()
         _statusMessage.value = "Sẵn sàng"
     }

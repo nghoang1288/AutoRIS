@@ -29,18 +29,19 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -49,15 +50,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.autoris.asrbenchmark.AppOperatingMode
 import com.autoris.asrbenchmark.MainViewModel
+import com.autoris.asrbenchmark.safety.SafetyGateStatus
 import com.autoris.asrbenchmark.ui.theme.BorderColor
 import com.autoris.asrbenchmark.ui.theme.CyanAccent
 import com.autoris.asrbenchmark.ui.theme.DarkBackground
-import androidx.compose.ui.graphics.vector.ImageVector
 import com.autoris.asrbenchmark.ui.theme.DarkSurface
 import com.autoris.asrbenchmark.ui.theme.DarkSurfaceVariant
 import com.autoris.asrbenchmark.ui.theme.EmeraldGreen
@@ -69,6 +72,13 @@ import com.autoris.asrbenchmark.ui.theme.TextPrimary
 import com.autoris.asrbenchmark.ui.theme.TextSecondary
 import com.autoris.asrbenchmark.vad.VadState
 import java.util.Locale
+
+private data class SafetyBadgeConfig(
+    val bg: Color,
+    val border: Color,
+    val title: String,
+    val icon: ImageVector
+)
 
 @Composable
 fun HomeScreen(
@@ -91,6 +101,8 @@ fun HomeScreen(
     val selectedModelType by viewModel.selectedModelType.collectAsState()
     val selectedScenario by viewModel.selectedScenario.collectAsState()
     val activeProfile by viewModel.preprocessingProfile.collectAsState()
+    val operatingMode by viewModel.operatingMode.collectAsState()
+    val safetyGateDecision by viewModel.safetyGateDecision.collectAsState()
 
     val scrollState = rememberScrollState()
 
@@ -109,14 +121,14 @@ fun HomeScreen(
         ) {
             Column {
                 Text(
-                    text = "VI ASR BENCHMARK",
+                    text = "AUTORIS ASR",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary
                 )
                 Text(
-                    text = SystemMonitor.getDeviceModel(),
-                    fontSize = 12.sp,
+                    text = "${SystemMonitor.getDeviceModel()} • On-device ZipFormer",
+                    fontSize = 11.sp,
                     color = CyanAccent,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -134,6 +146,51 @@ fun HomeScreen(
                 IconButton(onClick = onNavigateToSettings) {
                     Icon(Icons.Default.Settings, contentDescription = "Settings", tint = TextSecondary)
                 }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // === OPERATING MODE SELECTOR (CLINICAL SAFE VS BENCHMARK) ===
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .background(DarkSurface),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            val isClinical = operatingMode == AppOperatingMode.CLINICAL_SAFE
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(if (isClinical) CyanAccent else Color.Transparent)
+                    .clickable { viewModel.setOperatingMode(AppOperatingMode.CLINICAL_SAFE) }
+                    .padding(vertical = 10.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "🏥 LÂM SÀNG (PACS/RIS)",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isClinical) Color.Black else TextSecondary
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(if (!isClinical) CyanAccent else Color.Transparent)
+                    .clickable { viewModel.setOperatingMode(AppOperatingMode.BENCHMARK) }
+                    .padding(vertical = 10.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "🔬 BENCHMARK & METRICS",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (!isClinical) Color.Black else TextSecondary
+                )
             }
         }
 
@@ -219,8 +276,8 @@ fun HomeScreen(
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        // === REFERENCE (IF TEST SELECTED) ===
-        if (selectedSentence != null) {
+        // === BENCHMARK ONLY: REFERENCE TEST SENTENCE CARD ===
+        if (operatingMode == AppOperatingMode.BENCHMARK && selectedSentence != null) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = DarkSurfaceVariant),
@@ -317,7 +374,7 @@ fun HomeScreen(
             Spacer(modifier = Modifier.width(10.dp))
             Text(
                 text = if (captureState.isRecording)
-                    "⏹ DỪNG THU ÂM (${String.format(Locale.ROOT, "%.1f", captureState.audioDurationSec)}s) - LƯU & GỬI PC"
+                    "⏹ DỪNG THU ÂM (${String.format(Locale.ROOT, "%.1f", captureState.audioDurationSec)}s)"
                 else
                     "🎙 BẮT ĐẦU ĐỌC",
                 fontSize = 16.sp,
@@ -380,8 +437,8 @@ fun HomeScreen(
 
                 Text(
                     text = currentText.ifEmpty {
-                        if (captureState.isRecording) "🎙️ Đang lắng nghe... Hãy đọc câu của bạn (nghỉ 1-2s máy sẽ tự động hiện kết quả)"
-                        else "Nhấn nút màu xanh bên trên để bắt đầu đọc liên tục..."
+                        if (captureState.isRecording) "🎙️ Đang lắng nghe... Hãy đọc câu của bạn (nghỉ 1s máy tự nhận diện câu tiếp theo)"
+                        else "Nhấn nút màu xanh bên trên để bắt đầu đọc..."
                     },
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Medium,
@@ -393,7 +450,7 @@ fun HomeScreen(
                 // Normalized Suggestion Log
                 if (normalizedResult != null && normalizedResult!!.suggestionsLog.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(10.dp))
-                    Divider(color = BorderColor)
+                    HorizontalDivider(color = BorderColor)
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = "✨ ĐÃ CHUẨN HÓA CĐHA / ĐO ĐẠC / GIẢI PHẪU:",
@@ -417,130 +474,269 @@ fun HomeScreen(
             }
         }
 
-        // === ACCURACY EVALUATION (IF TEST SELECTED & FINISHED) ===
-        if (evaluationReport != null) {
-            Spacer(modifier = Modifier.height(10.dp))
+        // === SAFETY GATE DECISION BADGE ===
+        if (safetyGateDecision != null) {
+            Spacer(modifier = Modifier.height(12.dp))
+            val decision = safetyGateDecision!!
+            val cfg = when (decision.status) {
+                SafetyGateStatus.SAFE_TO_AUTOFILL -> SafetyBadgeConfig(
+                    bg = EmeraldGreen.copy(alpha = 0.15f),
+                    border = EmeraldGreen,
+                    title = "✓ AN TOÀN TỰ ĐỘNG ĐẨY VÀO PACS/RIS",
+                    icon = Icons.Default.Check
+                )
+                SafetyGateStatus.REVIEW_REQUIRED -> SafetyBadgeConfig(
+                    bg = OrangeWarning.copy(alpha = 0.15f),
+                    border = OrangeWarning,
+                    title = "⚠ YÊU CẦU BÁC SĨ RÀ SOÁT THỦ CÔNG",
+                    icon = Icons.Default.Warning
+                )
+                SafetyGateStatus.REJECTED -> SafetyBadgeConfig(
+                    bg = RedError.copy(alpha = 0.15f),
+                    border = RedError,
+                    title = "⛔ CẢNH BÁO NGUY HIỂM - TỪ CHỐI TỰ ĐỘNG",
+                    icon = Icons.Default.Security
+                )
+            }
+
             Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = DarkSurfaceVariant),
-                shape = RoundedCornerShape(10.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(1.5.dp, cfg.border, RoundedCornerShape(12.dp)),
+                colors = CardDefaults.cardColors(containerColor = DarkSurface),
+                shape = RoundedCornerShape(12.dp)
             ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text(
-                        text = "KẾT QUẢ ĐÁNH GIÁ ĐỘ CHÍNH XÁC",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = CyanAccent
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        MetricItem("WER", String.format(Locale.ROOT, "%.1f%%", evaluationReport!!.wer * 100))
-                        MetricItem("CER", String.format(Locale.ROOT, "%.1f%%", evaluationReport!!.cer * 100))
-                        MetricItem("Term Acc", String.format(Locale.ROOT, "%.0f%%", evaluationReport!!.medicalTermAccuracy * 100))
-                        MetricItem("Num Acc", String.format(Locale.ROOT, "%.0f%%", evaluationReport!!.numericAccuracy * 100))
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .clip(CircleShape)
+                                .background(cfg.bg),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(cfg.icon, contentDescription = null, tint = cfg.border, modifier = Modifier.size(18.dp))
+                        }
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = cfg.title,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = cfg.border
+                        )
+                    }
+
+                    if (decision.reasons.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        for (reason in decision.reasons) {
+                            Text(
+                                text = "• $reason",
+                                fontSize = 12.sp,
+                                color = if (decision.status == SafetyGateStatus.REJECTED) RedError else TextSecondary,
+                                lineHeight = 18.sp
+                            )
+                        }
                     }
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(14.dp))
-
-        // === METRICS CARD ===
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MetricCardBg),
-            shape = RoundedCornerShape(10.dp)
-        ) {
-            Column(modifier = Modifier.padding(14.dp)) {
-                Text(
-                    text = "METRICS",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextMuted
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    MetricItem("Audio duration", "${String.format(Locale.ROOT, "%.1f", metrics.audioDurationSec)} s")
-                    MetricItem("First partial", "${metrics.firstPartialMs} ms")
-                    MetricItem("Final latency", "${metrics.finalLatencyMs} ms")
-                }
-                Spacer(modifier = Modifier.height(10.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    MetricItem("Processing time", "${metrics.processingMs} ms")
-                    MetricItem("RTF", String.format(Locale.ROOT, "%.3f", metrics.rtf))
-                    MetricItem("Peak RAM", "${metrics.ramPeakMb} MB")
-                }
-                Spacer(modifier = Modifier.height(10.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    MetricItem("Battery", "${systemStats.batteryPercent} %")
-                    MetricItem("Temperature", "${String.format(Locale.ROOT, "%.1f", systemStats.batteryTempCelsius)} °C")
-                    MetricItem("Avg RAM", "${systemStats.ramCurrentMb} MB")
+        // === CLINICAL WARNING BOX IF CONFLICT OR AMBIGUITY ===
+        if (normalizedResult?.hasAmbiguityOrConflict == true) {
+            Spacer(modifier = Modifier.height(10.dp))
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(1.dp, RedError, RoundedCornerShape(10.dp)),
+                colors = CardDefaults.cardColors(containerColor = RedError.copy(alpha = 0.1f)),
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(
+                        text = "⚠ PHÁT HIỆN DẤU HIỆU LÂM SÀNG BẤT THƯỜNG / MÂU THUẪN:",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = RedError
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Có số đo thiếu đơn vị (mm/cm) hoặc mâu thuẫn vị trí trái/phải. Hãy kiểm tra lại kết quả trước khi ký duyệt.",
+                        fontSize = 12.sp,
+                        color = TextPrimary,
+                        lineHeight = 18.sp
+                    )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(14.dp))
-
-        // === ACTION BUTTONS ===
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Button(
-                onClick = { viewModel.saveCurrentTestSession() },
-                modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.buttonColors(containerColor = DarkSurfaceVariant),
-                shape = RoundedCornerShape(8.dp),
-                enabled = finalTranscript.isNotEmpty()
+        // === CLINICAL MODE: RIS/PACS EXPORT ACTION BUTTONS ===
+        if (operatingMode == AppOperatingMode.CLINICAL_SAFE) {
+            Spacer(modifier = Modifier.height(14.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("LƯU TEST", fontSize = 12.sp)
-            }
+                Button(
+                    onClick = { viewModel.resetTest() },
+                    modifier = Modifier
+                        .weight(0.35f)
+                        .height(48.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = DarkSurfaceVariant),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("XOÁ", fontSize = 12.sp)
+                }
 
-            Button(
-                onClick = { viewModel.resetTest() },
-                modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.buttonColors(containerColor = DarkSurfaceVariant),
-                shape = RoundedCornerShape(8.dp)
-            ) {
-                Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("XÓA", fontSize = 12.sp)
-            }
-
-            Button(
-                onClick = {
-                    viewModel.resetTest()
-                    viewModel.startRecording()
-                },
-                modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.buttonColors(containerColor = DarkSurfaceVariant),
-                shape = RoundedCornerShape(8.dp)
-            ) {
-                Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("TEST LẠI", fontSize = 12.sp)
+                Button(
+                    onClick = { viewModel.exportToRis() },
+                    modifier = Modifier
+                        .weight(0.65f)
+                        .height(48.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (safetyGateDecision?.status == SafetyGateStatus.REJECTED) TextMuted else CyanAccent
+                    ),
+                    shape = RoundedCornerShape(10.dp),
+                    enabled = currentText.isNotEmpty()
+                ) {
+                    Icon(Icons.Default.Send, contentDescription = null, tint = Color.Black, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "GỬI SANG RIS/PACS",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
+                }
             }
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
+        // === BENCHMARK MODE ONLY: ACCURACY METRICS & ACTION BUTTONS ===
+        if (operatingMode == AppOperatingMode.BENCHMARK) {
+            if (evaluationReport != null) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = DarkSurfaceVariant),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text(
+                            text = "KẾT QUẢ ĐÁNH GIÁ ĐỘ CHÍNH XÁC",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = CyanAccent
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            MetricItem("WER", String.format(Locale.ROOT, "%.1f%%", evaluationReport!!.wer * 100))
+                            MetricItem("CER", String.format(Locale.ROOT, "%.1f%%", evaluationReport!!.cer * 100))
+                            MetricItem("Term Acc", String.format(Locale.ROOT, "%.0f%%", evaluationReport!!.medicalTermAccuracy * 100))
+                            MetricItem("Num Acc", String.format(Locale.ROOT, "%.0f%%", evaluationReport!!.numericAccuracy * 100))
+                        }
+                    }
+                }
+            }
 
-        // Navigation to Test Set
-        OutlinedButton(
-            onClick = onNavigateToTestSet,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(44.dp),
-            shape = RoundedCornerShape(8.dp)
-        ) {
-            Icon(Icons.Default.FormatListBulleted, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("📋 CHỌN BỘ CÂU TEST CĐHA (55 CÂU)", fontSize = 13.sp)
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Metrics Card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MetricCardBg),
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Text(
+                        text = "BENCHMARK METRICS",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextMuted
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        MetricItem("Audio duration", "${String.format(Locale.ROOT, "%.1f", metrics.audioDurationSec)} s")
+                        MetricItem("First partial", "${metrics.firstPartialMs} ms")
+                        MetricItem("Final latency", "${metrics.finalLatencyMs} ms")
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        MetricItem("Processing time", "${metrics.processingMs} ms")
+                        MetricItem("RTF", String.format(Locale.ROOT, "%.3f", metrics.rtf))
+                        MetricItem("Peak RAM", "${metrics.ramPeakMb} MB")
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        MetricItem("Battery", "${systemStats.batteryPercent} %")
+                        MetricItem("Temperature", "${String.format(Locale.ROOT, "%.1f", systemStats.batteryTempCelsius)} °C")
+                        MetricItem("Avg RAM", "${systemStats.ramCurrentMb} MB")
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Action Buttons
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    onClick = { viewModel.saveCurrentTestSession() },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = DarkSurfaceVariant),
+                    shape = RoundedCornerShape(8.dp),
+                    enabled = finalTranscript.isNotEmpty()
+                ) {
+                    Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("LƯU TEST", fontSize = 12.sp)
+                }
+
+                Button(
+                    onClick = { viewModel.resetTest() },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = DarkSurfaceVariant),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("XÓA", fontSize = 12.sp)
+                }
+
+                Button(
+                    onClick = {
+                        viewModel.resetTest()
+                        viewModel.startRecording()
+                    },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = DarkSurfaceVariant),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("TEST LẠI", fontSize = 12.sp)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            OutlinedButton(
+                onClick = onNavigateToTestSet,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(44.dp),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Icon(Icons.Default.FormatListBulleted, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("📋 CHỌN BỘ CÂU TEST CĐHA (55 CÂU)", fontSize = 13.sp)
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
