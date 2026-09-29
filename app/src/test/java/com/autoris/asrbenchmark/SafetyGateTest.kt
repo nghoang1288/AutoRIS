@@ -3,9 +3,14 @@ package com.autoris.asrbenchmark
 import com.autoris.asrbenchmark.audio.VoiceLockResult
 import com.autoris.asrbenchmark.audio.VoiceLockState
 import com.autoris.asrbenchmark.benchmark.EvaluationReport
-import com.autoris.asrbenchmark.noise.NoiseProfile
+import com.autoris.asrbenchmark.safety.AcousticQuality
+import com.autoris.asrbenchmark.safety.AcousticQualityLevel
+import com.autoris.asrbenchmark.safety.EvidenceStatus
+import com.autoris.asrbenchmark.safety.ParserStatus
+import com.autoris.asrbenchmark.safety.SafetyEvidence
 import com.autoris.asrbenchmark.safety.SafetyGate
 import com.autoris.asrbenchmark.safety.SafetyGateStatus
+import com.autoris.asrbenchmark.safety.SpeakerState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -21,7 +26,7 @@ class SafetyGateTest {
         gate = SafetyGate()
     }
 
-    private fun createReport(
+    private fun createBenchmarkReport(
         cer: Float = 0.01f,
         wer: Float = 0.02f,
         criticalNumeric: Boolean = false,
@@ -52,21 +57,151 @@ class SafetyGateTest {
         )
     }
 
+    // =========================================================================
+    // PRODUCTION SAFETY TESTS (No reference text, strictly evidence-based)
+    // =========================================================================
+
     @Test
-    fun testPristineReportIsSafeToAutofill() {
-        val report = createReport(cer = 0.01f)
-        val decision = gate.evaluate(report = report, asrConfidence = 0.95f)
+    fun testProductionPristineEvidenceIsSafeToAutofill() {
+        val evidence = SafetyEvidence(
+            speakerState = SpeakerState.ACCEPTED,
+            transcriptConfidence = 0.95f,
+            acousticQuality = AcousticQuality(level = AcousticQualityLevel.OPTIMAL, snrDb = 25.0f),
+            parserStatus = ParserStatus.CONFIRMED_CLEAN,
+            criticalEntitiesStatus = EvidenceStatus.VALID,
+            unresolvedAmbiguities = emptyList(),
+            criticalErrors = emptyList()
+        )
+
+        val decision = gate.evaluateProduction(evidence)
+        assertEquals(SafetyGateStatus.SAFE_TO_AUTOFILL, decision.status)
+        assertTrue(decision.autofillAllowed)
+        assertEquals(0, decision.criticalErrorCount)
+    }
+
+    @Test
+    fun testProductionFailClosedOnMissingCriticalEntityValidation() {
+        // EvidenceStatus.UNKNOWN must FAIL-CLOSED (cannot autofill without positive verification)
+        val evidence = SafetyEvidence(
+            speakerState = SpeakerState.ACCEPTED,
+            transcriptConfidence = 0.95f,
+            acousticQuality = AcousticQuality(level = AcousticQualityLevel.OPTIMAL),
+            parserStatus = ParserStatus.CONFIRMED_CLEAN,
+            criticalEntitiesStatus = EvidenceStatus.UNKNOWN // Unknown!
+        )
+
+        val decision = gate.evaluateProduction(evidence)
+        assertEquals(SafetyGateStatus.REJECTED, decision.status)
+        assertFalse(decision.autofillAllowed)
+        assertTrue(decision.reasons.any { it.contains("Missing Required Evidence") })
+    }
+
+    @Test
+    fun testProductionRejectsUnauthorizedSpeaker() {
+        val evidence = SafetyEvidence(
+            speakerState = SpeakerState.REJECTED,
+            transcriptConfidence = 0.95f,
+            criticalEntitiesStatus = EvidenceStatus.VALID
+        )
+
+        val decision = gate.evaluateProduction(evidence)
+        assertEquals(SafetyGateStatus.REJECTED, decision.status)
+        assertFalse(decision.autofillAllowed)
+        assertTrue(decision.reasons.any { it.contains("Voice Lock") })
+    }
+
+    @Test
+    fun testProductionRejectsAudioClipping() {
+        val evidence = SafetyEvidence(
+            speakerState = SpeakerState.ACCEPTED,
+            transcriptConfidence = 0.95f,
+            acousticQuality = AcousticQuality(clippingDetected = true),
+            criticalEntitiesStatus = EvidenceStatus.VALID
+        )
+
+        val decision = gate.evaluateProduction(evidence)
+        assertEquals(SafetyGateStatus.REJECTED, decision.status)
+        assertFalse(decision.autofillAllowed)
+        assertTrue(decision.reasons.any { it.contains("Clipping detected") })
+    }
+
+    @Test
+    fun testProductionRequiresReviewWhenConfidenceMissing() {
+        // Missing confidence (null) MUST NOT default to 1.0f!
+        val evidence = SafetyEvidence(
+            speakerState = SpeakerState.ACCEPTED,
+            transcriptConfidence = null, // Unknown confidence!
+            acousticQuality = AcousticQuality(level = AcousticQualityLevel.OPTIMAL),
+            parserStatus = ParserStatus.CONFIRMED_CLEAN,
+            criticalEntitiesStatus = EvidenceStatus.VALID
+        )
+
+        val decision = gate.evaluateProduction(evidence)
+        assertEquals(SafetyGateStatus.REVIEW_REQUIRED, decision.status)
+        assertFalse(decision.autofillAllowed)
+        assertTrue(decision.reasons.any { it.contains("ASR Confidence UNKNOWN") })
+    }
+
+    @Test
+    fun testProductionRequiresReviewWhenSpeakerUnenrolled() {
+        val evidence = SafetyEvidence(
+            speakerState = SpeakerState.NOT_ENROLLED,
+            transcriptConfidence = 0.95f,
+            acousticQuality = AcousticQuality(level = AcousticQualityLevel.OPTIMAL),
+            parserStatus = ParserStatus.CONFIRMED_CLEAN,
+            criticalEntitiesStatus = EvidenceStatus.VALID
+        )
+
+        val decision = gate.evaluateProduction(evidence)
+        assertEquals(SafetyGateStatus.REVIEW_REQUIRED, decision.status)
+        assertFalse(decision.autofillAllowed)
+        assertTrue(decision.reasons.any { it.contains("Speaker Not Enrolled") })
+    }
+
+    @Test
+    fun testProductionRequiresReviewWhenAmbiguityExists() {
+        val evidence = SafetyEvidence(
+            speakerState = SpeakerState.ACCEPTED,
+            transcriptConfidence = 0.95f,
+            acousticQuality = AcousticQuality(level = AcousticQualityLevel.OPTIMAL),
+            parserStatus = ParserStatus.HAS_AMBIGUITY,
+            criticalEntitiesStatus = EvidenceStatus.VALID,
+            unresolvedAmbiguities = listOf("Number 21 without explicit unit (inferred mm)")
+        )
+
+        val decision = gate.evaluateProduction(evidence)
+        assertEquals(SafetyGateStatus.REVIEW_REQUIRED, decision.status)
+        assertFalse(decision.autofillAllowed)
+        assertTrue(decision.reasons.any { it.contains("Unresolved Ambiguity") })
+    }
+
+    // =========================================================================
+    // BENCHMARK SAFETY TESTS (Ground-truth reference comparison)
+    // =========================================================================
+
+    @Test
+    fun testBenchmarkFailClosedOnNullReport() {
+        // In benchmark mode, null report must FAIL-CLOSED
+        val decision = gate.evaluateBenchmark(report = null)
+        assertEquals(SafetyGateStatus.REJECTED, decision.status)
+        assertFalse(decision.autofillAllowed)
+        assertTrue(decision.reasons.any { it.contains("Missing EvaluationReport") })
+    }
+
+    @Test
+    fun testBenchmarkPristineReportIsSafeToAutofill() {
+        val report = createBenchmarkReport(cer = 0.01f)
+        val decision = gate.evaluateBenchmark(report = report)
 
         assertEquals(SafetyGateStatus.SAFE_TO_AUTOFILL, decision.status)
         assertTrue(decision.autofillAllowed)
         assertEquals(0, decision.criticalErrorCount)
-        assertTrue(decision.safetyScore >= 0.90f)
     }
 
     @Test
-    fun testNumericCriticalErrorBlocksAutofill() {
-        val report = createReport(criticalNumeric = true)
-        val decision = gate.evaluate(report = report)
+    fun testBenchmarkNumericCriticalErrorBlocksAutofill() {
+        val report = createBenchmarkReport(criticalNumeric = true)
+        val decision = gate.evaluateBenchmark(report = report)
 
         assertEquals(SafetyGateStatus.REJECTED, decision.status)
         assertFalse(decision.autofillAllowed)
@@ -75,9 +210,9 @@ class SafetyGateTest {
     }
 
     @Test
-    fun testNegationCriticalErrorBlocksAutofill() {
-        val report = createReport(criticalNegation = true)
-        val decision = gate.evaluate(report = report)
+    fun testBenchmarkNegationCriticalErrorBlocksAutofill() {
+        val report = createBenchmarkReport(criticalNegation = true)
+        val decision = gate.evaluateBenchmark(report = report)
 
         assertEquals(SafetyGateStatus.REJECTED, decision.status)
         assertFalse(decision.autofillAllowed)
@@ -85,9 +220,9 @@ class SafetyGateTest {
     }
 
     @Test
-    fun testLateralityCriticalErrorBlocksAutofill() {
-        val report = createReport(criticalLaterality = true)
-        val decision = gate.evaluate(report = report)
+    fun testBenchmarkLateralityCriticalErrorBlocksAutofill() {
+        val report = createBenchmarkReport(criticalLaterality = true)
+        val decision = gate.evaluateBenchmark(report = report)
 
         assertEquals(SafetyGateStatus.REJECTED, decision.status)
         assertFalse(decision.autofillAllowed)
@@ -95,9 +230,9 @@ class SafetyGateTest {
     }
 
     @Test
-    fun testSpineCriticalErrorBlocksAutofill() {
-        val report = createReport(criticalSpine = true)
-        val decision = gate.evaluate(report = report)
+    fun testBenchmarkSpineCriticalErrorBlocksAutofill() {
+        val report = createBenchmarkReport(criticalSpine = true)
+        val decision = gate.evaluateBenchmark(report = report)
 
         assertEquals(SafetyGateStatus.REJECTED, decision.status)
         assertFalse(decision.autofillAllowed)
@@ -105,24 +240,9 @@ class SafetyGateTest {
     }
 
     @Test
-    fun testVoiceLockRejectionBlocksAutofill() {
-        val report = createReport(cer = 0.01f)
-        val rejectedVoice = VoiceLockResult(
-            state = VoiceLockState.REJECT,
-            confidence = 0.90f,
-            similarity = 0.25f
-        )
-        val decision = gate.evaluate(report = report, voiceLockResult = rejectedVoice)
-
-        assertEquals(SafetyGateStatus.REJECTED, decision.status)
-        assertFalse(decision.autofillAllowed)
-        assertTrue(decision.reasons.any { it.contains("Speaker rejected") })
-    }
-
-    @Test
-    fun testModerateCerRequiresReview() {
-        val report = createReport(cer = 0.05f) // 5% CER
-        val decision = gate.evaluate(report = report)
+    fun testBenchmarkModerateCerRequiresReview() {
+        val report = createBenchmarkReport(cer = 0.05f) // 5% CER
+        val decision = gate.evaluateBenchmark(report = report)
 
         assertEquals(SafetyGateStatus.REVIEW_REQUIRED, decision.status)
         assertFalse(decision.autofillAllowed)
@@ -130,23 +250,20 @@ class SafetyGateTest {
     }
 
     @Test
-    fun testHighNoiseRequiresReview() {
-        val report = createReport(cer = 0.02f)
-        val noisyProfile = NoiseProfile(noiseFloorDb = -32.0f, snrDb = 8.0f)
-        val decision = gate.evaluate(report = report, noiseProfile = noisyProfile)
-
-        assertEquals(SafetyGateStatus.REVIEW_REQUIRED, decision.status)
-        assertFalse(decision.autofillAllowed)
-        assertTrue(decision.reasons.any { it.contains("ambient noise floor") })
-    }
-
-    @Test
-    fun testExcessiveCerRejectsReport() {
-        val report = createReport(cer = 0.12f) // 12% CER > 8% maxCerReviewRequired
-        val decision = gate.evaluate(report = report)
+    fun testBenchmarkExcessiveCerRejectsReport() {
+        val report = createBenchmarkReport(cer = 0.12f) // 12% CER > 8% maxCerReviewRequired
+        val decision = gate.evaluateBenchmark(report = report)
 
         assertEquals(SafetyGateStatus.REJECTED, decision.status)
         assertFalse(decision.autofillAllowed)
         assertTrue(decision.reasons.any { it.contains("Excessive Character Error Rate") })
+    }
+
+    @Test
+    fun testLegacyEvaluateFailClosedOnNullReport() {
+        // Proves legacy bridge no longer fails open
+        val decision = gate.evaluate(report = null)
+        assertEquals(SafetyGateStatus.REJECTED, decision.status)
+        assertFalse(decision.autofillAllowed)
     }
 }
