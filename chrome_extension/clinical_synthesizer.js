@@ -119,12 +119,13 @@
      * Đảm bảo không mất dữ liệu ngay cả khi mất mạng hoặc không dùng AI
      */
     localDeterministicFallback(currentMota, currentKetluan, dictationText) {
-      let mota = (currentMota || "").trim();
-      let ketluan = (currentKetluan || "").trim();
-      const lower = dictationText.toLowerCase();
+      let mota = (currentMota || "").normalize("NFC").trim();
+      let ketluan = (currentKetluan || "").normalize("NFC").trim();
+      const cleanDictation = dictationText.normalize("NFC");
+      const lower = cleanDictation.toLowerCase();
 
       // Xóa câu bình thường ở kết luận
-      const normalKLRegex = /(?:hiện tại|hiện tại)\s+(?:không|chưa)\s+thấy\s+bất\s+thường[^\n.]*\.?/gi;
+      const normalKLRegex = /(?:hiện tại|hiện tại)\s+(?:không|chưa)\s+thấy\s+bất\s+thường[^\n]*/gi;
       ketluan = ketluan.replace(normalKLRegex, "").trim();
 
       // Kiểm tra cơ quan liên quan
@@ -135,9 +136,9 @@
       if (lower.includes("gan") || lower.includes("hạ phân thùy") || lower.includes("hpt") || lower.includes("nhu mô gan")) {
         const ganRegex = /(--\s*Gan[^\n]*)/i;
         if (ganRegex.test(mota)) {
-          // Thay thế hoặc bổ sung tổn thương gan
-          mota = mota.replace(ganRegex, (match) => {
-            return `-- Gan không to, bờ đều, nhu mô gan ${dictationText.replace(/^(nhu mô gan|gan)\s*/i, "")}.`;
+          mota = mota.replace(ganRegex, () => {
+            const finding = dictationText.replace(/^(nhu mô gan|gan)\s*/i, "").trim();
+            return `-- Gan không to, bờ đều, nhu mô gan ${finding}.`;
           });
           organMatched = true;
           generatedConclusion = lower.includes("nang") ? "Nang gan." :
@@ -148,20 +149,36 @@
 
       // 2. DẠ DÀY (nếu chưa có dòng dạ dày thì thêm mới)
       if (lower.includes("dạ dày") || lower.includes("hang vị") || lower.includes("môn vị") || lower.includes("thành dạ dày")) {
+        let stomachText = dictationText;
+        let hachText = "";
+        const hachIdx = dictationText.search(/(?:lân cận có vài hạch|kèm hạch|có vài hạch|hạch lân cận)/i);
+        if (hachIdx !== -1) {
+          stomachText = dictationText.slice(0, hachIdx).replace(/[,;]\s*$/, "").trim();
+          hachText = dictationText.slice(hachIdx).trim();
+        }
+
         const ddRegex = /(--\s*Dạ dày[^\n]*)/i;
         if (ddRegex.test(mota)) {
-          mota = mota.replace(ddRegex, `-- Dạ dày: ${dictationText}`);
+          mota = mota.replace(ddRegex, `-- Dạ dày: ${stomachText}`);
         } else {
           // Chèn sau Lách hoặc Tụy
-          const lachRegex = /(--\s*Lách[^\n]*\n?)/i;
+          const lachRegex = /(--\s*Lách[^\n]*\n?|--\s*Lách[^\n]*\n?)/i;
           if (lachRegex.test(mota)) {
-            mota = mota.replace(lachRegex, `$1-- Dạ dày: ${dictationText}\n`);
+            mota = mota.replace(lachRegex, `$1-- Dạ dày: ${stomachText}\n`);
           } else {
-            mota += `\n-- Dạ dày: ${dictationText}`;
+            mota += `\n-- Dạ dày: ${stomachText}`;
           }
         }
+
+        if (hachText) {
+          const hachRegex = /(--\s*Không thấy hạch[^\n]*|--\s*Không thấy hạch[^\n]*|--\s*Hạch[^\n]*)/i;
+          if (hachRegex.test(mota)) {
+            mota = mota.replace(hachRegex, `-- Hạch: ${hachText}`);
+          }
+        }
+
         organMatched = true;
-        generatedConclusion = "Hình ảnh tổn thương vùng hang - môn vị dạ dày.";
+        generatedConclusion = "Hình ảnh dày thành không đều hang - môn vị dạ dày gây hẹp lòng môn vị, kèm vài hạch lân cận.";
       }
 
       // 3. TÚI MẬT
@@ -192,8 +209,8 @@
         }
       }
 
-      // 5. HẠCH
-      if (lower.includes("hạch")) {
+      // 5. HẠCH (nếu chưa được xử lý trong cơ quan cụ thể)
+      if (lower.includes("hạch") && !lower.includes("dạ dày")) {
         const hachRegex = /(--\s*Không thấy hạch[^\n]*|--\s*Không thấy hạch[^\n]*|--\s*Hạch[^\n]*)/i;
         if (hachRegex.test(mota)) {
           mota = mota.replace(hachRegex, `-- Hạch: ${dictationText}`);
