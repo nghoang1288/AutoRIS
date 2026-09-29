@@ -34,7 +34,10 @@ class AudioRecorderManager(
     private val vadConfig: VadConfig = VadConfig(),
     val preprocessingProfile: PreprocessingProfile = PreprocessingProfile.RAW,
     private val preprocessor: AudioPreprocessor = PassthroughAudioPreprocessor(),
+    private val speakerVerifier: SpeakerVerifier? = null,
+    var isSpeakerLockEnabled: Boolean = false,
     private val onPartialResult: (text: String, firstPartialLatencyMs: Long) -> Unit,
+    private val onSpeakerVerificationResult: ((VoiceLockResult) -> Unit)? = null,
     private val onError: (message: String) -> Unit
 ) {
 
@@ -253,6 +256,17 @@ class AudioRecorderManager(
             if (segmentSamples.size >= (SAMPLE_RATE * 0.4f)) { // at least 400ms of audio
                 decodeScope?.launch {
                     decodeMutex.withLock {
+                        // 1. Speaker Verification Gate (Biometric check)
+                        if (isSpeakerLockEnabled && speakerVerifier != null) {
+                            val vResult = speakerVerifier.verify(segmentSamples)
+                            onSpeakerVerificationResult?.invoke(vResult)
+                            if (vResult.state == VoiceLockState.REJECT) {
+                                Log.w(TAG, "Speaker Verification REJECTED: similarity=${vResult.similarity}, conf=${vResult.confidence}. Ignoring interloper speech segment.")
+                                return@withLock
+                            }
+                        }
+
+                        // 2. ASR decoding for accepted speech
                         val (segText, costMs) = asrEngine.decodeSegment(segmentSamples)
                         totalProcessingMs += costMs
                         if (segText.isNotBlank()) {

@@ -250,6 +250,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _speakerLockEnabled.value = enabled
     }
 
+    // Biometric Speaker Verifier (Fail-closed Voice Lock)
+    val speakerVerifier = com.autoris.asrbenchmark.audio.SpectralEmbeddingSpeakerVerifier()
+
+    fun clearSpeakerEnrollment() {
+        speakerVerifier.clearEnrollment()
+        _voiceLockState.value = VoiceLockState.ACCEPT
+        _voiceLockConfidence.value = 1.0f
+    }
+
+    fun enrollSpeakerUtterances(utterances: List<FloatArray>): com.autoris.asrbenchmark.audio.EnrollmentQualityResult {
+        return speakerVerifier.enroll(utterances)
+    }
+
     // Timings
     private var stopRequestedTimeNs: Long = 0L
 
@@ -389,6 +402,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             vadConfig = vadConfig,
             preprocessingProfile = profile,
             preprocessor = preprocessor,
+            speakerVerifier = speakerVerifier,
+            isSpeakerLockEnabled = _speakerLockEnabled.value,
             onPartialResult = { partial, firstLatencyMs ->
                 viewModelScope.launch(Dispatchers.Main) {
                     _livePartial.value = partial
@@ -412,6 +427,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             firstSegmentResultLatencyMs = firstLatencyMs
                         )
                     }
+                }
+            },
+            onSpeakerVerificationResult = { result ->
+                viewModelScope.launch(Dispatchers.Main) {
+                    _voiceLockState.value = result.state
+                    _voiceLockConfidence.value = result.confidence
                 }
             },
             onError = { errMsg ->
@@ -592,8 +613,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             vadSegmentCount = m.vadSegmentCount,
             vadTotalSpeechMs = m.vadTotalSpeechMs,
             speakerLockEnabled = _speakerLockEnabled.value,
-            speakerConfidence = 1.0f,
-            speakerRejection = false,
+            speakerConfidence = _voiceLockConfidence.value,
+            speakerRejection = _voiceLockState.value == VoiceLockState.REJECT,
             firstSegmentResultLatencyMs = if (m.firstSegmentResultLatencyMs > 0) m.firstSegmentResultLatencyMs else m.firstPartialMs,
             truePartialLatencyMs = m.truePartialLatencyMs,
             firstPartialMs = m.firstPartialMs,

@@ -55,14 +55,26 @@ class VoiceLock(
 
     /**
      * Verifies if incoming audio belongs to the enrolled radiologist.
+     * STRICTLY FAIL-CLOSED: If VoiceLock is enabled but no profile is enrolled,
+     * returns REJECT to prevent unauthorized dictation injection.
      */
     fun verify(samples: FloatArray): VoiceLockResult {
-        if (!isEnabled || !isEnrolled || samples.size < 800) {
-            // Unlocked or un-enrolled: pass all speech
+        if (!isEnabled) {
+            // Feature disabled: bypass gate
             return VoiceLockResult(VoiceLockState.ACCEPT, 1.0f, 1.0f)
         }
 
-        val profile = enrolledProfile ?: return VoiceLockResult(VoiceLockState.ACCEPT, 1.0f, 1.0f)
+        if (!isEnrolled) {
+            // FAIL-CLOSED: Enabled but not enrolled -> REJECT
+            return VoiceLockResult(VoiceLockState.REJECT, 0.0f, 0.0f)
+        }
+
+        if (samples.size < 800) {
+            // Micro-slice insufficient for biometric verification
+            return VoiceLockResult(VoiceLockState.UNCERTAIN, 0.5f, 0.5f)
+        }
+
+        val profile = enrolledProfile ?: return VoiceLockResult(VoiceLockState.REJECT, 0.0f, 0.0f)
         val currentFeature = extractAcousticFeatureVector(samples)
         val similarity = cosineSimilarity(profile, currentFeature)
 
