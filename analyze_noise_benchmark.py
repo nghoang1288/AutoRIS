@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
 AUTORIS - Offline Noise Benchmark Analysis & Clinical Safety Evaluation
-Aggregates benchmark session results across clinical acoustic rooms and preprocessing profiles.
+Aggregates REAL benchmark session results across clinical acoustic rooms and preprocessing profiles.
 Computes CER/WER, RTF, P95 Latency, Medical Entity F1, and Zero-Tolerance Critical Errors.
+Strictly zero synthetic metrics: Unmeasured configurations are explicitly marked as "Chưa có số liệu thực nghiệm".
 """
 
 import argparse
@@ -18,6 +19,17 @@ if sys.platform == "win32":
     sys.stdout.reconfigure(encoding="utf-8")
 
 
+def load_matrix(matrix_path: str = "benchmark_scenarios_matrix.json") -> Dict[str, Any]:
+    """Loads benchmark scenario matrix if present."""
+    if os.path.exists(matrix_path):
+        try:
+            with open(matrix_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"Warning: Failed to load matrix {matrix_path}: {e}", file=sys.stderr)
+    return {}
+
+
 def load_sessions(input_dir: str) -> List[Dict[str, Any]]:
     """Loads all session JSON files from the input directory or its subdirectories."""
     sessions = []
@@ -28,7 +40,7 @@ def load_sessions(input_dir: str) -> List[Dict[str, Any]]:
     files = glob.glob(pattern, recursive=True)
 
     for path in sorted(files):
-        # Skip aggregate or non-session files
+        # Skip aggregate or matrix files
         basename = os.path.basename(path)
         if basename in ("all_device_sessions.json", "benchmark_scenarios_matrix.json"):
             continue
@@ -47,84 +59,8 @@ def load_sessions(input_dir: str) -> List[Dict[str, Any]]:
     return sessions
 
 
-def generate_synthetic_benchmark_data(output_dir: str, num_samples_per_scenario: int = 3):
-    """Generates synthetic benchmark session results to test the analysis pipeline across all 12 scenarios."""
-    os.makedirs(output_dir, exist_ok=True)
-    matrix_path = "benchmark_scenarios_matrix.json"
-    if not os.path.exists(matrix_path):
-        print(f"Matrix file {matrix_path} not found for synthetic generation.")
-        return
-
-    with open(matrix_path, "r", encoding="utf-8") as f:
-        matrix = json.load(f)
-
-    scenarios = matrix.get("scenarios_matrix", [])
-    count = 0
-    import time
-    base_time = int(time.time() * 1000)
-
-    for sc in scenarios:
-        room_id = sc.get("room", "ROOM_01")
-        profile = sc.get("test_profile", "RAW")
-        expected_cer = sc.get("expected_cer_pct", 2.0) / 100.0
-        expected_rtf = sc.get("expected_rtf", 0.15)
-        dist_cm = sc.get("distance_cm", 30)
-
-        for i in range(num_samples_per_scenario):
-            test_id = f"TEST_{str((count % 10) + 1).zfill(3)}"
-            dur_sec = 4.5 + (count % 3) * 1.5
-            proc_ms = int(dur_sec * 1000 * expected_rtf)
-
-            # Small jitter
-            jitter = ((i - 1) * 0.003)
-            cer = max(0.005, expected_cer + jitter)
-            wer = cer * 1.4
-
-            session = {
-                "schema_version": "2.0.0",
-                "id": base_time + count,
-                "sessionId": f"synthetic_{room_id}_{profile}_{i}",
-                "timestamp": "2026-09-28 23:25:00",
-                "device": "Samsung Galaxy S24 Ultra (Synthetic Simulation)",
-                "cpuInfo": "Snapdragon 8 Gen 3",
-                "model": "ZipFormer 150M CR-CTC-RNNT (Offline)",
-                "testId": test_id,
-                "category": "CT bụng",
-                "roomId": room_id,
-                "roomType": "clinical_reading",
-                "preprocessingProfile": profile,
-                "speakerDistanceCm": dist_cm,
-                "audioDurationSec": dur_sec,
-                "audioDurationMs": int(dur_sec * 1000),
-                "processingMs": proc_ms,
-                "finalLatencyMs": int(proc_ms + 120),
-                "rtf": round(expected_rtf, 3),
-                "cer": round(cer, 4),
-                "wer": round(wer, 4),
-                "medicalTermAccuracy": round(max(0.90, 1.0 - (cer * 2.0)), 3),
-                "numericAccuracy": 1.0,
-                "measurementAccuracy": 1.0,
-                "negationAccuracy": 1.0,
-                "anatomyAccuracy": 1.0,
-                "criticalNumericError": False,
-                "criticalMeasurementError": False,
-                "criticalNegationError": False,
-                "criticalLateralityError": False,
-                "criticalSpineError": False,
-                "ramPeakMb": 480 + (count % 50),
-                "batteryTemp": 35.0
-            }
-
-            filename = f"session_synth_{room_id}_{profile}_{i}.json"
-            with open(os.path.join(output_dir, filename), "w", encoding="utf-8") as f_out:
-                json.dump(session, f_out, indent=2, ensure_ascii=False)
-            count += 1
-
-    print(f"Generated {count} synthetic benchmark sessions in {output_dir}")
-
-
-def compute_metrics(sessions: List[Dict[str, Any]]) -> Dict[Tuple[str, str], Dict[str, Any]]:
-    """Groups sessions by (roomId, preprocessingProfile) and aggregates metrics."""
+def compute_metrics(sessions: List[Dict[str, Any]], matrix: Dict[str, Any]) -> Dict[Tuple[str, str], Dict[str, Any]]:
+    """Groups sessions by (roomId, preprocessingProfile) and aggregates measured metrics."""
     groups = defaultdict(list)
 
     for s in sessions:
@@ -133,6 +69,8 @@ def compute_metrics(sessions: List[Dict[str, Any]]) -> Dict[Tuple[str, str], Dic
         groups[(room, profile)].append(s)
 
     summary = {}
+
+    # 1. Process measured sessions
     for (room, profile), group in groups.items():
         n = len(group)
         cers = [s.get("cer", 0.0) for s in group if s.get("cer") is not None]
@@ -162,6 +100,7 @@ def compute_metrics(sessions: List[Dict[str, Any]]) -> Dict[Tuple[str, str], Dic
         summary[(room, profile)] = {
             "room": room,
             "profile": profile,
+            "has_real_data": True,
             "count": n,
             "avg_cer": avg_cer,
             "avg_wer": avg_wer,
@@ -176,48 +115,95 @@ def compute_metrics(sessions: List[Dict[str, Any]]) -> Dict[Tuple[str, str], Dic
             "total_crit": total_crit,
         }
 
+    # 2. Add matrix scenarios that have not yet been measured on device
+    scenarios = matrix.get("scenarios_matrix", [])
+    for sc in scenarios:
+        r = sc.get("room", "ROOM_01")
+        p = sc.get("test_profile", "RAW")
+        if (r, p) not in summary:
+            summary[(r, p)] = {
+                "room": r,
+                "profile": p,
+                "has_real_data": False,
+                "count": 0,
+                "avg_cer": None,
+                "avg_wer": None,
+                "avg_rtf": None,
+                "p95_latency_ms": None,
+                "avg_med_term_acc": None,
+                "crit_num": 0,
+                "crit_meas": 0,
+                "crit_neg": 0,
+                "crit_lat": 0,
+                "crit_spine": 0,
+                "total_crit": 0,
+            }
+
     return summary
 
 
-def generate_markdown_report(summary: Dict[Tuple[str, str], Dict[str, Any]], total_sessions: int) -> str:
-    """Produces a comprehensive Markdown report."""
+def generate_markdown_report(summary: Dict[Tuple[str, str], Dict[str, Any]], total_sessions: int, sessions: List[Dict[str, Any]]) -> str:
+    """Produces a comprehensive Markdown report adhering strictly to measured metrics."""
+    devices = set(s.get("device", "Unknown Device") for s in sessions if s.get("device"))
+    devices_str = ", ".join(sorted(devices)) if devices else "Snapdragon 8 Gen 3"
+
     md = []
     md.append("# AUTORIS: Clinical Acoustic Noise Benchmark Report")
-    md.append(f"\n- **Total Sessions Analyzed:** {total_sessions}")
-    md.append("- **Target Device / SoC:** Snapdragon 8 Gen 3 (Samsung Galaxy S24 Ultra & OnePlus Ace 5)")
+    md.append(f"\n- **Total Real Sessions Analyzed:** {total_sessions}")
+    md.append(f"- **Physical Device Tested:** {devices_str}")
+    md.append("- **SoC / Architecture:** Snapdragon 8 Gen 3, ARM64-v8a")
     md.append("- **Target ASR Engine:** ZipFormer 150M CR-CTC-RNNT (Offline, 4 CPU threads)")
-    md.append("- **Safety Tolerance:** Zero-tolerance critical clinical errors (0%)\n")
+    md.append("- **Clinical Safety Policy:** Zero tolerance for numeric, measurement, negation, laterality, and spine level errors (0%)\n")
 
     md.append("## 1. Summary by Acoustic Room & Preprocessing Profile\n")
-    md.append("| Room ID | Profile | N | Avg CER (%) | Avg WER (%) | Med Entity Acc (%) | P95 Latency | Avg RTF | Status |")
+    md.append("| Room ID | Profile | Real Tests (N) | Avg CER (%) | Avg WER (%) | Med Entity Acc (%) | P95 Latency | Avg RTF | Benchmark Status |")
     md.append("| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :--- |")
 
     rooms = sorted(list(set(k[0] for k in summary.keys())))
     for room in rooms:
-        # Sort profiles: RAW first
         room_profiles = sorted([k for k in summary.keys() if k[0] == room], key=lambda x: (0 if x[1] == "RAW" else 1, x[1]))
         for k in room_profiles:
             st = summary[k]
-            status = "✅ PASS" if st["total_crit"] == 0 and st["avg_rtf"] <= 0.25 else "⚠️ REVIEW"
+            if st["has_real_data"]:
+                status = "✅ PASS" if st["total_crit"] == 0 and st["avg_rtf"] <= 0.25 else "⚠️ REVIEW"
+                cer_str = f"{st['avg_cer']:.2f}%"
+                wer_str = f"{st['avg_wer']:.2f}%"
+                med_str = f"{st['avg_med_term_acc']:.1f}%"
+                lat_str = f"{st['p95_latency_ms']} ms"
+                rtf_str = f"{st['avg_rtf']:.3f}" if st['avg_rtf'] > 0 else "N/A (Streaming/Partial)"
+            else:
+                status = "Chưa có số liệu thực nghiệm"
+                cer_str = "Chưa đo đạc"
+                wer_str = "Chưa đo đạc"
+                med_str = "Chưa đo đạc"
+                lat_str = "Chưa đo đạc"
+                rtf_str = "Chưa đo đạc"
+
             md.append(
                 f"| `{st['room']}` | `{st['profile']}` | {st['count']} | "
-                f"{st['avg_cer']:.2f}% | {st['avg_wer']:.2f}% | {st['avg_med_term_acc']:.1f}% | "
-                f"{st['p95_latency_ms']} ms | {st['avg_rtf']:.3f} | {status} |"
+                f"{cer_str} | {wer_str} | {med_str} | "
+                f"{lat_str} | {rtf_str} | {status} |"
             )
 
     md.append("\n## 2. Zero-Tolerance Clinical Error Audit\n")
-    md.append("| Room ID | Profile | Total Tests | Num Err | Meas Err | Neg Err | Lat Err | Spine Err | Critical Status |")
+    md.append("| Room ID | Profile | Real Tests (N) | Num Err | Meas Err | Neg Err | Lat Err | Spine Err | Critical Status |")
     md.append("| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :--- |")
 
     for k, st in sorted(summary.items()):
-        crit_status = "0 Errors (Compliant)" if st["total_crit"] == 0 else f"🚨 {st['total_crit']} ERRORS"
-        md.append(
-            f"| `{st['room']}` | `{st['profile']}` | {st['count']} | "
-            f"{st['crit_num']} | {st['crit_meas']} | {st['crit_neg']} | {st['crit_lat']} | {st['crit_spine']} | {crit_status} |"
-        )
+        if st["has_real_data"]:
+            crit_status = "0 Errors (Compliant)" if st["total_crit"] == 0 else f"🚨 {st['total_crit']} ERRORS"
+            md.append(
+                f"| `{st['room']}` | `{st['profile']}` | {st['count']} | "
+                f"{st['crit_num']} | {st['crit_meas']} | {st['crit_neg']} | {st['crit_lat']} | {st['crit_spine']} | {crit_status} |"
+            )
+        else:
+            md.append(
+                f"| `{st['room']}` | `{st['profile']}` | 0 | "
+                f"- | - | - | - | - | Chưa có số liệu thực nghiệm |"
+            )
 
     md.append("\n## 3. Preprocessing DSP vs RAW Profile Comparison\n")
-    md.append("| Room ID | DSP Profile | CER Delta (pts) | Rel CER Impv (%) | RTF Delta | Clinical Recommendation |")
+    md.append("| Room ID | DSP Profile | Measured CER Delta | Rel CER Impv (%) | Measured RTF Delta | Clinical Recommendation |")
     md.append("| :--- | :--- | :---: | :---: | :---: | :--- |")
 
     for room in rooms:
@@ -227,7 +213,7 @@ def generate_markdown_report(summary: Dict[Tuple[str, str], Dict[str, Any]], tot
         other_profiles = [k for k in summary.keys() if k[0] == room and k[1] != "RAW"]
         for k in sorted(other_profiles):
             dsp_st = summary[k]
-            if raw_st and raw_st["avg_cer"] > 0:
+            if raw_st and raw_st["has_real_data"] and dsp_st["has_real_data"] and raw_st["avg_cer"] > 0:
                 cer_delta = raw_st["avg_cer"] - dsp_st["avg_cer"]
                 rel_impv = (cer_delta / raw_st["avg_cer"]) * 100.0
                 rtf_delta = dsp_st["avg_rtf"] - raw_st["avg_rtf"]
@@ -237,7 +223,7 @@ def generate_markdown_report(summary: Dict[Tuple[str, str], Dict[str, Any]], tot
                 )
             else:
                 md.append(
-                    f"| `{room}` | `{dsp_st['profile']}` | N/A | N/A | N/A | Standard Evaluation Profile |"
+                    f"| `{room}` | `{dsp_st['profile']}` | Chưa có số liệu | Chưa có số liệu | Chưa có số liệu | Đang chờ ghi âm đo đạc thiết bị thật |"
                 )
 
     md.append("\n## 4. Acoustic Environment Policy Recommendation\n")
@@ -254,46 +240,49 @@ def generate_markdown_report(summary: Dict[Tuple[str, str], Dict[str, Any]], tot
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Analyze AutoRIS Noise & ASR Benchmark Results.")
-    parser.add_argument("--input-dir", type=str, default="benchmark_results_v2", help="Directory containing session JSONs.")
+    parser = argparse.ArgumentParser(description="Analyze AutoRIS Real Device Noise & ASR Benchmark Results.")
+    parser.add_argument("--input-dir", type=str, default="benchmark_results_device/sessions", help="Directory containing session JSONs.")
     parser.add_argument("--fallback-dir", type=str, default="benchmark_results_device", help="Fallback directory with device sessions.")
-    parser.add_argument("--output", type=str, default="benchmark_noise_report.md", help="Path for output Markdown report.")
-    parser.add_argument("--generate-synthetic", action="store_true", help="Generate synthetic data if directory is empty.")
+    parser.add_argument("--matrix", type=str, default="benchmark_scenarios_matrix.json", help="Path to scenario matrix JSON.")
+    parser.add_argument("--output", type=str, default="docs/BENCHMARK_NOISE_REPORT.md", help="Path for output Markdown report.")
     args = parser.parse_args()
-
-    if args.generate_synthetic:
-        print(f"Generating synthetic benchmark sessions into '{args.input_dir}'...")
-        generate_synthetic_benchmark_data(args.input_dir)
 
     sessions = load_sessions(args.input_dir)
     if not sessions and os.path.exists(args.fallback_dir):
         print(f"No sessions in {args.input_dir}, checking {args.fallback_dir}...")
         sessions = load_sessions(args.fallback_dir)
 
-    if not sessions:
-        print(f"No sessions found in '{args.input_dir}' or '{args.fallback_dir}'.")
-        sys.exit(0)
+    print(f"Loaded {len(sessions)} real benchmark session records from device.")
+    matrix = load_matrix(args.matrix)
+    summary = compute_metrics(sessions, matrix)
 
-    print(f"Loaded {len(sessions)} benchmark session records.")
-    summary = compute_metrics(sessions)
-
-    # Format output markdown
-    report = generate_markdown_report(summary, len(sessions))
+    os.makedirs(os.path.dirname(args.output), exist_ok=True)
+    report = generate_markdown_report(summary, len(sessions), sessions)
     with open(args.output, "w", encoding="utf-8") as f:
         f.write(report)
     print(f"Benchmark Report written to: {args.output}")
 
     # Print summary to console
-    print("\n" + "=" * 80)
-    print("AUTORIS BENCHMARK SUMMARY (ROOM x PREPROCESSING PROFILE)")
-    print("=" * 80)
-    header = f"{'ROOM':<12} | {'PROFILE':<18} | {'N':<4} | {'CER (%)':<8} | {'WER (%)':<8} | {'RTF':<6} | {'P95 LAT':<8} | {'CRIT ERR':<8}"
+    print("\n" + "=" * 90)
+    print("AUTORIS REAL DEVICE BENCHMARK SUMMARY (MEASURED ONLY)")
+    print("=" * 90)
+    header = f"{'ROOM':<12} | {'PROFILE':<20} | {'N':<4} | {'CER (%)':<10} | {'WER (%)':<10} | {'RTF':<8} | {'STATUS':<20}"
     print(header)
-    print("-" * 80)
+    print("-" * 90)
     for (room, profile), st in sorted(summary.items()):
-        row = f"{room:<12} | {profile:<18} | {st['count']:<4} | {st['avg_cer']:<8.2f} | {st['avg_wer']:<8.2f} | {st['avg_rtf']:<6.3f} | {st['p95_latency_ms']:<5} ms | {st['total_crit']:<8}"
+        if st["has_real_data"]:
+            cer_str = f"{st['avg_cer']:.2f}%"
+            wer_str = f"{st['avg_wer']:.2f}%"
+            rtf_str = f"{st['avg_rtf']:.3f}" if st['avg_rtf'] > 0 else "N/A"
+            status_str = "MEASURED"
+        else:
+            cer_str = "-"
+            wer_str = "-"
+            rtf_str = "-"
+            status_str = "Chưa có số liệu thực nghiệm"
+        row = f"{room:<12} | {profile:<20} | {st['count']:<4} | {cer_str:<10} | {wer_str:<10} | {rtf_str:<8} | {status_str:<20}"
         print(row)
-    print("=" * 80)
+    print("=" * 90)
 
 
 if __name__ == "__main__":
