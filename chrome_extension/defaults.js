@@ -245,10 +245,15 @@ function sanitizeLungRADSConclusion(conclusionText) {
   if (!conclusionText || !conclusionText.trim()) return conclusionText;
   let text = conclusionText.trim();
 
-  // 1. Loại bỏ các mở ngoặc liệt kê tên thuỳ sau "hai phổi"
+  // 1. Chuẩn hoá chữ hoa cho mức Lung-RADS (4a -> 4A, 4b -> 4B, 4x -> 4X)
+  text = text.replace(/Lung-RADS\s+([0-9])([a-z])\b/gi, function(_, num, letter) {
+    return "Lung-RADS " + num + letter.toUpperCase();
+  });
+
+  // 2. Loại bỏ các mở ngoặc liệt kê tên thuỳ sau "hai phổi"
   text = text.replace(/hai\s+phổi\s*\([^)]*(?:thuỳ|thùy)[^)]*\)/gi, "hai phổi");
 
-  // 2. Chuyển đổi "nốt ... hai phổi" thành "vài nốt ... hai phổi" nếu chưa có từ định lượng (vài/nhiều/các)
+  // 3. Chuyển đổi "nốt ... hai phổi" thành "vài nốt ... hai phổi" nếu chưa có từ định lượng (vài/nhiều/các)
   text = text.replace(/(^|[.\n]\s*)(Hình\s+ảnh\s+)?nốt\s+(đặc|kính\s+mờ|vôi\s+hoá|vôi\s+hóa|bán\s+đặc)\s+hai\s+phổi/gi, function(match, punct, prefix, type) {
     if (prefix) {
       return (punct || "") + prefix + "vài nốt " + type + " hai phổi";
@@ -257,13 +262,13 @@ function sanitizeLungRADSConclusion(conclusionText) {
     return (punct || "") + cap + type + " hai phổi";
   });
 
-  // 3. Chuẩn hoá định dạng Lung-RADS:
+  // 4. Chuẩn hoá định dạng Lung-RADS:
   // Chuyển " - Lung-RADS 2." hoặc " - Lung-RADS 2" thành " (Lung-RADS 2)."
   text = text.replace(/\s*[-–—]\s*(Lung-RADS\s+[0-9][A-Za-z]?)\.?/gi, function(_, lr) {
     return " (" + lr + ").";
   });
 
-  // 4. GỘP CÁC TỔN THƯƠNG CÙNG MỨC LUNG-RADS TRONG CÂU:
+  // 5. GỘP CÁC TỔN THƯƠNG CÙNG MỨC LUNG-RADS TRONG CÂU:
   // Ví dụ: "Hình ảnh nốt đặc thuỳ trên phổi trái (Lung-RADS 2), nốt kính mờ thuỳ trên phổi phải (Lung-RADS 2)."
   // -> "Hình ảnh nốt đặc thuỳ trên phổi trái và nốt kính mờ thuỳ trên phổi phải (Lung-RADS 2)."
   const sameTierRegex = /\((Lung-RADS\s+[0-9][A-Za-z]?)\)[.,;\s]+(?:và\s+)?([^().]+?)\s*\(\1\)/i;
@@ -287,32 +292,37 @@ function sanitizeLungRADSConclusion(conclusionText) {
     text = joined;
   }
 
-  // 5. TÁCH CÁC CÂU KHÁC MỨC LUNG-RADS:
+  // 6. TÁCH CÁC CÂU KHÁC MỨC LUNG-RADS:
   // Sửa lỗi '., nốt', '., và nốt', ', nốt', '., và' sau (Lung-RADS X) thành '. Nốt'
   text = text.replace(/(\(Lung-RADS\s+[0-9][A-Za-z]?\))[.,;\s]+(?:và\s+)?([a-zà-ỹ\p{L}])/gui, function(_, lr, nextChar) {
     return lr + ". " + nextChar.toUpperCase();
   });
 
   // Đảm bảo có dấu chấm sau (Lung-RADS X) nếu chưa có
-  text = text.replace(/(\(Lung-RADS\s+[0-9][A-Za-z]?\))(?!\.)/gi, "$1.");
+  text = text.replace(/(\(Lung-RADS\s+[0-9][A-Za-z]?\))(?!\.)/gi, function(_, lr) {
+    return lr + ".";
+  });
 
-  // 6. Xoá từ 'Hình ảnh' lặp lại ở các câu phía sau (chỉ giữ đúng 1 từ 'Hình ảnh' ở đầu kết luận)
+  // 7. Xoá từ 'Hình ảnh' lặp lại ở các câu phía sau (chỉ giữ đúng 1 từ 'Hình ảnh' ở đầu kết luận)
   text = text.replace(/(?:^|[.!?\n]\s+)Hình\s+ảnh\s+/gui, function(match, offset) {
     if (offset === 0) return match; // Giữ nguyên 'Hình ảnh' đầu tiên của toàn bộ kết luận
     return ". ";
   });
+
+  // 8. Dọn dẹp khoảng trắng trước dấu câu
+  text = text.replace(/\s+([.,;:!?])/g, "$1");
+
   // Viết hoa chữ cái đầu câu sau dấu chấm nếu bị viết thường
   text = text.replace(/\.\s+([a-zà-ỹ\p{L}])/gui, function(_, c) {
     return ". " + c.toUpperCase();
   });
 
-  // 7. Dọn dẹp khoảng trắng và dấu chấm trùng lặp
+  // Dọn dẹp khoảng trắng và dấu chấm trùng lặp
   text = text.replace(/[.,;]{2,}/g, ".").replace(/\s{2,}/g, " ").trim();
+  text = text.replace(/\.\s*\./g, ".");
 
-  // Đảm bảo kết thúc bằng dấu chấm
-  if (!/[.!?]$/.test(text)) {
-    text += ".";
-  }
+  // Đảm bảo kết thúc bằng đúng 1 dấu chấm duy nhất
+  text = text.replace(/[.,;\s]+$/, "") + ".";
 
   return text;
 }

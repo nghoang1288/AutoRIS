@@ -81,11 +81,11 @@
       // Loại bỏ tiếng click / rác mở đầu câu
       result = result.replace(/^(?:[.,\s]*(?:đó|này|thì|à|ừ|ờ|dạ|vâng|rồi|xong)[.,\s]+)+/i, "");
       // Loại bỏ tiếng nhiễu quạt / hơi thở lặp lại ở cuối câu
-      const trailingFillers = /(?:[.,\s]+(?:đây\s+này|đó\s+thôi|bây\s+giờ|dừng\s+lại|được\s+rồi|đây|này|đó|thôi|tôi|em|hết|xong|dừng|có|là|rồi|thì|ạ|nhé|nha|đấy|ừ|à|ờ)[.,\s]*)+$/i;
+      const trailingFillers = /(?:[.,\s]+(?:đây\s+này|đó\s+thôi|thế\s+thôi|vậy\s+thôi|thế\s+nhé|vậy\s+nhé|thế\s+nha|vậy\s+nha|bây\s+giờ|dừng\s+lại|được\s+rồi|đây|này|đó|thôi|tôi|em|hết|xong|dừng|có|là|rồi|thì|ạ|nhé|nha|nhỉ|thế|vậy|đấy|ừ|à|ờ)[.,\s]*)+$/i;
       while (trailingFillers.test(result)) {
         result = result.replace(trailingFillers, "");
       }
-      result = result.replace(/(?:[.,\s]+(?:đấy|đó|này|ạ|nhé|nha)[.,\s]*)+$/i, "");
+      result = result.replace(/(?:[.,\s]+(?:đấy|đó|này|ạ|nhé|nha|nhỉ|thế|thôi)[.,\s]*)+$/i, "");
       return result.replace(/[.,?!]+$/, "").trim();
     },
 
@@ -529,6 +529,7 @@
                        !pureNoiseClause.test(s));
 
         const newOrgans = new Set(organFindings.map(f => f.organ.startsWith("than") ? "than" : f.organ));
+        const inherited = [];
 
         for (const ec of existingClauses) {
           const lower = ec.toLowerCase();
@@ -548,10 +549,11 @@
 
           if (!newOrgans.has(organOfClause)) {
             if (!conclusions.some(c => c.toLowerCase() === lower)) {
-              conclusions.unshift(ec);
+              inherited.push(ec);
             }
           }
         }
+        conclusions.unshift(...inherited);
       }
 
       if (conclusions.length === 0) {
@@ -565,7 +567,8 @@
         clean = clean.replace(/\bHạ\s+phân\s+thùy\b/g, "hạ phân thùy")
                      .replace(/(?<=(?:hạ\s+phân\s+thùy|hpt)\s+)([ivx]+)(?![\p{L}\p{N}])/gui, (_, rom) => rom.toUpperCase());
         if (idx === 0) {
-          return `Hình ảnh ${clean}.`;
+          const firstWordLower = clean.charAt(0).toLowerCase() + clean.slice(1);
+          return `Hình ảnh ${firstWordLower}.`;
         } else {
           return `${clean.charAt(0).toUpperCase() + clean.slice(1)}.`;
         }
