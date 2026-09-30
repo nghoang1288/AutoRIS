@@ -198,7 +198,14 @@
         }
         // 7. Gan
         else if (lower.includes("gan") || lower.includes("hạ phân thùy") || lower.includes("hpt")) {
-          let finding = clause.replace(/^.*?(?:nhu mô gan|gan)\s*(?:có\s*)?/i, "").trim();
+          let finding = clause;
+          if (/^(?:nhu\s*mô\s*)?gan\s*(?:có\s*)?/i.test(finding)) {
+            finding = finding.replace(/^(?:nhu\s*mô\s*)?gan\s*(?:có\s*)?/i, "").trim();
+          } else if (/gan\s*(?:có\s*)?/i.test(finding) && !/^(?:hạ\s*phân\s*thùy|hpt|thùy)/i.test(finding)) {
+            finding = finding.replace(/^.*?(?:nhu\s*mô\s*)?gan\s*(?:có\s*)?/i, "").trim();
+          } else {
+            finding = finding.replace(/\bgan\s*(?:có\s*)?/i, "").trim();
+          }
           finding = finding.replace(/\b(nang|sỏi)\s+(nang|sỏi)\s+(lớn|nhỏ)\b/i, "$1, $2 $3");
           let lesionType = "tổn thương";
           if (lower.includes("nang")) lesionType = "nang";
@@ -291,22 +298,22 @@
             rawClause: clause
           });
         }
-        // 13. Ruột thừa / Hố chậu phải
-        else if (lower.includes("ruột thừa") || lower.includes("hố chậu phải")) {
-          organFindings.push({
-            organ: "ruot_thua",
-            label: "Ruột thừa",
-            lesionType: "viêm ruột thừa",
-            findingText: clause,
-            rawClause: clause
-          });
-        }
-        // 14. Dịch ổ bụng / Khoang màng phổi
+        // 13. Dịch ổ bụng / Khoang màng phổi (ưu tiên nhận diện dịch nếu có từ dịch)
         else if (lower.includes("dịch") || lower.includes("màng phổi")) {
           organFindings.push({
             organ: "dich",
             label: "Dịch tự do",
             lesionType: "tràn dịch",
+            findingText: clause,
+            rawClause: clause
+          });
+        }
+        // 14. Ruột thừa / Hố chậu phải (khi không phải dịch)
+        else if (lower.includes("ruột thừa") || lower.includes("hố chậu phải")) {
+          organFindings.push({
+            organ: "ruot_thua",
+            label: "Ruột thừa",
+            lesionType: "viêm ruột thừa",
             findingText: clause,
             rawClause: clause
           });
@@ -379,25 +386,7 @@
       const hasLeftStone = organFindings.some(f => f.organ === "than_trai" && f.lesionType === "sỏi");
       const hasBothKidneyStone = organFindings.some(f => f.organ === "than_hai_ben" && f.lesionType === "sỏi");
 
-      // Thận - Nang
-      if ((hasRightCyst && hasLeftCyst) || hasBothKidneyCyst) {
-        conclusions.push("nang thận hai bên");
-      } else if (hasRightCyst) {
-        conclusions.push("nang thận phải");
-      } else if (hasLeftCyst) {
-        conclusions.push("nang thận trái");
-      }
-
-      // Thận - Sỏi
-      if ((hasRightStone && hasLeftStone) || hasBothKidneyStone) {
-        conclusions.push("sỏi thận hai bên");
-      } else if (hasRightStone) {
-        conclusions.push("sỏi thận phải");
-      } else if (hasLeftStone) {
-        conclusions.push("sỏi thận trái");
-      }
-
-      // Gan
+      // 1. Gan
       const liverFindings = organFindings.filter(f => f.organ === "gan");
       for (const lf of liverFindings) {
         const raw = (lf.rawClause || "").toLowerCase();
@@ -430,23 +419,45 @@
         }
       }
 
-      // Tụy
+      // 2. Túi mật
+      const tmFindings = organFindings.filter(f => f.organ === "tui_mat");
+      for (const tf of tmFindings) {
+        if (tf.lesionType === "sỏi") conclusions.push("sỏi túi mật");
+        else if (tf.lesionType === "polyp") conclusions.push("polyp túi mật");
+      }
+
+      // 3. Tụy
       const pancreasFindings = organFindings.filter(f => f.organ === "tuy");
       for (const pf of pancreasFindings) {
         if (pf.lesionType === "nang") conclusions.push("nang tụy");
         else if (pf.lesionType === "khối u") conclusions.push("khối u tụy");
         else if (pf.lesionType === "viêm tụy") conclusions.push("viêm tụy");
-        else if (pf.lesionType === "vôi hóa") conclusions.push("vôi hóa tụy");
-        else conclusions.push(`tổn thương tụy`);
       }
 
-      // Lách
+      // 4. Lách
       const spleenFindings = organFindings.filter(f => f.organ === "lach");
       for (const sf of spleenFindings) {
-        if (sf.lesionType === "lách to") conclusions.push("lách to");
-        else if (sf.lesionType === "nang") conclusions.push("nang lách");
+        if (sf.lesionType === "nang") conclusions.push("nang lách");
         else if (sf.lesionType === "vôi hóa") conclusions.push("vôi hóa lách");
-        else conclusions.push(`tổn thương lách`);
+        else conclusions.push("tổn thương lách");
+      }
+
+      // 5. Thận - Nang
+      if ((hasRightCyst && hasLeftCyst) || hasBothKidneyCyst) {
+        conclusions.push("nang thận hai bên");
+      } else if (hasRightCyst) {
+        conclusions.push("nang thận phải");
+      } else if (hasLeftCyst) {
+        conclusions.push("nang thận trái");
+      }
+
+      // 6. Thận - Sỏi
+      if ((hasRightStone && hasLeftStone) || hasBothKidneyStone) {
+        conclusions.push("sỏi thận hai bên");
+      } else if (hasRightStone) {
+        conclusions.push("sỏi thận phải");
+      } else if (hasLeftStone) {
+        conclusions.push("sỏi thận trái");
       }
 
       // Bàng quang
@@ -499,13 +510,6 @@
       const stomachFindings = organFindings.filter(f => f.organ === "da_day");
       if (stomachFindings.length > 0) {
         conclusions.push("dày thành hang - môn vị dạ dày");
-      }
-
-      // Túi mật
-      const tmFindings = organFindings.filter(f => f.organ === "tui_mat");
-      for (const tf of tmFindings) {
-        if (tf.lesionType === "sỏi") conclusions.push("sỏi túi mật");
-        else if (tf.lesionType === "polyp") conclusions.push("polyp túi mật");
       }
 
       // Các phát hiện khác

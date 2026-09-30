@@ -265,8 +265,10 @@ function sanitizeLungRADSConclusion(conclusionText) {
   // 4. Chuẩn hoá định dạng Lung-RADS:
   // Chuyển " - Lung-RADS 2." hoặc " - Lung-RADS 2" thành " (Lung-RADS 2)."
   text = text.replace(/\s*[-–—]\s*(Lung-RADS\s+[0-9][A-Za-z]?)\.?/gi, function(_, lr) {
-    return " (" + lr + ").";
+    const stdLr = lr.replace(/lung-rads/i, "Lung-RADS");
+    return " (" + stdLr + ").";
   });
+  text = text.replace(/\(\s*lung-rads\b/gi, "(Lung-RADS");
 
   // 5. GỘP CÁC TỔN THƯƠNG CÙNG MỨC LUNG-RADS TRONG CÂU:
   // Ví dụ: "Hình ảnh nốt đặc thuỳ trên phổi trái (Lung-RADS 2), nốt kính mờ thuỳ trên phổi phải (Lung-RADS 2)."
