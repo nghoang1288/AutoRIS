@@ -759,6 +759,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                                         lastAutoSentText = currentClean
                                         withContext(Dispatchers.Main) {
                                             exportToRis(currentClean, isLiveStream = true)
+                                            // Sau khi gửi xong câu này, reset buffer để câu tiếp theo gửi riêng biệt từng dòng
+                                            audioRecorderManager?.clearAccumulatedSegments()
+                                            _livePartial.value = ""
+                                            lastAutoSentText = ""
                                         }
                                     }
                                 }

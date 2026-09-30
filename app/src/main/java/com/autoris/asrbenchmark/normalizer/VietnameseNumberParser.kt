@@ -103,7 +103,7 @@ object VietnameseNumberParser {
         result = decDigitDigit.replace(result, "$1.$2")
 
         // 5. Negative numbers: "âm [num|word]" -> "-[num]"
-        val negPattern = Regex("\\bâm\\s+([a-zA-ZÀ-ỹ0-9.]+)\\b", RegexOption.IGNORE_CASE)
+        val negPattern = Regex("(?<=^|[^\\p{L}\\p{N}])âm\\s+([a-zA-ZÀ-ỹ0-9.]+)(?=[^\\p{L}\\p{N}]|$)", RegexOption.IGNORE_CASE)
         result = negPattern.replace(result) { m ->
             val v = m.groupValues[1].lowercase(Locale.ROOT)
             val d = DIGIT_STR_MAP[v]
@@ -118,7 +118,7 @@ object VietnameseNumberParser {
 
         // 6. Single digit words immediately before measurement units: e.g. "năm mm" -> "5 mm"
         for ((dWord, dVal) in DIGIT_WORDS) {
-            val singleUnit = Regex("\\b$dWord\\s*(mm|cm|m|ml|l|%|HU)\\b", RegexOption.IGNORE_CASE)
+            val singleUnit = Regex("(?<=^|[^\\p{L}\\p{N}])$dWord\\s*(mm|cm|m|ml|l|%|HU)(?=[^\\p{L}\\p{N}]|$)", RegexOption.IGNORE_CASE)
             result = singleUnit.replace(result, "$dVal $1")
         }
 

@@ -12,7 +12,7 @@ chrome.runtime.onInstalled.addListener(() => {
     for (const [k, v] of Object.entries(DEFAULT_CONFIG)) {
       if (items[k] === undefined) toSet[k] = v;
     }
-    if (!items[STORAGE_KEYS.SYSTEM_PROMPT]) {
+    if (!items[STORAGE_KEYS.SYSTEM_PROMPT] || !items[STORAGE_KEYS.SYSTEM_PROMPT].includes("nốt đặc thuỳ trên phổi trái và nốt kính mờ")) {
       toSet[STORAGE_KEYS.SYSTEM_PROMPT] = LUNG_RADS_SYSTEM_PROMPT;
     }
     toSet[STORAGE_KEYS.INSTALLED_VERSION] = chrome.runtime.getManifest().version;
@@ -23,6 +23,19 @@ chrome.runtime.onInstalled.addListener(() => {
   });
 
   startPollingLoop();
+  chrome.alarms.create('autoris-keepalive', { periodInMinutes: 0.5 });
+});
+
+chrome.runtime.onStartup.addListener(() => {
+  startPollingLoop();
+});
+
+startPollingLoop();
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === 'autoris-keepalive') {
+    pollLatestDictation();
+  }
 });
 
 // 2. Vòng lặp polling kiểm tra ca đọc mới từ máy chủ AutoRIS
@@ -85,6 +98,24 @@ async function pollLatestDictation() {
   }
 }
 
+// 2.5. Kiểm tra URL trang xem ảnh DICOM viewer (tránh phát sóng vào tab xem ảnh)
+function isViewerUrl(url) {
+  if (!url) return false;
+  const lower = url.toLowerCase();
+  return lower.includes("vrviewer") ||
+         lower.includes("dicomviewer") ||
+         lower.includes("dcmviewer") ||
+         lower.includes("study/viewer") ||
+         lower.includes("/ris/viewer") ||
+         lower.includes("/viewer") ||
+         lower.includes("viewer.") ||
+         lower.includes("pacsviewer") ||
+         lower.includes("webviewer") ||
+         lower.includes("ohif") ||
+         lower.includes("cornerstone") ||
+         lower.includes("weasis");
+}
+
 // 3. Phát sóng ca đọc tới các tab RIS
 function broadcastDictationToRISTabs(dictationItem) {
   chrome.tabs.query({}, (tabs) => {
@@ -93,6 +124,8 @@ function broadcastDictationToRISTabs(dictationItem) {
     for (const tab of tabs) {
       if (!tab.url) continue;
       const url = tab.url.toLowerCase();
+      if (isViewerUrl(url)) continue; // Bỏ qua tab DICOM viewer/vrViewer
+
       const isTarget = url.includes("192.168.50.105") ||
                        url.includes("benhviendaihocyhanoi.com") ||
                        url.includes("study/reading") ||
@@ -121,6 +154,8 @@ function broadcastPACSToRISTabs(pacsReportText, timestamp) {
     for (const tab of tabs) {
       if (!tab.url) continue;
       const url = tab.url.toLowerCase();
+      if (isViewerUrl(url)) continue; // Bỏ qua tab DICOM viewer/vrViewer
+
       const isTarget = url.includes("192.168.50.105") ||
                        url.includes("benhviendaihocyhanoi.com") ||
                        url.includes("study/reading") ||
@@ -172,13 +207,12 @@ chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
   // D. Tổng hợp PACS Chest CT Lung-RADS (Từ nút PACS F9)
   if (req.action === ACTIONS.SYNTHESIZE || req.action === ACTIONS.SYNTHESIZE_LUNG || (req.action === "SYNTHESIZE_REPORT" && req.payload?.rawText)) {
     handlePACSSynthesizeReport(req.payload || {})
-      .then((result) => {
+      .then((rawResult) => {
+        const result = typeof sanitizeLungRADSReport === "function" ? sanitizeLungRADSReport(rawResult) : rawResult;
         const now = Date.now();
         chrome.storage.local.set({
           [STORAGE_KEYS.LAST_REPORT]: result,
-          [STORAGE_KEYS.LAST_REPORT_TIME]: now,
-          [STORAGE_KEYS.LAST_PACS_REPORT]: result,
-          [STORAGE_KEYS.LAST_PACS_TIME]: now
+          [STORAGE_KEYS.LAST_REPORT_TIME]: now
         });
         // Tự động phát sóng kết quả sang các tab RIS đang mở
         broadcastPACSToRISTabs(result, now);
@@ -201,7 +235,39 @@ chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
       });
     return true;
   }
+
+  // F. Lưu phản hồi / báo lỗi ca bệnh của bác sĩ lên server
+  if (req.action === "SUBMIT_FEEDBACK") {
+    handleFeedbackSubmission(req.payload || {})
+      .then(result => sendResponse({ success: true, data: result }))
+      .catch(err => {
+        console.error("[AutoRIS BG] Feedback error:", err);
+        sendResponse({ success: false, error: err.message });
+      });
+    return true;
+  }
 });
+
+// 5.5. Gửi log phản hồi ca bệnh của bác sĩ lên server AutoRIS (VPS)
+async function handleFeedbackSubmission(payload) {
+  const config = await chrome.storage.local.get([STORAGE_KEYS.SERVER_URL]);
+  const serverUrl = (config[STORAGE_KEYS.SERVER_URL] || DEFAULT_CONFIG.serverUrl).trim().replace(/\/+$/, "");
+
+  const res = await fetch(`${serverUrl}/api/feedback/submit`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Server lỗi HTTP ${res.status}: ${errText}`);
+  }
+
+  return await res.json();
+}
 
 // 6. Xử lý gọi AI Synthesizer cho lời đọc điện thoại (9router -> Fallback Direct Google)
 async function handleAISynthesis(payload) {
@@ -384,10 +450,11 @@ async function callOpenAICompatibleServer(endpoint, apiKey, preferredModel, syst
 
 // 9. Gọi trực tiếp Google Gemini API khi dự phòng
 async function callGoogleGeminiDirect(keysPool, preferredModel, systemPrompt, userPrompt, timeoutMs = 15000, externalSignal = null) {
+  const activeKeys = (keysPool && keysPool.length > 0) ? keysPool : DEFAULT_CONFIG.googleKeysPool;
   const candidateModels = [
-    GOOGLE_MODEL_MAP[preferredModel] || preferredModel || "gemini-2.5-flash-lite",
-    "gemini-2.5-flash",
-    "gemini-1.5-flash"
+    GOOGLE_MODEL_MAP[preferredModel] || preferredModel || "gemini-3.5-flash-lite",
+    "gemini-3.5-flash",
+    "gemini-3.5-flash-lite"
   ];
   const models = Array.from(new Set(candidateModels.filter(Boolean)));
   const contents = [
@@ -399,7 +466,7 @@ async function callGoogleGeminiDirect(keysPool, preferredModel, systemPrompt, us
 
   let lastError = null;
 
-  for (const apiKey of keysPool) {
+  for (const apiKey of activeKeys) {
     for (const model of models) {
       if (externalSignal && externalSignal.aborted) {
         throw new Error("Tác vụ đã bị hủy");

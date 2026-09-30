@@ -8,6 +8,7 @@ stores them locally, serves real-time analysis reports and web dashboard.
 import os
 import sys
 import json
+from html import escape as html_escape
 import csv
 import time
 import socket
@@ -49,6 +50,12 @@ os.makedirs(AUDIO_DIR, exist_ok=True)
 os.makedirs(SESSIONS_DIR_V2, exist_ok=True)
 os.makedirs(AUDIO_DIR_V2, exist_ok=True)
 os.makedirs(RELEASE_APK_DIR, exist_ok=True)
+
+# Doctor Feedback & Case Logging Storage
+FEEDBACK_DIR = os.environ.get("FEEDBACK_DIR", os.path.join(BASE_DIR, "feedback_cases"))
+FEEDBACK_AGGREGATE_JSONL = os.path.join(FEEDBACK_DIR, "feedback_cases_aggregate.jsonl")
+os.makedirs(FEEDBACK_DIR, exist_ok=True)
+FEEDBACK_LOCK = threading.Lock()
 
 # Real-time Dictation Sync (Chrome Extension & RIS Integration)
 RECENT_DICTATIONS = []
@@ -113,14 +120,15 @@ CSV_HEADERS_V2 = [
 ]
 
 def load_all_sessions():
-    if not os.path.exists(ALL_SESSIONS_JSON):
-        return []
-    try:
-        with open(ALL_SESSIONS_JSON, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception as e:
-        print(f"[AutoRIS Server Error] Failed to read {ALL_SESSIONS_JSON}: {e}")
-        raise IOError(f"Corrupt sessions file {ALL_SESSIONS_JSON}: {e}")
+    with FILE_LOCK:
+        if not os.path.exists(ALL_SESSIONS_JSON):
+            return []
+        try:
+            with open(ALL_SESSIONS_JSON, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"[AutoRIS Server Error] Failed to read {ALL_SESSIONS_JSON}: {e}")
+            raise IOError(f"Corrupt sessions file {ALL_SESSIONS_JSON}: {e}")
 
 def save_all_sessions(sessions):
     with FILE_LOCK:
@@ -166,14 +174,15 @@ def is_v2_session(s):
     return any(k in s for k in ("roomId", "room_id", "preprocessingProfile", "preprocessing_profile", "criticalNumericError", "sessionId"))
 
 def load_all_sessions_v2():
-    if not os.path.exists(ALL_SESSIONS_JSON_V2):
-        return []
-    try:
-        with open(ALL_SESSIONS_JSON_V2, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception as e:
-        print(f"[AutoRIS Server Error] Failed to read {ALL_SESSIONS_JSON_V2}: {e}")
-        raise IOError(f"Corrupt sessions file {ALL_SESSIONS_JSON_V2}: {e}")
+    with FILE_LOCK:
+        if not os.path.exists(ALL_SESSIONS_JSON_V2):
+            return []
+        try:
+            with open(ALL_SESSIONS_JSON_V2, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"[AutoRIS Server Error] Failed to read {ALL_SESSIONS_JSON_V2}: {e}")
+            raise IOError(f"Corrupt sessions file {ALL_SESSIONS_JSON_V2}: {e}")
 
 def get_all_sessions():
     try:
@@ -372,6 +381,106 @@ def print_terminal_summary(stats, new_count):
     print(f" Dashboard xem chi tiet: http://localhost:{PORT}/dashboard")
     print("=" * 70 + "\n")
 
+def save_feedback_case(payload):
+    with FEEDBACK_LOCK:
+        now_dt = datetime.now()
+        now_str = now_dt.strftime("%Y%m%d_%H%M%S")
+        rand_suffix = str(int(time.time() * 1000) % 1000000).zfill(6)
+        sid = payload.get("id") or f"fb_{now_str}_{rand_suffix}"
+
+        record = {
+            "id": sid,
+            "timestamp": payload.get("timestamp") or now_dt.isoformat(),
+            "source": payload.get("source", "voice_dictation"),
+            "raw_input": (payload.get("raw_input") or "").strip(),
+            "ai_output": (payload.get("ai_output") or "").strip(),
+            "doctor_final": (payload.get("doctor_final") or "").strip(),
+            "doctor_note": (payload.get("doctor_note") or "").strip(),
+            "page_url": (payload.get("page_url") or "").strip(),
+            "status": payload.get("status", "pending")
+        }
+
+        # Lưu file JSON chi tiết cho từng ca
+        single_file = os.path.join(FEEDBACK_DIR, f"{sid}.json")
+        with open(single_file, "w", encoding="utf-8") as f:
+            json.dump(record, f, ensure_ascii=False, indent=2)
+
+        # Lưu nối đuôi vào file JSONL tổng hợp
+        with open(FEEDBACK_AGGREGATE_JSONL, "a", encoding="utf-8") as f:
+            f.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+        print(f"[AutoRIS Server] 🚨 Đã lưu phản hồi bác sĩ: {sid} ({record['source']})")
+        return record
+
+def list_feedback_cases(status="pending", limit=100):
+    with FEEDBACK_LOCK:
+        cases = []
+        if not os.path.exists(FEEDBACK_DIR):
+            return cases
+
+        for fname in sorted(os.listdir(FEEDBACK_DIR), reverse=True):
+            if fname.endswith(".json") and fname.startswith("fb_"):
+                fpath = os.path.join(FEEDBACK_DIR, fname)
+                try:
+                    with open(fpath, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                        if status == "all" or data.get("status") == status:
+                            cases.append(data)
+                            if len(cases) >= limit:
+                                break
+                except Exception:
+                    continue
+        return cases
+
+def resolve_feedback_cases(ids, resolution_note=""):
+    with FEEDBACK_LOCK:
+        resolved = []
+        now_iso = datetime.now().isoformat()
+        id_set = set(ids) if isinstance(ids, list) else {str(ids)}
+
+        for sid in id_set:
+            clean_id = os.path.basename(str(sid))
+            fpath = os.path.join(FEEDBACK_DIR, f"{clean_id}.json")
+            if os.path.exists(fpath):
+                try:
+                    with open(fpath, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                    data["status"] = "resolved"
+                    data["resolved_at"] = now_iso
+                    if resolution_note:
+                        data["resolution_note"] = resolution_note
+                    with open(fpath, "w", encoding="utf-8") as f:
+                        json.dump(data, f, ensure_ascii=False, indent=2)
+                    resolved.append(clean_id)
+                except Exception:
+                    pass
+        return resolved
+
+def get_feedback_stats():
+    with FEEDBACK_LOCK:
+        total = 0
+        pending = 0
+        resolved = 0
+        if os.path.exists(FEEDBACK_DIR):
+            for fname in os.listdir(FEEDBACK_DIR):
+                if fname.endswith(".json") and fname.startswith("fb_"):
+                    total += 1
+                    fpath = os.path.join(FEEDBACK_DIR, fname)
+                    try:
+                        with open(fpath, "r", encoding="utf-8") as f:
+                            data = json.load(f)
+                            if data.get("status") == "resolved":
+                                resolved += 1
+                            else:
+                                pending += 1
+                    except Exception:
+                        pass
+        return {
+            "total": total,
+            "pending": pending,
+            "resolved": resolved
+        }
+
 class BenchmarkHandler(BaseHTTPRequestHandler):
 
     def do_OPTIONS(self):
@@ -380,7 +489,10 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_HEAD(self):
-        self.do_GET()
+        self.send_response(200)
+        self.send_cors_headers()
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.end_headers()
 
     def send_cors_headers(self):
         self.send_header("Access-Control-Allow-Origin", "*")
@@ -402,6 +514,40 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
                 "host": socket.gethostname(),
                 "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 "total_stored": len(get_all_sessions())
+            }
+            self.wfile.write(json.dumps(resp, ensure_ascii=False).encode("utf-8"))
+            return
+
+        elif path == "/api/feedback/list":
+            status = query.get("status", ["pending"])[0]
+            limit_str = query.get("limit", ["100"])[0]
+            try:
+                limit = int(limit_str)
+            except ValueError:
+                limit = 100
+            cases = list_feedback_cases(status=status, limit=limit)
+            self.send_response(200)
+            self.send_cors_headers()
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.end_headers()
+            resp = {
+                "status": "success",
+                "filter_status": status,
+                "count": len(cases),
+                "cases": cases
+            }
+            self.wfile.write(json.dumps(resp, ensure_ascii=False).encode("utf-8"))
+            return
+
+        elif path == "/api/feedback/stats":
+            stats = get_feedback_stats()
+            self.send_response(200)
+            self.send_cors_headers()
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.end_headers()
+            resp = {
+                "status": "success",
+                **stats
             }
             self.wfile.write(json.dumps(resp, ensure_ascii=False).encode("utf-8"))
             return
@@ -688,6 +834,62 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
             }
             self.wfile.write(json.dumps(resp, ensure_ascii=False).encode("utf-8"))
 
+        elif path == "/api/feedback/submit":
+            content_length = int(self.headers.get("Content-Length", 0))
+            if content_length == 0:
+                self.send_error(400, "Empty feedback payload")
+                return
+            if content_length > MAX_UPLOAD_SIZE:
+                self.send_error(413, "Payload too large")
+                return
+            body = self.rfile.read(content_length).decode("utf-8")
+            try:
+                data = json.loads(body)
+            except Exception as e:
+                self.send_error(400, f"Invalid JSON: {e}")
+                return
+
+            saved_record = save_feedback_case(data)
+            self.send_response(200)
+            self.send_cors_headers()
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.end_headers()
+            resp = {
+                "status": "success",
+                "id": saved_record["id"],
+                "message": "Feedback saved successfully",
+                "record": saved_record
+            }
+            self.wfile.write(json.dumps(resp, ensure_ascii=False).encode("utf-8"))
+            return
+
+        elif path == "/api/feedback/resolve":
+            content_length = int(self.headers.get("Content-Length", 0))
+            if content_length == 0:
+                self.send_error(400, "Empty payload")
+                return
+            body = self.rfile.read(content_length).decode("utf-8")
+            try:
+                data = json.loads(body)
+            except Exception as e:
+                self.send_error(400, f"Invalid JSON: {e}")
+                return
+
+            ids = data.get("ids", [])
+            note = data.get("note", "")
+            resolved_ids = resolve_feedback_cases(ids, note)
+            self.send_response(200)
+            self.send_cors_headers()
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.end_headers()
+            resp = {
+                "status": "success",
+                "resolved_count": len(resolved_ids),
+                "resolved_ids": resolved_ids
+            }
+            self.wfile.write(json.dumps(resp, ensure_ascii=False).encode("utf-8"))
+            return
+
         else:
             self.send_error(404, "Endpoint not found")
 
@@ -737,11 +939,11 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
 
             rows_html.append(f"""
             <tr>
-              <td><b>{s.get('testId') or 'CLINICAL'}</b><br><small style="color:#94a3b8;">{s.get('category', '--')}</small></td>
+              <td><b>{html_escape(str(s.get('testId') or 'CLINICAL'))}</b><br><small style="color:#94a3b8;">{html_escape(str(s.get('category', '--')))}</small></td>
               <td>
-                <div style="font-size:13px;color:#e2e8f0;margin-bottom:4px;"><b>Gốc:</b> {s.get('referenceText', '--')}</div>
-                <div style="font-size:13px;color:#38bdf8;margin-bottom:4px;"><b>Nhận diện:</b> {s.get('rawTranscript', '--')}</div>
-                <div style="font-size:12px;color:#10b981;"><b>Chuẩn hóa:</b> {s.get('normalizedTranscript', '--')}</div>
+                <div style="font-size:13px;color:#e2e8f0;margin-bottom:4px;"><b>Gốc:</b> {html_escape(str(s.get('referenceText', '--')))}</div>
+                <div style="font-size:13px;color:#38bdf8;margin-bottom:4px;"><b>Nhận diện:</b> {html_escape(str(s.get('rawTranscript', '--')))}</div>
+                <div style="font-size:12px;color:#10b981;"><b>Chuẩn hóa:</b> {html_escape(str(s.get('normalizedTranscript', '--')))}</div>
               </td>
               <td style="color:{'#ef4444' if (s.get('wer') or 0)>0.25 else '#10b981'};font-weight:bold;">{wer_val}</td>
               <td style="color:#f59e0b;">{cer_val}</td>

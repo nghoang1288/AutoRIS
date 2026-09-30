@@ -116,8 +116,9 @@ object MedicalTextNormalizer {
         val afterMeas = MeasurementParser.parse(normalized)
         normalized = afterMeas
 
-        // 10. Clean leading & trailing verbal fillers & capitalize
+        // 10. Clean leading, mid-sentence, & trailing verbal fillers & capitalize
         normalized = MedicalPhraseNormalizer.cleanLeadingFillers(normalized)
+        normalized = MedicalPhraseNormalizer.cleanInSentenceFillers(normalized)
         normalized = MedicalPhraseNormalizer.cleanTrailingFillers(normalized)
         normalized = MedicalPhraseNormalizer.capitalizeFirstLetter(normalized)
 

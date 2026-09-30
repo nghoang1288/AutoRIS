@@ -25,6 +25,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
+import com.autoris.asrbenchmark.normalizer.MedicalPhraseNormalizer
 import java.util.ArrayDeque
 import java.util.Locale
 import kotlin.math.log10
@@ -357,8 +358,19 @@ class AudioRecorderManager(
                         // 2. ASR decoding for accepted speech
                         val (segText, costMs) = asrEngine.decodeSegment(segmentSamples)
                         totalProcessingMs += costMs
-                        if (segText.isNotBlank()) {
-                            val formatted = formatSentence(segText)
+                        val trimmedSeg = segText.trim()
+                        if (trimmedSeg.isNotBlank()) {
+                            // Bỏ qua hoàn toàn các âm nhiễu quạt, tiếng thở hắt (ví dụ: "đấy", "đó", "bây giờ")
+                            if (MedicalPhraseNormalizer.isPureNoise(trimmedSeg)) {
+                                Log.i(TAG, "Bỏ qua segment nhiễu thuần túy: '$trimmedSeg'")
+                                return@withLock
+                            }
+                            val cleanedSeg = MedicalPhraseNormalizer.cleanTrailingFillers(trimmedSeg)
+                            if (cleanedSeg.isBlank() || MedicalPhraseNormalizer.isPureNoise(cleanedSeg)) {
+                                Log.i(TAG, "Bỏ qua segment rác sau lọc: '$trimmedSeg'")
+                                return@withLock
+                            }
+                            val formatted = formatSentence(cleanedSeg)
                             synchronized(accumulatedSegments) {
                                 accumulatedSegments.add(formatted)
                             }
@@ -475,6 +487,20 @@ class AudioRecorderManager(
     }
 
     fun getTotalProcessingMs(): Long = totalProcessingMs
+
+    /**
+     * Resets the accumulated segments buffer so that subsequent speech forms a new distinct sentence.
+     */
+    fun clearAccumulatedSegments() {
+        synchronized(accumulatedSegments) {
+            accumulatedSegments.clear()
+        }
+        synchronized(currentSegmentPcm) {
+            currentSegmentPcm.clear()
+        }
+        lastStreamingTranscript = ""
+        streamingEngine?.reset()
+    }
 
     fun release() {
         stopRecordingInternal()

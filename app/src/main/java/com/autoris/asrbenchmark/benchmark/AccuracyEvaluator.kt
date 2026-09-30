@@ -134,7 +134,7 @@ object AccuracyEvaluator {
         val missedTerms = mutableListOf<String>()
         for (term in keyTerms) {
             val termClean = cleanText(term)
-            val termPattern = Regex("\\b" + Regex.escape(termClean) + "\\b")
+            val termPattern = Regex("(?<=^|[^\\p{L}\\p{N}])" + Regex.escape(termClean) + "(?=[^\\p{L}\\p{N}]|$)")
             if (termPattern.containsMatchIn(cleanHyp)) {
                 matchedTerms.add(term)
             } else {
@@ -177,7 +177,7 @@ object AccuracyEvaluator {
         // 3. Anatomy
         var matchedAnatomy = 0
         for (a in keyAnatomy) {
-            val aPattern = Regex("\\b" + Regex.escape(cleanText(a)) + "\\b")
+            val aPattern = Regex("(?<=^|[^\\p{L}\\p{N}])" + Regex.escape(cleanText(a)) + "(?=[^\\p{L}\\p{N}]|$)")
             if (aPattern.containsMatchIn(cleanHyp)) matchedAnatomy++
         }
         val anatomyAcc = if (keyAnatomy.isNotEmpty()) matchedAnatomy.toFloat() / keyAnatomy.size else 1.0f
@@ -190,7 +190,7 @@ object AccuracyEvaluator {
         var matchedNegations = 0
         var criticalNegationErr = false
         for (n in refNegations) {
-            val nPattern = Regex("\\b" + Regex.escape(cleanText(n)) + "\\b")
+            val nPattern = Regex("(?<=^|[^\\p{L}\\p{N}])" + Regex.escape(cleanText(n)) + "(?=[^\\p{L}\\p{N}]|$)")
             if (nPattern.containsMatchIn(cleanHyp)) {
                 matchedNegations++
             } else {

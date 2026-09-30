@@ -8,7 +8,8 @@
     "storage",
     "clipboardWrite",
     "tabs",
-    "activeTab"
+    "activeTab",
+    "alarms"
   ],
   "host_permissions": [
     "http://192.168.50.105/*",
@@ -18,8 +19,7 @@
     "https://9router.hoang.qzz.io/*",
     "https://generativelanguage.googleapis.com/*",
     "http://192.168.50.100:8080/*",
-    "http://localhost:8080/*",
-    "<all_urls>"
+    "http://localhost:8080/*"
   ],
   "action": {
     "default_popup": "popup.html",
@@ -46,6 +46,14 @@
         "https://*/ris/*",
         "http://*/RIS/*",
         "https://*/RIS/*"
+      ],
+      "exclude_matches": [
+        "http://192.168.50.105/ris/vrViewer*",
+        "http://192.168.50.105/ris/vrviewer*",
+        "http://*/*vrViewer*",
+        "http://*/*vrviewer*",
+        "https://*/*vrViewer*",
+        "https://*/*vrviewer*"
       ],
       "all_frames": true,
       "match_about_blank": true,

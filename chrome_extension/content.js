@@ -24,7 +24,26 @@
   // =========================================================================
   // 1. NHẬN DIỆN TRANG WEB & BẢO VỆ PHẠM VI (GATE CHECKS)
   // =========================================================================
+  function isViewerPage(urlStr) {
+    const url = (urlStr || window.location.href).toLowerCase();
+    return url.includes("vrviewer") ||
+           url.includes("dicomviewer") ||
+           url.includes("dcmviewer") ||
+           url.includes("study/viewer") ||
+           url.includes("/ris/viewer") ||
+           url.includes("/viewer") ||
+           url.includes("viewer.") ||
+           url.includes("pacsviewer") ||
+           url.includes("webviewer") ||
+           url.includes("ohif") ||
+           url.includes("cornerstone") ||
+           url.includes("weasis");
+  }
+
   function isRISPage() {
+    if (isViewerPage()) {
+      return false;
+    }
     const url = window.location.href.toLowerCase();
     return url.includes("192.168.50.105") ||
            url.includes("benhviendaihocyhanoi.com") ||
@@ -41,7 +60,7 @@
            !!document.getElementById("uai_report_ex");
   }
 
-  // Dừng ngay lập tức nếu không phải trang RIS và không phải trang PACS
+  // Dừng ngay lập tức nếu không phải trang RIS và không phải trang PACS (hoặc nếu là trang xem ảnh DICOM viewer)
   if (!isRISPage() && !isPACSPage()) {
     return;
   }
@@ -178,8 +197,6 @@
   function applySurgicalDictationToRISEditor(editorEl, synthResult) {
     if (!editorEl || !synthResult) return false;
 
-    saveUndoSnapshot(null, null, editorEl);
-
     const isCE = editorEl.isContentEditable || editorEl.getAttribute("contenteditable") === "true";
     const isInput = editorEl.tagName === "TEXTAREA" || editorEl.tagName === "INPUT";
 
@@ -228,6 +245,7 @@
           organLineRegex = /((?:<p\b[^>]*>)?\s*(?:--|—|-)?\s*(?:<(?:\/)?(?:strong|b|span)[^>]*>)*\s*(?:Gan|Nhu\s*mô\s*gan)\b\s*(?:<(?:\/)?(?:strong|b|span)[^>]*>)*\s*:?\s*)([\s\S]*?)(?=<\/p>|<br\s*\/?>|\n|$)/i;
           let cleanFinding = item.findingText.replace(/^[.,;: ]+/, "").trim();
           cleanFinding = cleanFinding.replace(/\b(nang|sỏi)\s+(nang|sỏi)\s+(lớn|nhỏ)\b/i, "$1, $2 $3");
+          cleanFinding = cleanFinding.replace(/\bHạ\s+phân\s+thùy\b/g, "hạ phân thùy");
           if (/^(?:trái|phải)\b/i.test(cleanFinding)) {
             newClause = `gan ${cleanFinding}`;
           } else if (/^(?:hạ\s*phân\s*thùy|hpt|thùy|nhu\s*mô)/i.test(cleanFinding)) {
@@ -242,28 +260,89 @@
           newClause = item.findingText;
         } else if (item.organ === "tui_mat") {
           organLineRegex = /((?:<p\b[^>]*>)?\s*(?:--|—|-)?\s*(?:<(?:\/)?(?:strong|b|span)[^>]*>)*\s*(?:Túi\s*mật|Túi\s*mật)\b\s*(?:<(?:\/)?(?:strong|b|span)[^>]*>)*\s*:?\s*)([\s\S]*?)(?=<\/p>|<br\s*\/?>|\n|$)/i;
+          newClause = `có ${item.findingText}`.replace(/^có\s+có\s*/i, "có ");
+        } else if (item.organ === "tuy") {
+          organLineRegex = /((?:<p\b[^>]*>)?\s*(?:--|—|-)?\s*(?:<(?:\/)?(?:strong|b|span)[^>]*>)*\s*(?:Tụy|Tụy|Nhu\s*mô\s*tụy)\b\s*(?:<(?:\/)?(?:strong|b|span)[^>]*>)*\s*:?\s*)([\s\S]*?)(?=<\/p>|<br\s*\/?>|\n|$)/i;
+          newClause = `có ${item.findingText}`.replace(/^có\s+có\s*/i, "có ");
+        } else if (item.organ === "lach") {
+          organLineRegex = /((?:<p\b[^>]*>)?\s*(?:--|—|-)?\s*(?:<(?:\/)?(?:strong|b|span)[^>]*>)*\s*(?:Lách|Lách|Nhu\s*mô\s*lách)\b\s*(?:<(?:\/)?(?:strong|b|span)[^>]*>)*\s*:?\s*)([\s\S]*?)(?=<\/p>|<br\s*\/?>|\n|$)/i;
+          newClause = `có ${item.findingText}`.replace(/^có\s+có\s*/i, "có ");
+        } else if (item.organ === "bang_quang") {
+          organLineRegex = /((?:<p\b[^>]*>)?\s*(?:--|—|-)?\s*(?:<(?:\/)?(?:strong|b|span)[^>]*>)*\s*(?:Bàng\s*quang|Bàng\s*quang)\b\s*(?:<(?:\/)?(?:strong|b|span)[^>]*>)*\s*:?\s*)([\s\S]*?)(?=<\/p>|<br\s*\/?>|\n|$)/i;
+          newClause = `có ${item.findingText}`.replace(/^có\s+có\s*/i, "có ");
+        } else if (item.organ === "tuyen_tien_liet") {
+          organLineRegex = /((?:<p\b[^>]*>)?\s*(?:--|—|-)?\s*(?:<(?:\/)?(?:strong|b|span)[^>]*>)*\s*(?:Tuyến\s*tiền\s*liệt|Tiền\s*liệt\s*tuyến)\b\s*(?:<(?:\/)?(?:strong|b|span)[^>]*>)*\s*:?\s*)([\s\S]*?)(?=<\/p>|<br\s*\/?>|\n|$)/i;
+          newClause = `có ${item.findingText}`.replace(/^có\s+có\s*/i, "có ");
+        } else if (item.organ === "tu_cung") {
+          organLineRegex = /((?:<p\b[^>]*>)?\s*(?:--|—|-)?\s*(?:<(?:\/)?(?:strong|b|span)[^>]*>)*\s*(?:Tử\s*cung|Phần\s*phụ|Buồng\s*trứng)\b\s*(?:<(?:\/)?(?:strong|b|span)[^>]*>)*\s*:?\s*)([\s\S]*?)(?=<\/p>|<br\s*\/?>|\n|$)/i;
+          newClause = item.findingText;
+        } else if (item.organ === "ruot_thua") {
+          organLineRegex = /((?:<p\b[^>]*>)?\s*(?:--|—|-)?\s*(?:<(?:\/)?(?:strong|b|span)[^>]*>)*\s*(?:Ruột\s*thừa|Hố\s*chậu\s*phải)\b\s*(?:<(?:\/)?(?:strong|b|span)[^>]*>)*\s*:?\s*)([\s\S]*?)(?=<\/p>|<br\s*\/?>|\n|$)/i;
+          newClause = item.findingText;
+        } else if (item.organ === "dich") {
+          organLineRegex = /((?:<p\b[^>]*>)?\s*(?:--|—|-)?\s*(?:<(?:\/)?(?:strong|b|span)[^>]*>)*\s*(?:Dịch\s*(?:ổ\s*bụng|tự\s*do|màng\s*phổi))\b\s*(?:<(?:\/)?(?:strong|b|span)[^>]*>)*\s*:?\s*)([\s\S]*?)(?=<\/p>|<br\s*\/?>|\n|$)/i;
+          newClause = item.findingText;
+        } else if (item.organ === "hach") {
+          organLineRegex = /((?:<p\b[^>]*>)?\s*(?:--|—|-)?\s*(?:<(?:\/)?(?:strong|b|span)[^>]*>)*\s*(?:Hạch|Hạch)\b\s*(?:<(?:\/)?(?:strong|b|span)[^>]*>)*\s*:?\s*)([\s\S]*?)(?=<\/p>|<br\s*\/?>|\n|$)/i;
+          newClause = item.findingText;
+        } else if (item.organ === "phoi_phai") {
+          organLineRegex = /((?:<p\b[^>]*>)?\s*(?:--|—|-)?\s*(?:<(?:\/)?(?:strong|b|span)[^>]*>)*\s*(?:Phổi\s*phải|Phổi\s*phải)\b\s*(?:<(?:\/)?(?:strong|b|span)[^>]*>)*\s*:?\s*)([\s\S]*?)(?=<\/p>|<br\s*\/?>|\n|$)/i;
+          newClause = item.findingText;
+        } else if (item.organ === "phoi_trai") {
+          organLineRegex = /((?:<p\b[^>]*>)?\s*(?:--|—|-)?\s*(?:<(?:\/)?(?:strong|b|span)[^>]*>)*\s*(?:Phổi\s*trái|Phổi\s*trái)\b\s*(?:<(?:\/)?(?:strong|b|span)[^>]*>)*\s*:?\s*)([\s\S]*?)(?=<\/p>|<br\s*\/?>|\n|$)/i;
           newClause = item.findingText;
         }
 
         if (organLineRegex && organLineRegex.test(bodyHTML)) {
           bodyHTML = bodyHTML.replace(organLineRegex, (fullMatch, prefix, content) => {
             let updatedContent = content;
-            const normalParenchymaRegex = /(Nhu\s*mô\s*(?:đồng\s*nhất[,\s]*)?)(?:không\s*thấy\s*(?:khối|tổn\s*thương)[^.]*|đều[,\s]*không\s*thấy\s*(?:khối|tổn\s*thương)[^.]*|không\s*thấy\s*khối[^.]*|bình\s*thường[^.]*)(\.?)/i;
-            if (normalParenchymaRegex.test(content)) {
-              updatedContent = content.replace(normalParenchymaRegex, `Nhu mô ${newClause}$2`);
-            } else if (content.includes("không to") || content.includes("hình thái, kích thước bình thường")) {
-              updatedContent = content.replace(/Nhu\s*mô[^.]*\.?/i, `Nhu mô ${newClause}.`);
+            if (item.organ === "tui_mat") {
+              const normalGbRegex = /(không\s*thấy\s*sỏi[^.]*|không\s*sỏi[^.]*|bình\s*thường[^.]*)(\.?)/i;
+              if (normalGbRegex.test(content)) {
+                updatedContent = content.replace(normalGbRegex, `${newClause}$2`);
+              } else {
+                updatedContent = `${content.replace(/[.,\s]+$/, "")}, ${newClause}.`;
+              }
+            } else if (item.organ === "gan") {
+              const normalParenchymaRegex = /(Nhu\s*mô\s*(?:đồng\s*nhất[,\s]*)?)(?:không\s*thấy\s*(?:khối|tổn\s*thương)[^.]*|đều[,\s]*không\s*thấy\s*(?:khối|tổn\s*thương)[^.]*|không\s*thấy\s*khối[^.]*|bình\s*thường[^.]*)(\.?)/i;
+              if (normalParenchymaRegex.test(content)) {
+                updatedContent = content.replace(normalParenchymaRegex, (match, p1, p2) => {
+                  const isLower = p1.trim().startsWith("nhu");
+                  const pfx = isLower ? "nhu mô " : "Nhu mô ";
+                  return `${pfx}${newClause}${p2}`;
+                });
+              } else if (content.includes("không to") || content.includes("hình thái, kích thước bình thường")) {
+                updatedContent = content.replace(/Nhu\s*mô[^.]*\.?/i, `Nhu mô ${newClause}.`);
+              } else {
+                updatedContent = `${content.trim()} Nhu mô ${newClause}.`;
+              }
+            } else if (item.organ === "phoi_phai" || item.organ === "phoi_trai") {
+              const normalLungRegex = /(?:trường\s*phổi\s*(?:sáng\s*đều[,\s]*)?)(?:không\s*thấy\s*(?:khối|tổn\s*thương)[^.]*|đều[,\s]*không\s*thấy\s*(?:khối|tổn\s*thương)[^.]*)(\.?)/i;
+              let cleanFinding = newClause.trim().replace(/[.,\s]+$/, "");
+              if (normalLungRegex.test(content)) {
+                updatedContent = content.replace(normalLungRegex, `${cleanFinding}.`);
+              } else if (/dày\s+tổ\s+chức\s+kẽ|giãn\s+phế\s+quản/i.test(content)) {
+                const suffixMatch = content.match(/(?:không\s*thấy\s*dày\s*tổ\s*chức\s*kẽ[^\n<]*)/i);
+                const suffix = suffixMatch ? suffixMatch[0] : "Không thấy dày tổ chức kẽ, không thấy giãn phế quản, phế nang.";
+                updatedContent = `${cleanFinding}. ${suffix}`;
+              } else {
+                updatedContent = `${cleanFinding}. Không thấy dày tổ chức kẽ, không thấy giãn phế quản, phế nang.`;
+              }
             } else {
-              updatedContent = `${content.trim()} Nhu mô ${newClause}.`;
+              updatedContent = `${newClause}.`;
             }
             return `${prefix}${updatedContent}`;
           });
           modified = true;
-        } else if (item.organ === "da_day") {
-          // Nếu chưa có Dạ dày trong mẫu, chèn sau Lách hoặc Tụy
-          const anchorPat = /(<p\b[^>]*>.*?(?:Lách|Lách|Tụy|Tụy).*?<\/p>)/i;
-          if (anchorPat.test(bodyHTML)) {
-            bodyHTML = bodyHTML.replace(anchorPat, `$1\n<p>-- <strong>Dạ dày:</strong> ${escapeHTML(item.findingText)}</p>`);
+        } else {
+          // Nếu mẫu chưa có cơ quan này, chèn dòng mới ngay trước KẾT LUẬN để tránh mất thông tin
+          const klMatch = bodyHTML.match(/((?:<p\b[^>]*>)?\s*(?:<strong>|<b>)?\s*(?:--|—|-)?\s*KẾT\s*LUẬN)/i);
+          const organInsertHtml = `<p>-- <strong>${escapeHTML(item.label)}:</strong> ${escapeHTML(item.findingText || newClause)}</p>\n`;
+          if (klMatch && klMatch.index !== undefined) {
+            bodyHTML = bodyHTML.slice(0, klMatch.index) + organInsertHtml + bodyHTML.slice(klMatch.index);
+            modified = true;
+          } else {
+            bodyHTML += `\n${organInsertHtml}`;
             modified = true;
           }
         }
@@ -370,11 +449,23 @@
       }
     }
 
-    const rawRightLung = rawRightLungLines.join(" ").trim();
-    const htmlRightLung = escapeHTML(rawRightLung);
-    const rawLeftLung = rawLeftLungLines.join(" ").trim();
-    const htmlLeftLung = escapeHTML(rawLeftLung);
-    const rawConclusion = rawConclusionLines.join(" ").trim();
+    const LUNG_INTERSTITIAL_SUFFIX = "Không thấy dày tổ chức kẽ, không thấy giãn phế quản, phế nang.";
+
+    function ensureInterstitialSuffix(lungLine) {
+      if (!lungLine || !lungLine.trim()) return lungLine;
+      let text = lungLine.trim();
+      if (/dày\s+tổ\s+chức\s+kẽ|giãn\s+phế\s+quản/i.test(text)) {
+        return text;
+      }
+      text = text.replace(/[.,\s]+$/, "");
+      return `${text}. ${LUNG_INTERSTITIAL_SUFFIX}`;
+    }
+
+    const rawRightLung = ensureInterstitialSuffix(rawRightLungLines.join(" ").trim());
+    const rawLeftLung = ensureInterstitialSuffix(rawLeftLungLines.join(" ").trim());
+    const rawConclusion = (typeof sanitizeLungRADSConclusion === "function")
+      ? sanitizeLungRADSConclusion(rawConclusionLines.join(" ").trim())
+      : rawConclusionLines.join(" ").trim();
     const htmlConclusion = escapeHTML(rawConclusion);
 
     let modified = false;
@@ -386,19 +477,29 @@
       const footerHTML = footerIdx !== -1 ? html.slice(footerIdx) : "";
 
       // 1. Phổi phải
-      if (htmlRightLung) {
+      if (rawRightLung) {
         const rightRegex = /(?:\s*<(?:b\b|strong\b|span\b)[^>]*>)?\s*(?:--|—|-)?\s*(?:<\/(?:b\b|strong\b|span\b)>\s*)?(?:<(?:b\b|strong\b|span\b)[^>]*>\s*)?Phổi\s*phải\s*(?:<\/(?:b\b|strong\b|span\b)>\s*)?:\s*(?:<\/(?:b\b|strong\b|span\b)>\s*)?[^<\n\r]*(?:<(?!br\b|\/p\b|\/div\b)[^>]*>[^<\n\r]*)*(?=(?:<br\s*\/?>|<\/p>|<\/div>|\n|$))/i;
         if (rightRegex.test(bodyHTML)) {
-          bodyHTML = bodyHTML.replace(rightRegex, () => htmlRightLung);
+          bodyHTML = bodyHTML.replace(rightRegex, (m) => {
+            const hasStrong = /<(?:strong|b)\b/i.test(m);
+            const prefix = hasStrong ? "-- <strong>Phổi phải:</strong> " : "-- Phổi phải: ";
+            const findingOnly = rawRightLung.replace(/^(?:--|—|-)?\s*Phổi\s*phải\s*:\s*/i, "").trim();
+            return `${prefix}${escapeHTML(findingOnly)}`;
+          });
           modified = true;
         }
       }
 
       // 2. Phổi trái
-      if (htmlLeftLung) {
+      if (rawLeftLung) {
         const leftRegex = /(?:\s*<(?:b\b|strong\b|span\b)[^>]*>)?\s*(?:--|—|-)?\s*(?:<\/(?:b\b|strong\b|span\b)>\s*)?(?:<(?:b\b|strong\b|span\b)[^>]*>\s*)?Phổi\s*trái\s*(?:<\/(?:b\b|strong\b|span\b)>\s*)?:\s*(?:<\/(?:b\b|strong\b|span\b)>\s*)?[^<\n\r]*(?:<(?!br\b|\/p\b|\/div\b)[^>]*>[^<\n\r]*)*(?=(?:<br\s*\/?>|<\/p>|<\/div>|\n|$))/i;
         if (leftRegex.test(bodyHTML)) {
-          bodyHTML = bodyHTML.replace(leftRegex, () => htmlLeftLung);
+          bodyHTML = bodyHTML.replace(leftRegex, (m) => {
+            const hasStrong = /<(?:strong|b)\b/i.test(m);
+            const prefix = hasStrong ? "-- <strong>Phổi trái:</strong> " : "-- Phổi trái: ";
+            const findingOnly = rawLeftLung.replace(/^(?:--|—|-)?\s*Phổi\s*trái\s*:\s*/i, "").trim();
+            return `${prefix}${escapeHTML(findingOnly)}`;
+          });
           modified = true;
         }
       }
@@ -426,14 +527,16 @@
       if (rawRightLung) {
         const rExp = /(?:--|—|-)?\s*Phổi\s*phải\s*:[^\n]*/i;
         if (rExp.test(text)) {
-          text = text.replace(rExp, () => rawRightLung);
+          const findingOnly = rawRightLung.replace(/^(?:--|—|-)?\s*Phổi\s*phải\s*:\s*/i, "").trim();
+          text = text.replace(rExp, () => `-- Phổi phải: ${findingOnly}`);
           modified = true;
         }
       }
       if (rawLeftLung) {
         const lExp = /(?:--|—|-)?\s*Phổi\s*trái\s*:[^\n]*/i;
         if (lExp.test(text)) {
-          text = text.replace(lExp, () => rawLeftLung);
+          const findingOnly = rawLeftLung.replace(/^(?:--|—|-)?\s*Phổi\s*trái\s*:\s*/i, "").trim();
+          text = text.replace(lExp, () => `-- Phổi trái: ${findingOnly}`);
           modified = true;
         }
       }
@@ -465,21 +568,35 @@
   // 4. TIẾN TRÌNH XỬ LÝ LỜI ĐỌC ĐIỆN THOẠI TRÊN TRANG RIS
   // =========================================================================
   async function processAndApplyDictation(dictationText) {
+    if (!isExtensionValid()) {
+      console.warn("[AutoRIS] Tiện ích đã cập nhật/tải lại. Vui lòng bấm F5 lại trang RIS!");
+      showToast("⚠️ Tiện ích vừa tải lại. Vui lòng bấm F5 lại trang RIS!", true);
+      return false;
+    }
     if (!dictationText || !dictationText.trim()) return false;
     if (!isTabSelectedForFilling()) {
       console.log("[AutoRIS Content] Bỏ qua điền vì tab này chưa được tick chọn '🎯 Điền tab này'.");
       return false;
     }
-    const cleanDictation = dictationText.normalize("NFC").trim();
+    const rawClean = ClinicalSynthesizer.cleanFillerWords(dictationText);
+    if (!rawClean) return false;
+    const cleanDictation = rawClean;
     lastDictationText = cleanDictation;
 
     updateFloatingPreview(cleanDictation, null, "Đang phân bổ giải phẫu...");
 
-    const storedConfig = await chrome.storage.local.get([
-      STORAGE_KEYS.SMART_SYNTHESIZE,
-      STORAGE_KEYS.AUTO_COPY,
-      STORAGE_KEYS.PLAY_CHIME
-    ]);
+    let storedConfig = {};
+    try {
+      if (isExtensionValid()) {
+        storedConfig = await chrome.storage.local.get([
+          STORAGE_KEYS.SMART_SYNTHESIZE,
+          STORAGE_KEYS.AUTO_COPY,
+          STORAGE_KEYS.PLAY_CHIME
+        ]);
+      }
+    } catch (e) {
+      storedConfig = {};
+    }
     const useSmartSynthesize = storedConfig[STORAGE_KEYS.SMART_SYNTHESIZE] !== false;
 
     const sep = findSeparateFields();
@@ -564,20 +681,60 @@
   // =========================================================================
   // 5. HỆ THỐNG HOÀN TÁC (UNDO SYSTEM)
   // =========================================================================
-  function saveUndoSnapshot(motaEl, ketluanEl, unifiedEl) {
+  let lastStreamSnapshotSaved = false;
+  let streamResetTimer = null;
+
+  function resetStreamUndoSession() {
+    lastStreamSnapshotSaved = false;
+    if (streamResetTimer) {
+      clearTimeout(streamResetTimer);
+      streamResetTimer = null;
+    }
+  }
+
+  function saveUndoSnapshot(motaEl, ketluanEl, unifiedEl, isStream = false) {
+    const curUnified = unifiedEl ? (unifiedEl.isContentEditable ? unifiedEl.innerHTML : unifiedEl.value) : null;
+    const curMota = motaEl ? (motaEl.isContentEditable ? motaEl.innerHTML : motaEl.value) : null;
+    const curKL = ketluanEl ? (ketluanEl.isContentEditable ? ketluanEl.innerHTML : ketluanEl.value) : null;
+
+    // 1. Chống trùng lặp (Deduplication): Nếu nội dung không thay đổi so với snapshot trên đỉnh stack, không lưu
+    if (undoStack.length > 0) {
+      const top = undoStack[undoStack.length - 1];
+      const sameUnified = top.unifiedEl === unifiedEl && top.unifiedVal === curUnified;
+      const sameMota = top.motaEl === motaEl && top.motaVal === curMota;
+      const sameKL = top.ketluanEl === ketluanEl && top.ketluanVal === curKL;
+      if (sameUnified && sameMota && sameKL) {
+        return;
+      }
+    }
+
+    // 2. Chế độ gộp luồng đọc (Streaming Session Grouping):
+    // Trong 1 câu đọc có nhiều lần gửi tự động liên tục, chỉ lưu snapshot GỐC trước khi đọc câu đó!
+    if (isStream && lastStreamSnapshotSaved) {
+      if (streamResetTimer) clearTimeout(streamResetTimer);
+      streamResetTimer = setTimeout(resetStreamUndoSession, 3500);
+      return;
+    }
+
     const snapshot = {
       motaEl,
       ketluanEl,
       unifiedEl,
-      motaVal: motaEl ? (motaEl.isContentEditable ? motaEl.innerHTML : motaEl.value) : null,
-      ketluanVal: ketluanEl ? (ketluanEl.isContentEditable ? ketluanEl.innerHTML : ketluanEl.value) : null,
-      unifiedVal: unifiedEl ? (unifiedEl.isContentEditable ? unifiedEl.innerHTML : unifiedEl.value) : null
+      motaVal: curMota,
+      ketluanVal: curKL,
+      unifiedVal: curUnified
     };
     undoStack.push(snapshot);
-    if (undoStack.length > 10) undoStack.shift();
+    if (isStream) {
+      lastStreamSnapshotSaved = true;
+      if (streamResetTimer) clearTimeout(streamResetTimer);
+      streamResetTimer = setTimeout(resetStreamUndoSession, 3500);
+    }
+    if (undoStack.length > 15) undoStack.shift();
   }
 
   function handleUndo() {
+    resetStreamUndoSession();
     if (undoStack.length === 0) {
       showToast("ℹ️ Không có thao tác nào để hoàn tác!");
       return;
@@ -648,9 +805,114 @@
   }
 
   // =========================================================================
+  // 5.5. THU THẬP VÀ GỬI PHẢN HỒI / CA SỬA CỦA BÁC SĨ LÊN SERVER
+  // =========================================================================
+  function extractCurrentDoctorReport() {
+    const editor = findRISEditor();
+    if (editor) {
+      if (editor.isContentEditable || editor.getAttribute("contenteditable") === "true") {
+        return (editor.innerText || editor.textContent || "").trim();
+      }
+      if (editor.value) {
+        return editor.value.trim();
+      }
+    }
+    const sep = findSeparateFields();
+    if (sep) {
+      const motaVal = sep.motaEl ? (sep.motaEl.value || sep.motaEl.innerText || "").trim() : "";
+      const klVal = sep.ketluanEl ? (sep.ketluanEl.value || sep.ketluanEl.innerText || "").trim() : "";
+      if (motaVal || klVal) {
+        return `${motaVal}\n\nKẾT LUẬN:\n${klVal}`.trim();
+      }
+    }
+    return "";
+  }
+
+  function getLatestAIOutput() {
+    if (lastSynthesizedReport) {
+      return lastSynthesizedReport.trim();
+    }
+    if (lastSynthesizedData) {
+      if (lastSynthesizedData.mota && lastSynthesizedData.ketluan) {
+        return `${lastSynthesizedData.mota}\n\nKẾT LUẬN:\n${lastSynthesizedData.ketluan}`.trim();
+      }
+      return (lastSynthesizedData.ketluan || lastSynthesizedData.mota || "").trim();
+    }
+    return "";
+  }
+
+  function getLatestRawInput() {
+    return (lastInputText || lastDictationText || "").trim();
+  }
+
+  async function captureAndSubmitFeedback() {
+    if (!isExtensionValid()) {
+      showToast("⚠️ Tiện ích vừa tải lại. Vui lòng bấm F5 lại trang RIS!", true);
+      return;
+    }
+
+    const doctorFinal = extractCurrentDoctorReport();
+    const aiOutput = getLatestAIOutput();
+    const rawInput = getLatestRawInput();
+
+    if (!doctorFinal && !aiOutput && !rawInput) {
+      showToast("ℹ️ Chưa có nội dung báo cáo hoặc bản đọc nào để lưu!", true);
+      return;
+    }
+
+    const feedbackBtn = document.getElementById("autoris-btn-feedback");
+    const originalText = feedbackBtn ? feedbackBtn.innerHTML : "";
+    if (feedbackBtn) {
+      feedbackBtn.disabled = true;
+      feedbackBtn.innerHTML = "⏳ Đang gửi lên server...";
+    }
+
+    const isLungRADS = (lastSynthesizedReport && /Lung-RADS/i.test(lastSynthesizedReport)) ||
+                       (aiOutput && /Lung-RADS/i.test(aiOutput));
+
+    const payload = {
+      source: isLungRADS ? "pacs_lung_rads" : "voice_dictation",
+      raw_input: rawInput,
+      ai_output: aiOutput,
+      doctor_final: doctorFinal,
+      page_url: window.location.href,
+      timestamp: new Date().toISOString()
+    };
+
+    chrome.runtime.sendMessage({
+      action: "SUBMIT_FEEDBACK",
+      payload: payload
+    }, (res) => {
+      if (feedbackBtn) {
+        feedbackBtn.disabled = false;
+        feedbackBtn.innerHTML = originalText;
+      }
+      if (res && res.success) {
+        playChimeSound();
+        const cid = res.data?.id || "OK";
+        showToast(`✅ Đã lưu ca sửa lên server (Mã: ${cid})! Tối nay AI sẽ học lại.`);
+        if (feedbackBtn) {
+          feedbackBtn.innerHTML = "✅ Đã lưu ca sửa!";
+          setTimeout(() => {
+            feedbackBtn.innerHTML = originalText;
+          }, 3000);
+        }
+      } else {
+        console.error("[AutoRIS] Lỗi lưu feedback:", res?.error);
+        showToast(`❌ Không thể lưu lên server: ${res?.error || "Mất kết nối"}`, true);
+      }
+    });
+  }
+
+  // =========================================================================
   // 6. THANH ĐIỀU KHIỂN NỔI (CHỈ HIỆN TRÊN TRANG RIS)
   // =========================================================================
   function createFloatingVoiceBar() {
+    if (isViewerPage()) {
+      const existing = document.getElementById("autoris-floating-bar");
+      if (existing) existing.remove();
+      return;
+    }
     if (!isRISPage() || document.getElementById("autoris-floating-bar")) return;
 
     const bar = document.createElement("div");
@@ -678,11 +940,11 @@
           <button id="autoris-btn-apply" class="autoris-btn-primary" title="Điền lại câu này vào RIS">
             ✍️ Điền lại
           </button>
-          <button id="autoris-btn-copy" class="autoris-btn-secondary" title="Sao chép toàn bộ kết quả vào Clipboard">
-            📋 Copy
-          </button>
           <button id="autoris-btn-undo" class="autoris-btn-secondary" title="Hoàn tác nội dung vừa điền (Ctrl+Z)">
             ↩️ Hoàn tác
+          </button>
+          <button id="autoris-btn-feedback" class="autoris-btn-feedback" title="Lưu log ca bệnh & bản sửa của bác sĩ lên server để tối về AI học và sửa lại (Phím tắt: Ctrl+Shift+S)">
+            🚨 Báo lỗi / Lưu ca sửa
           </button>
         </div>
       </div>
@@ -779,51 +1041,96 @@
       }
     });
 
-    document.getElementById("autoris-btn-copy").addEventListener("click", async () => {
-      let textToCopy = "";
-      if (lastSynthesizedData) {
-        if (lastSynthesizedData.mota && lastSynthesizedData.ketluan) {
-          textToCopy = `${lastSynthesizedData.mota}\n\nKẾT LUẬN:\n${lastSynthesizedData.ketluan}`;
-        } else {
-          textToCopy = lastSynthesizedData.ketluan || lastSynthesizedData.mota || "";
-        }
-      }
-      if (!textToCopy) {
-        const previewEl = document.getElementById("autoris-preview-text");
-        textToCopy = previewEl ? (previewEl.innerText || previewEl.textContent || "").trim() : "";
-      }
-      if (textToCopy) {
-        await copyToClipboard(textToCopy);
-        showToast("📋 Đã copy kết quả vào clipboard!");
-      } else {
-        showToast("ℹ️ Chưa có nội dung để sao chép!");
+    document.getElementById("autoris-btn-undo").addEventListener("click", handleUndo);
+
+    const feedbackBtn = document.getElementById("autoris-btn-feedback");
+    if (feedbackBtn) {
+      feedbackBtn.addEventListener("click", captureAndSubmitFeedback);
+    }
+
+    // Phím tắt Ctrl+Shift+S hoặc Alt+S: Báo lỗi / Lưu ca sửa lên server
+    window.addEventListener("keydown", (e) => {
+      if ((e.ctrlKey && e.shiftKey && (e.key === "S" || e.key === "s" || e.code === "KeyS")) ||
+          (e.altKey && (e.key === "S" || e.key === "s" || e.code === "KeyS"))) {
+        e.preventDefault();
+        captureAndSubmitFeedback();
       }
     });
-
-    document.getElementById("autoris-btn-undo").addEventListener("click", handleUndo);
   }
+
+  const recentDictationsLog = [];
+  const MAX_LOG_ENTRIES = 6;
 
   function updateFloatingPreview(rawText, synthResult = null, statusMsg = "") {
     const previewEl = document.getElementById("autoris-preview-text");
     if (!previewEl) return;
 
-    if (statusMsg) {
+    if (statusMsg && !rawText && recentDictationsLog.length === 0) {
       previewEl.innerHTML = `<span style="color:#38bdf8;">⏳ ${escapeHTML(statusMsg)}</span>`;
       return;
     }
 
-    let html = `<div style="color:#94a3b8;font-size:11px;margin-bottom:4px;"><b>📱 Bác sĩ đọc:</b> "${escapeHTML(rawText)}"</div>`;
+    const timeStr = new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
-    if (synthResult) {
-      if (synthResult.summary) {
-        html += `<div style="color:#10b981;font-size:11px;margin-bottom:4px;"><b>⚡ Thay đổi:</b> ${escapeHTML(synthResult.summary)}</div>`;
+    if (rawText && rawText.trim()) {
+      const trimmed = rawText.trim();
+      const lastEntry = recentDictationsLog[recentDictationsLog.length - 1];
+      if (!lastEntry || lastEntry.text !== trimmed) {
+        recentDictationsLog.push({
+          time: timeStr,
+          text: trimmed,
+          summary: synthResult && synthResult.summary ? synthResult.summary : "",
+          ketluan: synthResult && synthResult.ketluan ? synthResult.ketluan : ""
+        });
+        if (recentDictationsLog.length > MAX_LOG_ENTRIES) {
+          recentDictationsLog.shift();
+        }
+      } else if (synthResult) {
+        if (synthResult.summary) lastEntry.summary = synthResult.summary;
+        if (synthResult.ketluan) lastEntry.ketluan = synthResult.ketluan;
       }
-      if (synthResult.ketluan) {
-        html += `<div style="color:#38bdf8;font-size:12px;border-top:1px solid #1e293b;padding-top:4px;"><b>KẾT LUẬN:</b> ${escapeHTML(synthResult.ketluan)}</div>`;
+    }
+
+    let html = "";
+    if (recentDictationsLog.length === 0) {
+      if (statusMsg) {
+        html = `<span style="color:#38bdf8;">⏳ ${escapeHTML(statusMsg)}</span>`;
+      } else {
+        html = `<span style="color:#64748b;">🟢 Sẵn sàng nhận giọng nói từ điện thoại (AutoRIS ZipFormer)...</span>`;
+      }
+    } else {
+      html += `<div style="display:flex;flex-direction:column;gap:5px;">`;
+      recentDictationsLog.forEach((item, index) => {
+        const isLatest = index === recentDictationsLog.length - 1;
+        const borderColor = isLatest ? "#38bdf8" : "#334155";
+        const bgColor = isLatest ? "rgba(56, 189, 248, 0.08)" : "transparent";
+        html += `
+          <div style="padding:4px 6px;border-left:3px solid ${borderColor};background:${bgColor};border-radius:3px;">
+            <div style="font-size:11px;color:${isLatest ? '#f8fafc' : '#94a3b8'};">
+              <span style="color:#64748b;font-size:10px;margin-right:4px;">[${item.time}]</span>
+              <b>Bác sĩ:</b> "${escapeHTML(item.text)}"
+            </div>
+            ${item.summary ? `<div style="color:#10b981;font-size:10.5px;margin-top:2px;">⚡ ${escapeHTML(item.summary)}</div>` : ''}
+          </div>
+        `;
+      });
+      html += `</div>`;
+
+      const latestKetluan = synthResult && synthResult.ketluan 
+        ? synthResult.ketluan 
+        : (recentDictationsLog[recentDictationsLog.length - 1]?.ketluan || "");
+
+      if (latestKetluan) {
+        html += `<div style="color:#38bdf8;font-size:11.5px;font-weight:600;border-top:1px solid #1e293b;margin-top:6px;padding-top:4px;"><b>KẾT LUẬN:</b> ${escapeHTML(latestKetluan)}</div>`;
+      }
+
+      if (statusMsg) {
+        html += `<div style="color:#f59e0b;font-size:10.5px;margin-top:4px;">⚠️ ${escapeHTML(statusMsg)}</div>`;
       }
     }
 
     previewEl.innerHTML = html;
+    previewEl.scrollTop = previewEl.scrollHeight;
   }
 
   // =========================================================================
@@ -890,7 +1197,9 @@
             apiKey: config[STORAGE_KEYS.AI_API_KEY] || DEFAULT_CONFIG.aiKey,
             googleKeysPool: config[STORAGE_KEYS.GOOGLE_KEYS_POOL] || DEFAULT_CONFIG.googleKeysPool,
             preferredModel: config[STORAGE_KEYS.AI_MODEL] || DEFAULT_CONFIG.aiModel,
-            systemPrompt: config[STORAGE_KEYS.SYSTEM_PROMPT] || LUNG_RADS_SYSTEM_PROMPT,
+            systemPrompt: (config[STORAGE_KEYS.SYSTEM_PROMPT] && config[STORAGE_KEYS.SYSTEM_PROMPT].includes("nốt đặc thuỳ trên phổi trái và nốt kính mờ"))
+              ? config[STORAGE_KEYS.SYSTEM_PROMPT]
+              : LUNG_RADS_SYSTEM_PROMPT,
             rawText: currentText
           }
         }, (res) => {
@@ -902,9 +1211,12 @@
       });
 
       clearInterval(countInterval);
-      await copyToClipboard(synthesized);
+      const cleanSynthesized = (typeof sanitizeLungRADSReport === "function")
+        ? sanitizeLungRADSReport(synthesized)
+        : synthesized;
+      await copyToClipboard(cleanSynthesized);
       lastInputText = currentText;
-      lastSynthesizedReport = synthesized;
+      lastSynthesizedReport = cleanSynthesized;
 
       btn.disabled = false;
       btn.innerHTML = `✅ Đã điền vào RIS & Copy!`;
@@ -1033,6 +1345,7 @@
       gain2.connect(ctx.destination);
       osc2.start(ctx.currentTime + 0.08);
       osc2.stop(ctx.currentTime + 0.25);
+      setTimeout(() => ctx.close(), 300);
     } catch (e) {}
   }
 
@@ -1148,29 +1461,7 @@
       }
     });
 
-    // Tự động kiểm tra báo cáo mới khi tab RIS được focus
-    function checkLatestStorageReport() {
-      if (!isExtensionValid() || !isTabSelectedForFilling()) return;
-      try {
-        chrome.storage.local.get([STORAGE_KEYS.LAST_REPORT, STORAGE_KEYS.LAST_REPORT_TIME], (res) => {
-          const report = res[STORAGE_KEYS.LAST_REPORT];
-          const time = res[STORAGE_KEYS.LAST_REPORT_TIME];
-          if (report && time && time > lastAppliedReportTime && Date.now() - time < 900000) {
-            lastAppliedReportTime = time;
-            const editor = findRISEditor();
-            if (editor) {
-              applySynthesizedReportToRISEditor(editor, report);
-              playChimeSound();
-            }
-          }
-        });
-      } catch (e) {}
-    }
 
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible") checkLatestStorageReport();
-    });
-    window.addEventListener("focus", checkLatestStorageReport);
 
     // Khởi tạo Floating Bar
     if (document.readyState === "loading") {

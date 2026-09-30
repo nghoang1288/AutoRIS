@@ -104,6 +104,7 @@
 
 .autoris-controls {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
 }
 
@@ -117,7 +118,7 @@
   color: #ffffff;
   border: none;
   border-radius: 8px;
-  padding: 8px 12px;
+  padding: 8px 10px;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -129,6 +130,7 @@
 }
 
 .autoris-btn-secondary {
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -137,7 +139,7 @@
   color: #e2e8f0;
   border: 1px solid #475569;
   border-radius: 8px;
-  padding: 8px 12px;
+  padding: 8px 10px;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -147,6 +149,29 @@
 .autoris-btn-secondary:hover {
   background: #475569;
   color: #ffffff;
+}
+
+.autoris-btn-feedback {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #b45309 0%, #78350f 100%);
+  color: #fef3c7;
+  border: 1px solid #d97706;
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.autoris-btn-feedback:hover {
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(217, 119, 6, 0.4);
 }
 
 /* Nút chọn tab nhận kết quả khi mở nhiều tab RIS cùng lúc */

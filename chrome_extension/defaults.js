@@ -19,9 +19,6 @@ const STORAGE_KEYS = {
   GOOGLE_KEYS_POOL: "googleKeysPool",
 
   // PACS Lung-RADS Translator
-  PACS_SYSTEM_PROMPT: "systemPrompt",
-  LAST_PACS_REPORT: "lastSynthesizedReport",
-  LAST_PACS_TIME: "lastReportTime",
   INSTALLED_VERSION: "installedVersion",
   LAST_REPORT: "lastSynthesizedReport",
   LAST_REPORT_TIME: "lastReportTime",
@@ -46,9 +43,11 @@ const TIMING = {
 };
 
 const GOOGLE_MODEL_MAP = {
-  "gemini-3.5-flash-lite": "gemini-2.5-flash-lite",
-  "gemini-3.7-flash": "gemini-2.5-flash",
-  "gemini-3.6-flash": "gemini-2.5-flash"
+  "gemini-3.5-flash-lite": "gemini-3.5-flash-lite",
+  "gemini-3.5-flash": "gemini-3.5-flash",
+  "gemini-3.7-flash": "gemini-3.5-flash",
+  "gemini-3.8-flash": "gemini-3.5-flash",
+  "combo1": "gemini-3.5-flash-lite"
 };
 
 const DEFAULT_CONFIG = {
@@ -61,9 +60,11 @@ const DEFAULT_CONFIG = {
   pollIntervalMs: 800,
   connectionMode: "auto",
   aiEndpoint: "https://9router.hoang.qzz.io/v1",
-  aiKey: "",
+  aiKey: "sk-e8ff53fc363b707a-aj81vz-ff55a6d6",
   aiModel: "gemini-3.5-flash-lite",
-  googleKeysPool: []
+  googleKeysPool: [
+    "AIzaSyAbHAXnTiePACai-G3sF2taXvdRvoADuoc"
+  ]
 };
 
 const DEFAULT_SETTINGS = {
@@ -86,6 +87,8 @@ YÊU CẦU XỬ LÝ (TUYỆT ĐỐI TUÂN THỦ 3 NGUYÊN TẮC):
    - Với GAN: Khi có tổn thương (ví dụ nang gan, u máu, nốt vôi hóa, u gan...), BẮT BUỘC XOÁ BỎ câu "không thấy khối khu trú trước và sau tiêm thuốc cản quang." và câu "nhu mô đồng nhất". Cấu trúc dòng gan chuẩn: "-- Gan không to, bờ đều, nhu mô gan [vị trí + tổn thương + kích thước bác sĩ đọc]." (Ví dụ: "-- Gan không to, bờ đều, nhu mô gan trái có nang đường kính 5mm.").
    - Với TÚI MẬT: Khi có tổn thương (sỏi, polyp...), XOÁ BỎ câu "không thấy sỏi".
    - Với THẬN: Khi có tổn thương (sỏi, nang, ứ nước...), XOÁ BỎ câu "không thấy sỏi", "không giãn".
+   - Với PHỔI (Phổi phải, Phổi trái): Khi có tổn thương (nốt, khối, kính mờ...), mô tả chi tiết tổn thương nhưng BẮT BUỘC GIỮ NGUYÊN câu kết: "Không thấy dày tổ chức kẽ, không thấy giãn phế quản, phế nang." ở cuối dòng.
+     Ví dụ: "-- Phổi trái: Thuỳ trên có 1 nốt kính mờ kích thước 5×4 mm (đường kính trung bình 5 mm). Không thấy dày tổ chức kẽ, không thấy giãn phế quản, phế nang."
    - Với cơ quan CHƯA CÓ trong mẫu (ví dụ: Dạ dày, Ruột non, Đại tràng, Ruột thừa, Tuyến thượng thận, Cột sống...): Thêm 1 dòng mới duy nhất "-- [Tên cơ quan]: [mô tả]" vào đúng vị trí giải phẫu tự nhiên trong phần MÔ TẢ (sau Tụy/Lách).
    - Nếu lời đọc có hạch hoặc dịch: Cập nhật vào dòng hạch/dòng dịch tương ứng trong mẫu.
 
@@ -96,6 +99,7 @@ YÊU CẦU XỬ LÝ (TUYỆT ĐỐI TUÂN THỦ 3 NGUYÊN TẮC):
    - Ví dụ đúng: "Hình ảnh nang gan hạ phân thùy VIII."
    - Ví dụ đúng: "Hình ảnh dày thành không đều hang - môn vị dạ dày gây hẹp lòng môn vị, kèm vài hạch lân cận."
    - Nếu trước đó trong kết luận đã có tổn thương khác, các câu phía sau nối tiếp KHÔNG lặp lại từ "Hình ảnh" (ví dụ: "Hình ảnh nang gan trái. Sỏi thận phải.").
+   - Với PHỔI (nốt phổi, Lung-RADS): Khi có nốt ở cả hai phổi (nốt đặc hoặc kính mờ hai phổi), câu kết luận chuẩn là: "Hình ảnh vài nốt [đặc/kính mờ] hai phổi (Lung-RADS [X]).", TUYỆT ĐỐI KHÔNG mở ngoặc liệt kê tên từng thuỳ như (thuỳ dưới phổi phải, thuỳ dưới phổi trái).
    - Xóa bỏ câu kết luận bình thường ("Hiện tại không thấy bất thường...").
 
 3. ĐỊNH DẠNG TRẢ VỀ:
@@ -158,20 +162,50 @@ Mô tả trong mỗi phổi theo thứ tự: thuỳ trên, thuỳ giữa (chỉ 
   - QUY TẮC CO KÉO MÀNG PHỔI:
     + Nốt đặc đường kính trung bình < 6 mm kèm co kéo màng phổi -> Lung-RADS 2.
     + Nốt đặc đường kính trung bình từ 6 đến < 8 mm kèm co kéo màng phổi (không có bờ tua gai) -> Lung-RADS 3.
-    + Nốt đặc đường kính trung bình >= 8 mm hoặc nốt bán đặc phần đặc >= 6 mm kèm co kéo màng phổi -> Lung-RADS 4.
-  - Nếu phổi không có tổn thương/nốt: "trường phổi sáng đều, không thấy tổn thương dạng nốt hoặc dạng khối. Không thấy dày tổ chức kẽ, không thấy giãn phế quản, phế nang."
-
-**3. Kết luận**
+* **QUY TẮC BẮT BUỘC VỀ CÂU KẾT CỦA CẢ HAI PHỔI (TUYỆT ĐỐI KHÔNG ĐƯỢC XOÁ)**:
+  - DÙ PHỔI CÓ TỔN THƯƠNG HAY KHÔNG CÓ TỔN THƯƠNG, DÒNG MÔ TẢ CỦA CẢ HAI PHỔI BẮT BUỘC LUÔN KẾT THÚC BẰNG CÂU:
+    "Không thấy dày tổ chức kẽ, không thấy giãn phế quản, phế nang."
+  - Nếu phổi KHÔNG có tổn thương/nốt:
+    "trường phổi sáng đều, không thấy tổn thương dạng nốt hoặc dạng khối. Không thấy dày tổ chức kẽ, không thấy giãn phế quản, phế nang."
+  - Nếu phổi CÓ tổn thương/nốt: Mô tả chi tiết tổn thương theo quy tắc trên, rồi BẮT BUỘC VIẾT TIẾP CÂU:
+    "Không thấy dày tổ chức kẽ, không thấy giãn phế quản, phế nang." ở cuối dòng.
+    * Ví dụ đúng chuẩn:
+      -- Phổi phải: trường phổi sáng đều, không thấy tổn thương dạng nốt hoặc dạng khối. Không thấy dày tổ chức kẽ, không thấy giãn phế quản, phế nang.
+      -- Phổi trái: Thuỳ trên có 1 nốt kính mờ kích thước 5×4 mm (đường kính trung bình 5 mm). Không thấy dày tổ chức kẽ, không thấy giãn phế quản, phế nang.
+    * CẤM (SAI):
+      -- Phổi trái: Thuỳ trên có 1 nốt kính mờ kích thước 5×4 mm (đường kính trung bình 5 mm). (SAI vì bị xoá mất câu 'Không thấy dày tổ chức kẽ, không thấy giãn phế quản, phế nang.')
 * Toàn bộ phần Kết luận phải nằm trên 1 DÒNG DUY NHẤT.
 * Phân loại Lung-RADS bắt buộc tính theo ĐƯỜNG KÍNH TRUNG BÌNH.
+* **QUY TẮC ĐỊNH DẠNG LUNG-RADS TRONG KẾT LUẬN (BẮT BUỘC)**:
+  - Luôn đặt Lung-RADS trong dấu ngoặc đơn ở cuối câu: "(Lung-RADS 2).", "(Lung-RADS 3).", "(Lung-RADS 4A)."
+  - TUYỆT ĐỐI CẤM dùng dấu gạch nối (CẤM ghi "- Lung-RADS 2.").
+
+* **QUY TẮC GỘP CÁC TỔN THƯƠNG CÙNG MỨC LUNG-RADS TRONG KẾT LUẬN (BẮT BUỘC)**:
+  - Khi có từ 2 tổn thương khác loại hoặc khác vị trí có CÙNG MỨC LUNG-RADS (ví dụ cùng Lung-RADS 2, hoặc cùng Lung-RADS 3):
+    + BẮT BUỘC GỘP CHUNG VÀO 1 CÂU DUY NHẤT nối bằng từ "và" (hoặc dấu phẩy nếu từ 3 tổn thương trở lên).
+    + Mức "(Lung-RADS [X])." CHỈ ĐƯỢC XUẤT HIỆN ĐÚNG 1 LẦN DUY NHẤT Ở CUỐI CÂU GỘP.
+    + TUYỆT ĐỐI CẤM gắn "(Lung-RADS [X])" vào từng vế rồi nối bằng dấu chấm phẩy ".," hoặc tách rời!
+    + ĐÚNG CHUẨN: "Hình ảnh nốt đặc thuỳ trên phổi trái và nốt kính mờ thuỳ trên phổi phải (Lung-RADS 2)."
+    + SAI (CẤM): "Hình ảnh nốt đặc thuỳ trên phổi trái (Lung-RADS 2)., nốt kính mờ thuỳ trên phổi phải (Lung-RADS 2)."
+    + SAI (CẤM): "Hình ảnh nốt đặc thuỳ trên phổi trái (Lung-RADS 2). Nốt kính mờ thuỳ trên phổi phải (Lung-RADS 2)."
+
+* **QUY TẮC NỐT Ở HAI PHỔI VÀ ĐỊNH LƯỢNG "VÀI NỐT" TRONG KẾT LUẬN (BẮT BUỘC)**:
+  - Khi có nốt cùng loại (cùng nốt đặc, cùng nốt kính mờ, hoặc cùng nốt vôi hoá) ở CẢ HAI PHỔI:
+    + BẮT BUỘC dùng cụm: "vài nốt [đặc/kính mờ/vôi hoá] hai phổi (Lung-RADS [X])."
+    + TUYỆT ĐỐI CẤM liệt kê tên từng thuỳ trong Kết luận khi đã ở hai phổi (CẤM ghi "(thuỳ dưới phổi phải, thuỳ dưới phổi trái)"). Tên các thuỳ chỉ được mô tả chi tiết ở phần MÔ TẢ.
+    + ĐÚNG CHUẨN: "Hình ảnh vài nốt đặc hai phổi (Lung-RADS 2)."
+    + ĐÚNG CHUẨN: "Hình ảnh vài nốt kính mờ hai phổi (Lung-RADS 2)."
+    + ĐÚNG CHUẨN: "Hình ảnh vài nốt vôi hoá hai phổi (Lung-RADS 1)."
+    + SAI (CẤM): "Hình ảnh nốt đặc hai phổi (thuỳ dưới phổi phải, thuỳ dưới phổi trái) - Lung-RADS 2."
+  - Chỉ ghi tên thuỳ trong Kết luận khi tổn thương chỉ nằm khu trú ở DUY NHẤT một thuỳ của một bên phổi (Ví dụ: "Hình ảnh nốt đặc thuỳ trên phổi phải (Lung-RADS 2).").
 * Ưu tiên câu nốt nguy cơ cao (4X, 4B, 4A) lên đầu tiên. BỎ TOÀN BỘ MÔ TẢ HÌNH THÁI TRONG KẾT LUẬN (chỉ ghi loại tổn thương + vị trí + Lung-RADS).
 * Mỗi mức Lung-RADS chỉ xuất hiện ĐÚNG 1 LẦN trong kết luận.
 * Thứ tự các câu trong dòng Kết luận:
   1. Câu Lung-RADS cao nhất (bắt đầu bằng từ "Hình ảnh").
   2. Câu các mức Lung-RADS thấp hơn (viết nối tiếp, KHÔNG dùng lại từ "Hình ảnh"):
      - Câu gom nốt Lung-RADS 3 (nếu có).
-     - Câu gom nốt Lung-RADS 2 (nếu có).
-     - Câu gom nốt vôi hoá Lung-RADS 1.
+     - Câu gom nốt Lung-RADS 2 (nếu có). Ví dụ: "Vài nốt đặc hai phổi (Lung-RADS 2)."
+     - Câu gom nốt vôi hoá Lung-RADS 1. Ví dụ: "Vài nốt vôi hoá hai phổi (Lung-RADS 1)."
   3. Câu tổn thương kèm theo ở cuối cùng.
 * CHỈ DÙNG ĐÚNG 1 TỪ 'Hình ảnh' DUY NHẤT ở đầu dòng kết luận.
 * Không ghi kích thước trong Kết luận.
@@ -189,4 +223,85 @@ function formatMaskedKey(key) {
   const trimmed = key.trim();
   if (trimmed.length <= 6) return trimmed;
   return `${trimmed.slice(0, 3)}••••••••••••••••${trimmed.slice(-3)}`;
+}
+
+/**
+ * Chuẩn hoá câu Kết luận theo chuẩn Lung-RADS v2022:
+ * 1. Chuyển " - Lung-RADS 2." thành " (Lung-RADS 2)."
+ * 2. Loại bỏ mở ngoặc liệt kê thuỳ sau "hai phổi": "(thuỳ dưới phổi phải, thuỳ dưới phổi trái)" -> BỎ
+ * 3. Chuyển "nốt ... hai phổi" thành "vài nốt ... hai phổi"
+ */
+function sanitizeLungRADSConclusion(conclusionText) {
+  if (!conclusionText || !conclusionText.trim()) return conclusionText;
+  let text = conclusionText.trim();
+
+  // 1. Loại bỏ các mở ngoặc liệt kê tên thuỳ sau "hai phổi"
+  text = text.replace(/hai\s+phổi\s*\([^)]*(?:thuỳ|thùy)[^)]*\)/gi, "hai phổi");
+
+  // 2. Chuyển đổi "nốt ... hai phổi" thành "vài nốt ... hai phổi" nếu chưa có từ định lượng (vài/nhiều/các)
+  text = text.replace(/(^|[.\n]\s*)(Hình\s+ảnh\s+)?nốt\s+(đặc|kính\s+mờ|vôi\s+hoá|vôi\s+hóa|bán\s+đặc)\s+hai\s+phổi/gi, function(match, punct, prefix, type) {
+    if (prefix) {
+      return (punct || "") + prefix + "vài nốt " + type + " hai phổi";
+    }
+    const cap = (!punct || punct.includes("\n") || punct.includes(".")) ? "Vài nốt " : "vài nốt ";
+    return (punct || "") + cap + type + " hai phổi";
+  });
+
+  // 3. Chuẩn hoá định dạng Lung-RADS:
+  // Chuyển " - Lung-RADS 2." hoặc " - Lung-RADS 2" thành " (Lung-RADS 2)."
+  text = text.replace(/\s*[-–—]\s*(Lung-RADS\s+[0-9][A-Za-z]?)\.?/gi, function(_, lr) {
+    return " (" + lr + ").";
+  });
+
+  // 4. Loại bỏ các cụm phân cách lỗi do AI sinh ra như '.,' hoặc ',.' hoặc '., '
+  text = text.replace(/[.,;]{2,}/g, ", ");
+
+  // 5. GỘP CÁC TỔN THƯƠNG CÙNG MỨC LUNG-RADS TRONG CÂU:
+  // Ví dụ: "Hình ảnh nốt đặc thuỳ trên phổi trái (Lung-RADS 2), nốt kính mờ thuỳ trên phổi phải (Lung-RADS 2)."
+  // -> "Hình ảnh nốt đặc thuỳ trên phổi trái và nốt kính mờ thuỳ trên phổi phải (Lung-RADS 2)."
+  const sameTierRegex = /\((Lung-RADS\s+[0-9][A-Za-z]?)\)[.,;\s]+(?:và\s+)?([^().]+?)\s*\(\1\)/i;
+  while (sameTierRegex.test(text)) {
+    text = text.replace(sameTierRegex, function(match, lr, secondPart) {
+      const cleanPart = secondPart.trim().replace(/^và\s+/i, "");
+      return " __JOIN__ " + cleanPart + " (" + lr + ")";
+    });
+  }
+
+  if (text.includes("__JOIN__")) {
+    const parts = text.split("__JOIN__");
+    let joined = parts[0].trim();
+    for (let i = 1; i < parts.length; i++) {
+      if (i === parts.length - 1) {
+        joined += " và " + parts[i].trim();
+      } else {
+        joined += ", " + parts[i].trim();
+      }
+    }
+    text = joined;
+  }
+
+  // 6. Đảm bảo có dấu chấm sau (Lung-RADS X)
+  text = text.replace(/(\(Lung-RADS\s+[0-9][A-Za-z]?\))(?!\.)/gi, function(_, lr) {
+    return lr + ".";
+  });
+
+  // 7. Dọn dẹp khoảng trắng và dấu chấm trùng lặp
+  text = text.replace(/\.{2,}/g, ".").replace(/\s{2,}/g, " ").trim();
+
+  return text;
+}
+
+/**
+ * Chuẩn hoá toàn bộ báo cáo Lung-RADS (Mô tả + Kết luận)
+ */
+function sanitizeLungRADSReport(reportText) {
+  if (!reportText) return "";
+  let text = reportText.normalize("NFC");
+
+  text = text.replace(/((?:Kết\s*luận\s*:?\s*))([\s\S]*)/i, function(_, label, klBody) {
+    const cleanKL = sanitizeLungRADSConclusion(klBody);
+    return label.trim() + "\n" + cleanKL;
+  });
+
+  return text;
 }

@@ -74,7 +74,12 @@ object MedicalPhraseNormalizer {
     )
 
     private val REPEATED_TRAILING_FILLERS = Regex(
-        "(?:[.,\\s]+(?:đây\\s+này|đó\\s+thôi|bây\\s+giờ|dừng\\s+lại|được\\s+rồi|đây|này|đó|thôi|tôi|em|hết|xong|dừng|có|là|rồi|thì|ạ|nhé|nha)[.,\\s]*)+$",
+        "(?:[.,\\s]+(?:đây\\s+này|đó\\s+thôi|bây\\s+giờ|dừng\\s+lại|được\\s+rồi|đây|này|đó|thôi|tôi|em|hết|xong|dừng|có|là|rồi|thì|ạ|nhé|nha|đấy|ừ|à|ờ)[.,\\s]*)+$",
+        RegexOption.IGNORE_CASE
+    )
+
+    private val PURE_NOISE_CLAUSE = Regex(
+        "^(?:[.,;\\s]*(?:bây\\s+giờ|đây\\s+này|đó\\s+thôi|dừng\\s+lại|được\\s+rồi|bây|giờ|đây|này|đó|thôi|tôi|em|hết|xong|dừng|có|là|rồi|thì|ạ|nhé|nha|đấy|ừ|à|ờ)[.,;\\s]*)+$",
         RegexOption.IGNORE_CASE
     )
 
@@ -110,6 +115,23 @@ object MedicalPhraseNormalizer {
     }
 
     /**
+     * Cleans up noise/filler clauses occurring between clinical sentences (e.g., when doctor pauses to breathe).
+     */
+    fun cleanInSentenceFillers(text: String): String {
+        if (text.isBlank()) return text
+        val sentences = text.split(Regex("(?<=[.?!;])\\s+"))
+        val filtered = sentences.filter { !PURE_NOISE_CLAUSE.matches(it.trim()) }
+        if (filtered.isEmpty()) return ""
+        return filtered.joinToString(" ") { clause ->
+            var cl = clause.trim()
+            while (REPEATED_TRAILING_FILLERS.containsMatchIn(cl)) {
+                cl = REPEATED_TRAILING_FILLERS.replace(cl, "")
+            }
+            cl
+        }.trim()
+    }
+
+    /**
      * Cleans up trailing verbal fillers when the doctor finishes dictating.
      */
     fun cleanTrailingFillers(text: String): String {
@@ -134,5 +156,14 @@ object MedicalPhraseNormalizer {
         val trimmed = text.trim()
         if (trimmed.isEmpty()) return ""
         return trimmed.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
+    }
+
+    /**
+     * Checks if a raw segment or token is purely acoustic noise / breath filler.
+     */
+    fun isPureNoise(text: String): Boolean {
+        val t = text.trim()
+        if (t.isEmpty()) return true
+        return PURE_NOISE_CLAUSE.matches(t)
     }
 }

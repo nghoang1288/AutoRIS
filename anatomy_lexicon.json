@@ -1,0 +1,7648 @@
+{
+  "A01": {
+    "name": "Giải phẫu đại cương",
+    "count": 87,
+    "terms": [
+      {
+        "en": "Forehead",
+        "vi": "Trán",
+        "page": 4
+      },
+      {
+        "en": "Occiput",
+        "vi": "Chẩm",
+        "page": 4
+      },
+      {
+        "en": "Temple",
+        "vi": "Thái dương",
+        "page": 4
+      },
+      {
+        "en": "Face",
+        "vi": "Mặt",
+        "page": 4
+      },
+      {
+        "en": "Eye",
+        "vi": "Mắt",
+        "page": 4
+      },
+      {
+        "en": "Nose",
+        "vi": "Mũi",
+        "page": 4
+      },
+      {
+        "en": "Mouth",
+        "vi": "Miệng",
+        "page": 4
+      },
+      {
+        "en": "Chin",
+        "vi": "Cằm",
+        "page": 4
+      },
+      {
+        "en": "Thorax",
+        "vi": "Ngực",
+        "page": 4
+      },
+      {
+        "en": "Front of chest",
+        "vi": "Mặt trước ngực",
+        "page": 4
+      },
+      {
+        "en": "Abdomen",
+        "vi": "Bụng",
+        "page": 5
+      },
+      {
+        "en": "Pelvis",
+        "vi": "Chậu hông",
+        "page": 5
+      },
+      {
+        "en": "Back",
+        "vi": "Lưng",
+        "page": 5
+      },
+      {
+        "en": "Axilla",
+        "vi": "Nách",
+        "page": 5
+      },
+      {
+        "en": "Arm",
+        "vi": "Cánh tay",
+        "page": 5
+      },
+      {
+        "en": "Elbow",
+        "vi": "Khuỷu",
+        "page": 5
+      },
+      {
+        "en": "Forearm",
+        "vi": "Cẳng tay",
+        "page": 5
+      },
+      {
+        "en": "Hand",
+        "vi": "Bàn tay",
+        "page": 5
+      },
+      {
+        "en": "Wrist",
+        "vi": "Cổ tay",
+        "page": 5
+      },
+      {
+        "en": "Metacarpus",
+        "vi": "Thân bàn tay",
+        "page": 5
+      },
+      {
+        "en": "Palm",
+        "vi": "Gan bàn tay",
+        "page": 5
+      },
+      {
+        "en": "Dorsum of hand",
+        "vi": "Mu bàn tay",
+        "page": 5
+      },
+      {
+        "en": "Pelvic girdle",
+        "vi": "Đai chậu",
+        "page": 6
+      },
+      {
+        "en": "Buttocks",
+        "vi": "Mông",
+        "page": 6
+      },
+      {
+        "en": "Hip",
+        "vi": "Hông",
+        "page": 6
+      },
+      {
+        "en": "Thigh",
+        "vi": "Đùi",
+        "page": 6
+      },
+      {
+        "en": "Knee",
+        "vi": "Gối",
+        "page": 6
+      },
+      {
+        "en": "Leg",
+        "vi": "Cẳng chân",
+        "page": 6
+      },
+      {
+        "en": "Calf",
+        "vi": "Bắp chân",
+        "page": 6
+      },
+      {
+        "en": "Foot",
+        "vi": "Bàn chân",
+        "page": 6
+      },
+      {
+        "en": "Ankle",
+        "vi": "Cổ chân",
+        "page": 6
+      },
+      {
+        "en": "Heel",
+        "vi": "Gót",
+        "page": 6
+      },
+      {
+        "en": "Metatarsus",
+        "vi": "Thân bàn chân",
+        "page": 6
+      },
+      {
+        "en": "Sole",
+        "vi": "Gan bàn chân",
+        "page": 6
+      },
+      {
+        "en": "Dorsum of foot",
+        "vi": "Mu bàn chân",
+        "page": 6
+      },
+      {
+        "en": "Toes",
+        "vi": "Các ngón chân",
+        "page": 6
+      },
+      {
+        "en": "Cranial cavity",
+        "vi": "Hộp sọ",
+        "page": 7
+      },
+      {
+        "en": "Thoracic cavity",
+        "vi": "Khoang ngực",
+        "page": 7
+      },
+      {
+        "en": "Abdominal cavity",
+        "vi": "Ổ bụng",
+        "page": 7
+      },
+      {
+        "en": "Pelvic cavity",
+        "vi": "Khoang chậu hông",
+        "page": 7
+      },
+      {
+        "en": "Paramedian planes",
+        "vi": "Các mặt phẳng",
+        "page": 8
+      },
+      {
+        "en": "Transpyloric plane",
+        "vi": "Mặt phẳng ngang",
+        "page": 8
+      },
+      {
+        "en": "Subcostal plane",
+        "vi": "Mặt phẳng dưới",
+        "page": 8
+      },
+      {
+        "en": "Supracristal plane",
+        "vi": "Mặt phẳng trên",
+        "page": 8
+      },
+      {
+        "en": "Intertubercular plane",
+        "vi": "Mặt phẳng gian củ",
+        "page": 8
+      },
+      {
+        "en": "Interspinous plane",
+        "vi": "Mặt phẳng gian gai",
+        "page": 8
+      },
+      {
+        "en": "Orbital region",
+        "vi": "Vùng ổ mắt",
+        "page": 10
+      },
+      {
+        "en": "Infrapalpebral sulcus",
+        "vi": "Rãnh dưới mí mắt",
+        "page": 10
+      },
+      {
+        "en": "Infra-orbital region",
+        "vi": "Vùng dưới ổ mắt",
+        "page": 10
+      },
+      {
+        "en": "Buccal region",
+        "vi": "Vùng má",
+        "page": 10
+      },
+      {
+        "en": "Parotid region",
+        "vi": "Vùng mang tai",
+        "page": 10
+      },
+      {
+        "en": "Zygomatic region",
+        "vi": "Vùng gò má",
+        "page": 10
+      },
+      {
+        "en": "Nasal region",
+        "vi": "Vùng mũi",
+        "page": 10
+      },
+      {
+        "en": "Nasolabial sulcus",
+        "vi": "Rãnh mũi-môi",
+        "page": 10
+      },
+      {
+        "en": "Oral region",
+        "vi": "Vùng miệng",
+        "page": 10
+      },
+      {
+        "en": "Mantolabial sulcus",
+        "vi": "Rãnh cằm-môi",
+        "page": 10
+      },
+      {
+        "en": "Mental region",
+        "vi": "Vùng cằm",
+        "page": 10
+      },
+      {
+        "en": "Carotid triangle",
+        "vi": "Tam giác cảnh",
+        "page": 11
+      },
+      {
+        "en": "Submental triangle",
+        "vi": "Tam giác dưới cằm",
+        "page": 11
+      },
+      {
+        "en": "Mammary region",
+        "vi": "Vùng vú",
+        "page": 12
+      },
+      {
+        "en": "Inframammary region",
+        "vi": "Vùng dưới vú",
+        "page": 12
+      },
+      {
+        "en": "(Coccygeal foveola)",
+        "vi": "(Hõm cụt)",
+        "page": 13
+      },
+      {
+        "en": "Anterior region of arm",
+        "vi": "Vùng cánh tay",
+        "page": 13
+      },
+      {
+        "en": "Cubital fossa",
+        "vi": "Hố khuỷu",
+        "page": 14
+      },
+      {
+        "en": "lưng rộng và cơ chéo bụng ngoài",
+        "vi": "gối lên với mạc ngực-lưng",
+        "page": 14
+      },
+      {
+        "en": "Carpal region",
+        "vi": "Vùng cổ tay",
+        "page": 15
+      },
+      {
+        "en": "Palm; Palmar region",
+        "vi": "Gan bàn tay; Vùng",
+        "page": 15
+      },
+      {
+        "en": "Thenar eminence",
+        "vi": "Lồi mô cái",
+        "page": 15
+      },
+      {
+        "en": "Thumb",
+        "vi": "Ngón cái",
+        "page": 15
+      },
+      {
+        "en": "Index finger",
+        "vi": "Ngón trỏ",
+        "page": 15
+      },
+      {
+        "en": "Middle finger",
+        "vi": "Ngón giữa",
+        "page": 15
+      },
+      {
+        "en": "Ring finger",
+        "vi": "Ngón nhẫn",
+        "page": 15
+      },
+      {
+        "en": "Gluteal fold",
+        "vi": "Nếp mông",
+        "page": 16
+      },
+      {
+        "en": "Femoral triangle",
+        "vi": "Tam giác đùi",
+        "page": 16
+      },
+      {
+        "en": "Popliteal fossa",
+        "vi": "Hố khoeo",
+        "page": 16
+      },
+      {
+        "en": "Sural region",
+        "vi": "Vùng bắp chân",
+        "page": 17
+      },
+      {
+        "en": "Heel region",
+        "vi": "Vùng gót",
+        "page": 17
+      },
+      {
+        "en": "Sole; Plantar region",
+        "vi": "Gan bàn chân;",
+        "page": 17
+      },
+      {
+        "en": "Lateral part",
+        "vi": "Phần ngoài*",
+        "page": 18
+      },
+      {
+        "en": "Medial part",
+        "vi": "Phần trong*",
+        "page": 18
+      },
+      {
+        "en": "Ankle region",
+        "vi": "Vùng mắt cá",
+        "page": 18
+      },
+      {
+        "en": "Metatarsal region",
+        "vi": "Vùng thân bàn",
+        "page": 18
+      },
+      {
+        "en": "Digits of foot; Toes",
+        "vi": "Các ngón chân",
+        "page": 18
+      },
+      {
+        "en": "Great toe [I]",
+        "vi": "Ngón cái [I]",
+        "page": 18
+      },
+      {
+        "en": "Second toe [II]",
+        "vi": "Ngón hai [II]",
+        "page": 18
+      },
+      {
+        "en": "Third toe [III]",
+        "vi": "Ngón ba [III]",
+        "page": 18
+      },
+      {
+        "en": "Fourth toe [IV]",
+        "vi": "Ngón bốn [IV]",
+        "page": 18
+      }
+    ]
+  },
+  "A02": {
+    "name": "Hệ xương & X-quang",
+    "count": 286,
+    "terms": [
+      {
+        "en": "Compact bone",
+        "vi": "Xương đặc",
+        "page": 20
+      },
+      {
+        "en": "Periosteum",
+        "vi": "Màng ngoài xương",
+        "page": 20
+      },
+      {
+        "en": "Perichondrium",
+        "vi": "Màng ngoài sụn",
+        "page": 20
+      },
+      {
+        "en": "Epiphysial cartilage",
+        "vi": "Sụn đầu xương",
+        "page": 21
+      },
+      {
+        "en": "Epiphysial line",
+        "vi": "Đường đầu xương",
+        "page": 21
+      },
+      {
+        "en": "Primary",
+        "vi": "Nguyên phát",
+        "page": 22
+      },
+      {
+        "en": "Secondary",
+        "vi": "Thứ phát",
+        "page": 22
+      },
+      {
+        "en": "Chuẩn mặt;",
+        "vi": "Mặt",
+        "page": 23
+      },
+      {
+        "en": "Anterior fontanelle",
+        "vi": "Thóp trước",
+        "page": 24
+      },
+      {
+        "en": "Posterior fontanelle",
+        "vi": "Thóp sau",
+        "page": 24
+      },
+      {
+        "en": "Mastoid fontanelle",
+        "vi": "Thóp chũm",
+        "page": 24
+      },
+      {
+        "en": "External table",
+        "vi": "Bản ngoài",
+        "page": 25
+      },
+      {
+        "en": "Diploe",
+        "vi": "Lõi xốp",
+        "page": 25
+      },
+      {
+        "en": "Diploic canals",
+        "vi": "Các ống lõi xốp",
+        "page": 25
+      },
+      {
+        "en": "Internal table",
+        "vi": "Bản trong",
+        "page": 25
+      },
+      {
+        "en": "Granular foveolae",
+        "vi": "Các hõm hạt",
+        "page": 25
+      },
+      {
+        "en": "Venous grooves",
+        "vi": "Các rãnh tĩnh mạch",
+        "page": 25
+      },
+      {
+        "en": "Arterial grooves",
+        "vi": "Các rãnh động",
+        "page": 25
+      },
+      {
+        "en": "(Sutural bone)",
+        "vi": "(Xương đường",
+        "page": 25
+      },
+      {
+        "en": "Clivus",
+        "vi": "Dốc",
+        "page": 26
+      },
+      {
+        "en": "Jugular foramen",
+        "vi": "Lỗ tĩnh mạch cảnh",
+        "page": 27
+      },
+      {
+        "en": "Foramen lacerum",
+        "vi": "Lỗ rách",
+        "page": 27
+      },
+      {
+        "en": "Bony palate",
+        "vi": "Khẩu cái xương;",
+        "page": 27
+      },
+      {
+        "en": "Incisive fossa",
+        "vi": "Hố răng cửa",
+        "page": 27
+      },
+      {
+        "en": "Incisive canals",
+        "vi": "Các ống răng cửa",
+        "page": 27
+      },
+      {
+        "en": "Incisive foramina",
+        "vi": "Các lỗ răng cửa",
+        "page": 27
+      },
+      {
+        "en": "(Palatine torus)",
+        "vi": "(Gờ khẩu cái)",
+        "page": 27
+      },
+      {
+        "en": "Palatovaginal canal",
+        "vi": "Ống khẩu cái-mỏm",
+        "page": 27
+      },
+      {
+        "en": "Vomerovaginal canal",
+        "vi": "Ống lá mía-mỏm",
+        "page": 27
+      },
+      {
+        "en": "Vomerorostral canal",
+        "vi": "Ống lá mía-mỏ",
+        "page": 27
+      },
+      {
+        "en": "Orbital cavity",
+        "vi": "(Lòng) ổ mắt",
+        "page": 27
+      },
+      {
+        "en": "Orbital opening",
+        "vi": "Lỗ vào ổ mắt",
+        "page": 27
+      },
+      {
+        "en": "Orbital margin",
+        "vi": "Bờ ổ mắt",
+        "page": 28
+      },
+      {
+        "en": "Lateral margin",
+        "vi": "Bờ ngoài*",
+        "page": 28
+      },
+      {
+        "en": "Medial margin",
+        "vi": "Bờ trong*",
+        "page": 28
+      },
+      {
+        "en": "Roof",
+        "vi": "Thành trên",
+        "page": 28
+      },
+      {
+        "en": "Floor",
+        "vi": "Thành dưới",
+        "page": 28
+      },
+      {
+        "en": "Lateral wall",
+        "vi": "Thành ngoài*",
+        "page": 28
+      },
+      {
+        "en": "Medial wall",
+        "vi": "Thành trong",
+        "page": 28
+      },
+      {
+        "en": "Lacrimal groove",
+        "vi": "Rãnh lệ",
+        "page": 28
+      },
+      {
+        "en": "Bony nasal septum",
+        "vi": "Vách mũi xương",
+        "page": 29
+      },
+      {
+        "en": "Piriform aperture",
+        "vi": "Lỗ mũi trước; Lỗ",
+        "page": 29
+      },
+      {
+        "en": "Middle nasal meatus",
+        "vi": "Ngách mũi giữa",
+        "page": 29
+      },
+      {
+        "en": "Inferior nasal meatus",
+        "vi": "Ngách mũi dưới",
+        "page": 29
+      },
+      {
+        "en": "Grooves for arteries",
+        "vi": "Các rãnh động",
+        "page": 30
+      },
+      {
+        "en": "External surface",
+        "vi": "Mặt ngoài",
+        "page": 31
+      },
+      {
+        "en": "Superciliary arch",
+        "vi": "Cung mày",
+        "page": 31
+      },
+      {
+        "en": "Glabella",
+        "vi": "Điểm trên gốc",
+        "page": 31
+      },
+      {
+        "en": "Temporal surface",
+        "vi": "Mặt thái dương",
+        "page": 31
+      },
+      {
+        "en": "Parietal margin",
+        "vi": "Bờ đỉnh",
+        "page": 31
+      },
+      {
+        "en": "Temporal line",
+        "vi": "Đường thái dương",
+        "page": 31
+      },
+      {
+        "en": "Zygomatic process",
+        "vi": "Mỏm gò má",
+        "page": 31
+      },
+      {
+        "en": "Frontal crest",
+        "vi": "Mào trán",
+        "page": 32
+      },
+      {
+        "en": "Foramen caecum",
+        "vi": "Lỗ tịt",
+        "page": 32
+      },
+      {
+        "en": "Nasal part",
+        "vi": "Phần mũi",
+        "page": 32
+      },
+      {
+        "en": "Nasal spine",
+        "vi": "Gai mũi",
+        "page": 32
+      },
+      {
+        "en": "Nasal margin",
+        "vi": "Bờ mũi",
+        "page": 32
+      },
+      {
+        "en": "Orbital surface",
+        "vi": "Mặt ổ mắt",
+        "page": 32
+      },
+      {
+        "en": "(Trochlear spine)",
+        "vi": "(Gai ròng rọc)",
+        "page": 32
+      },
+      {
+        "en": "Trochlear fovea",
+        "vi": "Hõm ròng rọc",
+        "page": 32
+      },
+      {
+        "en": "Basion",
+        "vi": "Điểm nền",
+        "page": 33
+      },
+      {
+        "en": "Opisthion",
+        "vi": "Điểm sau nền",
+        "page": 33
+      },
+      {
+        "en": "Pharyngeal tubercle",
+        "vi": "Củ hầu",
+        "page": 33
+      },
+      {
+        "en": "Mastoid border",
+        "vi": "Bờ chũm",
+        "page": 33
+      },
+      {
+        "en": "Lambdoid border",
+        "vi": "Bờ lambda",
+        "page": 33
+      },
+      {
+        "en": "(Interparietal bone)",
+        "vi": "(Xương gian đỉnh)",
+        "page": 33
+      },
+      {
+        "en": "Limbus of sphenoid",
+        "vi": "Viền xương bướm",
+        "page": 35
+      },
+      {
+        "en": "Prechiasmatic sulcus",
+        "vi": "Rãnh trước giao",
+        "page": 35
+      },
+      {
+        "en": "Sella turnica",
+        "vi": "Yên Thổ Nhĩ Kỳ",
+        "page": 35
+      },
+      {
+        "en": "Tuberculum sellae",
+        "vi": "Củ yên",
+        "page": 35
+      },
+      {
+        "en": "Hypophysial fossa",
+        "vi": "Hố tuyến yên",
+        "page": 35
+      },
+      {
+        "en": "Dorsum sellae",
+        "vi": "Lưng yên",
+        "page": 35
+      },
+      {
+        "en": "Carotid sulcus",
+        "vi": "Rãnh động mạch",
+        "page": 36
+      },
+      {
+        "en": "Sphenoidal lingula",
+        "vi": "Lưỡi bướm",
+        "page": 36
+      },
+      {
+        "en": "Sphenoidal crest",
+        "vi": "Mào bướm",
+        "page": 36
+      },
+      {
+        "en": "Sphenoidal rostrum",
+        "vi": "Mỏ bướm",
+        "page": 36
+      },
+      {
+        "en": "Sphenoidal sinus",
+        "vi": "Xoang bướm",
+        "page": 36
+      },
+      {
+        "en": "Sphenoidal concha",
+        "vi": "Xoăn bướm",
+        "page": 36
+      },
+      {
+        "en": "Optic canal",
+        "vi": "Ống thị giác",
+        "page": 36
+      },
+      {
+        "en": "Cerebral surface",
+        "vi": "Mặt đại não",
+        "page": 36
+      },
+      {
+        "en": "Infratemporal crest",
+        "vi": "Mào dưới thái",
+        "page": 37
+      },
+      {
+        "en": "Maxillary surface",
+        "vi": "Mặt hàm trên",
+        "page": 37
+      },
+      {
+        "en": "Zygomatic margin",
+        "vi": "Bờ gò má",
+        "page": 37
+      },
+      {
+        "en": "Frontal margin",
+        "vi": "Bờ trán",
+        "page": 37
+      },
+      {
+        "en": "Squamosal margin",
+        "vi": "Bờ trai",
+        "page": 37
+      },
+      {
+        "en": "Foramen rotundum",
+        "vi": "Lỗ tròn",
+        "page": 37
+      },
+      {
+        "en": "Foramen ovale",
+        "vi": "Lỗ bầu dục",
+        "page": 37
+      },
+      {
+        "en": "Foramen spinosum",
+        "vi": "Lỗ gai",
+        "page": 37
+      },
+      {
+        "en": "(Foramen petrosum)",
+        "vi": "(Lỗ đá)",
+        "page": 37
+      },
+      {
+        "en": "Medial plate",
+        "vi": "Mảnh trong*",
+        "page": 38
+      },
+      {
+        "en": "Palatovaginal groove",
+        "vi": "Rãnh khẩu cái-mỏm",
+        "page": 38
+      },
+      {
+        "en": "Occipital margin",
+        "vi": "Bờ chẩm",
+        "page": 38
+      },
+      {
+        "en": "Mastoid process",
+        "vi": "Mỏm chũm",
+        "page": 38
+      },
+      {
+        "en": "Occipital groove",
+        "vi": "Rãnh chẩm",
+        "page": 39
+      },
+      {
+        "en": "Mastoid foramen",
+        "vi": "Lỗ chũm",
+        "page": 39
+      },
+      {
+        "en": "Facial canal",
+        "vi": "Ống thần kinh mặt",
+        "page": 39
+      },
+      {
+        "en": "Apex of petrous part",
+        "vi": "Đỉnh phần đá",
+        "page": 39
+      },
+      {
+        "en": "Carotid canal",
+        "vi": "Ống động mạch",
+        "page": 39
+      },
+      {
+        "en": "Musculotubal canal",
+        "vi": "Ống cơ vòi",
+        "page": 39
+      },
+      {
+        "en": "Tegmen tympani",
+        "vi": "Trần hòm nhĩ",
+        "page": 40
+      },
+      {
+        "en": "Arcuate eminence",
+        "vi": "Lồi cung",
+        "page": 40
+      },
+      {
+        "en": "Subarcuate fossa",
+        "vi": "Hố dưới cung",
+        "page": 40
+      },
+      {
+        "en": "Jugular notch",
+        "vi": "Khuyết tĩnh mạch",
+        "page": 41
+      },
+      {
+        "en": "Jugular fossa",
+        "vi": "Hố tĩnh mạch cảnh",
+        "page": 41
+      },
+      {
+        "en": "Jugular notch",
+        "vi": "Khuyết tĩnh",
+        "page": 41
+      },
+      {
+        "en": "Styloid process",
+        "vi": "Mỏm trâm",
+        "page": 41
+      },
+      {
+        "en": "Petrosal fossula",
+        "vi": "Hố đá",
+        "page": 41
+      },
+      {
+        "en": "Tympanic cavity",
+        "vi": "Hòm nhĩ",
+        "page": 41
+      },
+      {
+        "en": "Tympanic sulcus",
+        "vi": "Rãnh màng nhĩ",
+        "page": 42
+      },
+      {
+        "en": "Tympanic notch",
+        "vi": "Khuyết màng nhĩ",
+        "page": 42
+      },
+      {
+        "en": "Parietal border",
+        "vi": "Bờ đỉnh",
+        "page": 42
+      },
+      {
+        "en": "Parietal notch",
+        "vi": "Khuyết đỉnh",
+        "page": 42
+      },
+      {
+        "en": "Sphenoid margin",
+        "vi": "Bờ bướm",
+        "page": 42
+      },
+      {
+        "en": "Articular surface",
+        "vi": "Mặt khớp",
+        "page": 43
+      },
+      {
+        "en": "Ala of crista galli",
+        "vi": "Cánh mào gà",
+        "page": 43
+      },
+      {
+        "en": "Orbital plate",
+        "vi": "Mảnh ổ mắt",
+        "page": 44
+      },
+      {
+        "en": "Middle nasal concha",
+        "vi": "Xoăn mũi giữa",
+        "page": 44
+      },
+      {
+        "en": "Ethmoidal bulla",
+        "vi": "Bọt sàng",
+        "page": 44
+      },
+      {
+        "en": "Uncinate process",
+        "vi": "Mỏm móc",
+        "page": 44
+      },
+      {
+        "en": "Hiatus semilunaris",
+        "vi": "Lỗ bán nguyệt",
+        "page": 44
+      },
+      {
+        "en": "Infra-orbital canal",
+        "vi": "Ống dưới ổ mắt",
+        "page": 45
+      },
+      {
+        "en": "Infra-orbital margin",
+        "vi": "Bờ dưới ổ mắt",
+        "page": 46
+      },
+      {
+        "en": "Anterior surface",
+        "vi": "Mặt trước",
+        "page": 46
+      },
+      {
+        "en": "Canine fossa",
+        "vi": "Hố nanh",
+        "page": 46
+      },
+      {
+        "en": "Nasal notch",
+        "vi": "Khuyết mũi",
+        "page": 46
+      },
+      {
+        "en": "Anterior nasal spine",
+        "vi": "Gai mũi trước",
+        "page": 46
+      },
+      {
+        "en": "Alveolar foramina",
+        "vi": "Các lỗ huyệt răng",
+        "page": 46
+      },
+      {
+        "en": "Alveolar canals",
+        "vi": "Các ống huyệt",
+        "page": 46
+      },
+      {
+        "en": "Nasal surface",
+        "vi": "Mặt mũi",
+        "page": 46
+      },
+      {
+        "en": "Conchal crest",
+        "vi": "Mào xoăn",
+        "page": 46
+      },
+      {
+        "en": "Lacrimal margin",
+        "vi": "Bờ lệ",
+        "page": 46
+      },
+      {
+        "en": "Maxillary hiatus",
+        "vi": "Lỗ xoang hàm",
+        "page": 47
+      },
+      {
+        "en": "Maxillary sinus",
+        "vi": "Xoang hàm trên",
+        "page": 47
+      },
+      {
+        "en": "Lacrimal notch",
+        "vi": "Khuyết lệ",
+        "page": 47
+      },
+      {
+        "en": "Ethmoidal crest",
+        "vi": "Mào sàng",
+        "page": 47
+      },
+      {
+        "en": "Nasal crest",
+        "vi": "Mào mũi",
+        "page": 47
+      },
+      {
+        "en": "(Incisive suture)",
+        "vi": "(Đường khớp răng",
+        "page": 47
+      },
+      {
+        "en": "Palatine spines",
+        "vi": "Các gai khẩu cái",
+        "page": 47
+      },
+      {
+        "en": "Palatine grooves",
+        "vi": "Các rãnh khẩu cái",
+        "page": 47
+      },
+      {
+        "en": "Alveolar arch",
+        "vi": "Cung huyệt răng",
+        "page": 48
+      },
+      {
+        "en": "Dental alveoli",
+        "vi": "Các huyệt răng",
+        "page": 48
+      },
+      {
+        "en": "Interalveolar septa",
+        "vi": "Các vách gian huyệt",
+        "page": 48
+      },
+      {
+        "en": "Interradicular septa",
+        "vi": "Các vách gian chân",
+        "page": 48
+      },
+      {
+        "en": "Alveolar yokes",
+        "vi": "Các ách huyệt răng",
+        "page": 48
+      },
+      {
+        "en": "Pyramidal process",
+        "vi": "Mỏm tháp",
+        "page": 48
+      },
+      {
+        "en": "Orbital crest",
+        "vi": "Mào ổ mắt",
+        "page": 49
+      },
+      {
+        "en": "Sphenoidal process",
+        "vi": "Mỏm bướm",
+        "page": 49
+      },
+      {
+        "en": "Palatine surface",
+        "vi": "Mặt khẩu cái",
+        "page": 49
+      },
+      {
+        "en": "Posterior nasal spine",
+        "vi": "Gai mũi sau",
+        "page": 49
+      },
+      {
+        "en": "Palatine crest",
+        "vi": "Mào khẩu cái",
+        "page": 49
+      },
+      {
+        "en": "Base of mandible",
+        "vi": "Nền xương hàm",
+        "page": 50
+      },
+      {
+        "en": "Mental protuberance",
+        "vi": "Ụ cằm",
+        "page": 50
+      },
+      {
+        "en": "Mental tubercle",
+        "vi": "Củ cằm",
+        "page": 50
+      },
+      {
+        "en": "Mental foramen",
+        "vi": "Lỗ cằm",
+        "page": 50
+      },
+      {
+        "en": "Oblicque line",
+        "vi": "Đường chéo",
+        "page": 50
+      },
+      {
+        "en": "Digastric fossa",
+        "vi": "Hố cơ hai bụng",
+        "page": 50
+      },
+      {
+        "en": "Mylohyoid line",
+        "vi": "Đường hàm-móng",
+        "page": 51
+      },
+      {
+        "en": "(Mandibular torus)",
+        "vi": "(Gờ hàm dưới)",
+        "page": 51
+      },
+      {
+        "en": "Sublingual fossa",
+        "vi": "Hõm dưới lưỡi",
+        "page": 51
+      },
+      {
+        "en": "Alveolar part",
+        "vi": "Phần huyệt răng",
+        "page": 51
+      },
+      {
+        "en": "Interalveolar septa",
+        "vi": "Các vách gian",
+        "page": 51
+      },
+      {
+        "en": "Retromolar fossa",
+        "vi": "Hố sau răng cối",
+        "page": 51
+      },
+      {
+        "en": "Angle of mandible",
+        "vi": "Góc hàm dưới",
+        "page": 51
+      },
+      {
+        "en": "Lingula",
+        "vi": "Lưỡi",
+        "page": 52
+      },
+      {
+        "en": "Mandibular canal",
+        "vi": "Ống hàm dưới",
+        "page": 52
+      },
+      {
+        "en": "Mylohyoid groove",
+        "vi": "Rãnh hàm-móng",
+        "page": 52
+      },
+      {
+        "en": "Coronoid process",
+        "vi": "Mỏm vẹt",
+        "page": 52
+      },
+      {
+        "en": "Temporal crest",
+        "vi": "Mào thái dương",
+        "page": 52
+      },
+      {
+        "en": "Mandibular notch",
+        "vi": "Khuyết hàm dưới",
+        "page": 52
+      },
+      {
+        "en": "Condylar process",
+        "vi": "Mỏm lồi cầu",
+        "page": 52
+      },
+      {
+        "en": "Head of mandible",
+        "vi": "Chỏm hàm dưới",
+        "page": 52
+      },
+      {
+        "en": "Neck of mandible",
+        "vi": "Cổ hàm dưới",
+        "page": 52
+      },
+      {
+        "en": "Pterygoid fovea",
+        "vi": "Hõm chân bướm",
+        "page": 52
+      },
+      {
+        "en": "Lesser horn",
+        "vi": "Sừng bé",
+        "page": 52
+      },
+      {
+        "en": "Greater horn",
+        "vi": "Sừng lớn",
+        "page": 52
+      },
+      {
+        "en": "Thoracic kyphosis",
+        "vi": "Cong gù ngực",
+        "page": 53
+      },
+      {
+        "en": "Sacral kyphosis",
+        "vi": "Cong gù cùng",
+        "page": 53
+      },
+      {
+        "en": "Cervical lordosis",
+        "vi": "Cong ưỡn cổ",
+        "page": 53
+      },
+      {
+        "en": "Lumbar lordosis",
+        "vi": "Cong ưỡn thắt lưng",
+        "page": 53
+      },
+      {
+        "en": "Anular epiphysis",
+        "vi": "Vòng đầu xương",
+        "page": 54
+      },
+      {
+        "en": "Pedicle",
+        "vi": "Cuống",
+        "page": 54
+      },
+      {
+        "en": "Lamina",
+        "vi": "Mảnh",
+        "page": 54
+      },
+      {
+        "en": "Facet for dens",
+        "vi": "Hõm răng; Mặt khớp",
+        "page": 55
+      },
+      {
+        "en": "Anterior tubercle",
+        "vi": "Củ trước",
+        "page": 55
+      },
+      {
+        "en": "Posterior tubercle",
+        "vi": "Củ sau",
+        "page": 56
+      },
+      {
+        "en": "Apex",
+        "vi": "Đỉnh răng",
+        "page": 56
+      },
+      {
+        "en": "Promontory",
+        "vi": "Ụ nhô",
+        "page": 57
+      },
+      {
+        "en": "Ala; Wing",
+        "vi": "Cánh",
+        "page": 57
+      },
+      {
+        "en": "Auricular surface",
+        "vi": "Diện loa tai",
+        "page": 57
+      },
+      {
+        "en": "Sacral tuberosity",
+        "vi": "Lồi củ xương",
+        "page": 57
+      },
+      {
+        "en": "Pelvic surface",
+        "vi": "Mặt chậu hông",
+        "page": 57
+      },
+      {
+        "en": "Transverse ridges",
+        "vi": "Các đường",
+        "page": 57
+      },
+      {
+        "en": "Median sacral crest",
+        "vi": "Mào cùng giữa",
+        "page": 58
+      },
+      {
+        "en": "Lateral sacral crest",
+        "vi": "Mào cùng bên*",
+        "page": 58
+      },
+      {
+        "en": "Sacral canal",
+        "vi": "Ống cùng",
+        "page": 58
+      },
+      {
+        "en": "Sacral hiatus",
+        "vi": "Lỗ cùng",
+        "page": 58
+      },
+      {
+        "en": "Articular facet",
+        "vi": "Mặt khớp chỏm",
+        "page": 59
+      },
+      {
+        "en": "Crest",
+        "vi": "Mào chỏm sườn",
+        "page": 59
+      },
+      {
+        "en": "Crest",
+        "vi": "Mào cổ sườn",
+        "page": 59
+      },
+      {
+        "en": "Tubercle",
+        "vi": "Củ sườn",
+        "page": 59
+      },
+      {
+        "en": "Articular facet",
+        "vi": "Mặt khớp củ",
+        "page": 59
+      },
+      {
+        "en": "Angle",
+        "vi": "Góc sườn",
+        "page": 59
+      },
+      {
+        "en": "Costal groove",
+        "vi": "Rãnh sườn",
+        "page": 59
+      },
+      {
+        "en": "Crest",
+        "vi": "Mào sườn",
+        "page": 59
+      },
+      {
+        "en": "Scalene tubercle",
+        "vi": "Củ cơ bậc thang",
+        "page": 60
+      },
+      {
+        "en": "Clavicular notch",
+        "vi": "Khuyết đòn",
+        "page": 60
+      },
+      {
+        "en": "Subscapular fossa",
+        "vi": "Hố dưới vai",
+        "page": 61
+      },
+      {
+        "en": "Deltoid tubercle",
+        "vi": "Củ delta",
+        "page": 62
+      },
+      {
+        "en": "Supraspinous fossa",
+        "vi": "Hố trên gai",
+        "page": 62
+      },
+      {
+        "en": "Infraspinous fossa",
+        "vi": "Hố dưới gai",
+        "page": 62
+      },
+      {
+        "en": "Clavicular facet",
+        "vi": "Mặt khớp đòn",
+        "page": 62
+      },
+      {
+        "en": "Acromial angle",
+        "vi": "Góc mỏm cùng vai",
+        "page": 62
+      },
+      {
+        "en": "Suprascapular notch",
+        "vi": "Khuyết trên vai",
+        "page": 62
+      },
+      {
+        "en": "Sternal facet",
+        "vi": "Mặt khớp ức",
+        "page": 63
+      },
+      {
+        "en": "Acromial facet",
+        "vi": "Mặt khớp cùng vai",
+        "page": 63
+      },
+      {
+        "en": "aperture",
+        "vi": "Các từ \"đường vào ngực\" và \"đường ra khỏi ngực\"",
+        "page": 63
+      },
+      {
+        "en": "Conoid tubercle",
+        "vi": "Củ nón",
+        "page": 64
+      },
+      {
+        "en": "Trapezoid line",
+        "vi": "Đường thang",
+        "page": 64
+      },
+      {
+        "en": "Anteromedial surface",
+        "vi": "Mặt trước-trong*",
+        "page": 64
+      },
+      {
+        "en": "Posterior surface",
+        "vi": "Mặt sau",
+        "page": 65
+      },
+      {
+        "en": "Medial border",
+        "vi": "Bờ trong*",
+        "page": 65
+      },
+      {
+        "en": "Lateral border",
+        "vi": "Bờ ngoài*",
+        "page": 65
+      },
+      {
+        "en": "Deltoid tuberosity",
+        "vi": "Lồi củ delta",
+        "page": 65
+      },
+      {
+        "en": "Capitulum",
+        "vi": "Chỏm con",
+        "page": 65
+      },
+      {
+        "en": "Trochlea",
+        "vi": "Ròng rọc",
+        "page": 65
+      },
+      {
+        "en": "Olecranon fossa",
+        "vi": "Hố khuỷu",
+        "page": 65
+      },
+      {
+        "en": "Coronoid fossa",
+        "vi": "Hố vẹt",
+        "page": 65
+      },
+      {
+        "en": "Articular facet",
+        "vi": "Mặt khớp",
+        "page": 66
+      },
+      {
+        "en": "Radial tuberosity",
+        "vi": "Lồi củ quay",
+        "page": 66
+      },
+      {
+        "en": "Lateral surface",
+        "vi": "Mặt ngoài*",
+        "page": 66
+      },
+      {
+        "en": "Pronator tuberosity",
+        "vi": "Lồi củ cơ sấp",
+        "page": 66
+      },
+      {
+        "en": "Interosseous border",
+        "vi": "Bờ gian cốt",
+        "page": 66
+      },
+      {
+        "en": "Posterior border",
+        "vi": "Bờ sau",
+        "page": 67
+      },
+      {
+        "en": "Tuberosity of ulna",
+        "vi": "Lồi củ trụ",
+        "page": 67
+      },
+      {
+        "en": "Radial notch",
+        "vi": "Khuyết quay",
+        "page": 67
+      },
+      {
+        "en": "Medial surface",
+        "vi": "Mặt trong*",
+        "page": 68
+      },
+      {
+        "en": "Anterior border",
+        "vi": "Bờ trước",
+        "page": 68
+      },
+      {
+        "en": "Supinator crest",
+        "vi": "Mào cơ ngửa",
+        "page": 68
+      },
+      {
+        "en": "Tubercle",
+        "vi": "Củ xương thuyền",
+        "page": 68
+      },
+      {
+        "en": "Tubercle",
+        "vi": "Củ xương thang",
+        "page": 69
+      },
+      {
+        "en": "Hook of hamate",
+        "vi": "Móc xương móc",
+        "page": 69
+      },
+      {
+        "en": "Trochlea of phalanx",
+        "vi": "Ròng rọc xương đốt",
+        "page": 70
+      },
+      {
+        "en": "Acetabular margin",
+        "vi": "Viền ổ cối; Bờ ổ",
+        "page": 70
+      },
+      {
+        "en": "Acetabular fossa",
+        "vi": "Hố ổ cối",
+        "page": 70
+      },
+      {
+        "en": "Acetabular notch",
+        "vi": "Khuyết ổ cối",
+        "page": 70
+      },
+      {
+        "en": "Lunate surface",
+        "vi": "Diện nguyệt",
+        "page": 71
+      },
+      {
+        "en": "Outer lip",
+        "vi": "Mép ngoài",
+        "page": 71
+      },
+      {
+        "en": "Intermediate zone",
+        "vi": "Đường trung gian;",
+        "page": 71
+      },
+      {
+        "en": "Inner lip",
+        "vi": "Mép trong",
+        "page": 71
+      },
+      {
+        "en": "Iliac fossa",
+        "vi": "Hố cánh chậu",
+        "page": 72
+      },
+      {
+        "en": "Anterior gluteal line",
+        "vi": "Đường mông trước",
+        "page": 72
+      },
+      {
+        "en": "Posterior gluteal line",
+        "vi": "Đường mông sau",
+        "page": 72
+      },
+      {
+        "en": "Inferior gluteal",
+        "vi": "Đường mông dưới",
+        "page": 72
+      },
+      {
+        "en": "Auricular surface",
+        "vi": "Mặt loa tai",
+        "page": 72
+      },
+      {
+        "en": "Iliac tuberosiry",
+        "vi": "Lồi củ cánh chậu",
+        "page": 72
+      },
+      {
+        "en": "Ischial tuberosity",
+        "vi": "Ụ ngồi; Củ ngồi",
+        "page": 72
+      },
+      {
+        "en": "Pubic tubercle",
+        "vi": "Củ mu",
+        "page": 73
+      },
+      {
+        "en": "Symphysial surface",
+        "vi": "Mặt khớp mu",
+        "page": 73
+      },
+      {
+        "en": "Pubic crest",
+        "vi": "Mào mu",
+        "page": 73
+      },
+      {
+        "en": "Iliopubic ramus",
+        "vi": "Lồi cánh chậu-mu;",
+        "page": 73
+      },
+      {
+        "en": "Obturator crest",
+        "vi": "Mào bịt",
+        "page": 73
+      },
+      {
+        "en": "Obturator groove",
+        "vi": "Rãnh bịt",
+        "page": 73
+      },
+      {
+        "en": "Trochanteric fossa",
+        "vi": "Hố mấu chuyển",
+        "page": 75
+      },
+      {
+        "en": "Quadrate tubercle",
+        "vi": "Củ cơ vuông đùi",
+        "page": 76
+      },
+      {
+        "en": "Linea aspera",
+        "vi": "Đường ráp",
+        "page": 76
+      },
+      {
+        "en": "Lateral lip",
+        "vi": "Mép ngoài*",
+        "page": 76
+      },
+      {
+        "en": "Medial lip",
+        "vi": "Mép trong*",
+        "page": 76
+      },
+      {
+        "en": "Gluteal tuberosity",
+        "vi": "Lồi củ cơ mông",
+        "page": 76
+      },
+      {
+        "en": "Popliteal surface",
+        "vi": "Diện khoeo",
+        "page": 76
+      },
+      {
+        "en": "Medial epicondyle",
+        "vi": "Mỏm trên lồi cầu",
+        "page": 76
+      },
+      {
+        "en": "Adductor tubercle",
+        "vi": "Củ cơ khép",
+        "page": 76
+      },
+      {
+        "en": "Lateral epicondyle",
+        "vi": "Mỏm trên lồi cầu",
+        "page": 77
+      },
+      {
+        "en": "Tibial tuberosity",
+        "vi": "Lồi củ chày",
+        "page": 78
+      },
+      {
+        "en": "Soleal line",
+        "vi": "Đường cơ dép",
+        "page": 78
+      },
+      {
+        "en": "Malleolar groove",
+        "vi": "Rãnh mắt cá",
+        "page": 78
+      },
+      {
+        "en": "Articular facet",
+        "vi": "Mặt khớp mắt cá",
+        "page": 79
+      },
+      {
+        "en": "Apex of head",
+        "vi": "Đỉnh chỏm mác",
+        "page": 79
+      },
+      {
+        "en": "Medial crest",
+        "vi": "Mào trong*",
+        "page": 79
+      },
+      {
+        "en": "Malleolar fossa",
+        "vi": "Hố mắt cá ngoài",
+        "page": 80
+      },
+      {
+        "en": "Trochlea of talus",
+        "vi": "Ròng rọc xương sên",
+        "page": 81
+      },
+      {
+        "en": "Superior facet",
+        "vi": "Mặt trên",
+        "page": 81
+      },
+      {
+        "en": "Lateral process",
+        "vi": "Mỏm ngoài*",
+        "page": 81
+      },
+      {
+        "en": "Posterior process",
+        "vi": "Mỏm sau xương",
+        "page": 81
+      },
+      {
+        "en": "Lateral tubercle",
+        "vi": "Củ ngoài*",
+        "page": 81
+      },
+      {
+        "en": "Medial tubercle",
+        "vi": "Củ trong*",
+        "page": 81
+      },
+      {
+        "en": "Lateral process",
+        "vi": "Mỏm ngoài* ụ gót",
+        "page": 82
+      }
+    ]
+  },
+  "A03": {
+    "name": "Hệ khớp & Dây chằng",
+    "count": 56,
+    "terms": [
+      {
+        "en": "Trochlea of phalanx",
+        "vi": "Ròng rọc xương đốt",
+        "page": 84
+      },
+      {
+        "en": "Synarthrosis",
+        "vi": "Khớp bất động",
+        "page": 85
+      },
+      {
+        "en": "Fibrous joint",
+        "vi": "Khớp sợi",
+        "page": 85
+      },
+      {
+        "en": "Syndesmosis",
+        "vi": "Khớp chằng",
+        "page": 85
+      },
+      {
+        "en": "Suture",
+        "vi": "Đường khớp",
+        "page": 85
+      },
+      {
+        "en": "Plane suture",
+        "vi": "Đường khớp",
+        "page": 85
+      },
+      {
+        "en": "Limbous suture",
+        "vi": "Đường khớp",
+        "page": 85
+      },
+      {
+        "en": "Serrate suture",
+        "vi": "Đường khớp",
+        "page": 85
+      },
+      {
+        "en": "Schindylesis",
+        "vi": "Đường khớp",
+        "page": 85
+      },
+      {
+        "en": "Cartilaginous joint",
+        "vi": "Khớp sụn",
+        "page": 85
+      },
+      {
+        "en": "Synchondrosis",
+        "vi": "Khớp sụn trong",
+        "page": 85
+      },
+      {
+        "en": "Articular surface",
+        "vi": "Mặt khớp",
+        "page": 86
+      },
+      {
+        "en": "Articular cavity",
+        "vi": "Ổ khớp",
+        "page": 86
+      },
+      {
+        "en": "Articular fossa",
+        "vi": "Hố khớp",
+        "page": 86
+      },
+      {
+        "en": "(Articular head)",
+        "vi": "(Chỏm khớp)",
+        "page": 86
+      },
+      {
+        "en": "Labrum",
+        "vi": "Viền khớp",
+        "page": 86
+      },
+      {
+        "en": "Synovial folds",
+        "vi": "Các nếp hoạt",
+        "page": 86
+      },
+      {
+        "en": "Synovial villi",
+        "vi": "Các nhung mao",
+        "page": 86
+      },
+      {
+        "en": "Synovial fluid",
+        "vi": "Hoạt dịch",
+        "page": 86
+      },
+      {
+        "en": "Articular disc",
+        "vi": "Đĩa khớp",
+        "page": 86
+      },
+      {
+        "en": "Ligaments",
+        "vi": "Các dây chằng",
+        "page": 87
+      },
+      {
+        "en": "Articular recess",
+        "vi": "Ngách khớp",
+        "page": 87
+      },
+      {
+        "en": "Synovial bursa",
+        "vi": "Túi hoạt dịch",
+        "page": 87
+      },
+      {
+        "en": "Synovial sheath",
+        "vi": "Bao hoạt dịch",
+        "page": 87
+      },
+      {
+        "en": "Simple joint",
+        "vi": "Khớp đơn",
+        "page": 87
+      },
+      {
+        "en": "Complex joint",
+        "vi": "Khớp phức hợp",
+        "page": 87
+      },
+      {
+        "en": "Plane joint",
+        "vi": "Khớp phẳng",
+        "page": 87
+      },
+      {
+        "en": "Cylindrical joint",
+        "vi": "Khớp trụ",
+        "page": 87
+      },
+      {
+        "en": "Pivot joint",
+        "vi": "Khớp trục",
+        "page": 87
+      },
+      {
+        "en": "Hinge joint",
+        "vi": "Khớp bản lề",
+        "page": 87
+      },
+      {
+        "en": "Bicondylar joint",
+        "vi": "Khớp lưỡng lồi cầu",
+        "page": 87
+      },
+      {
+        "en": "Saddle joint",
+        "vi": "Khớp yên",
+        "page": 87
+      },
+      {
+        "en": "Cotyloid joint",
+        "vi": "Khớp ổ cối",
+        "page": 88
+      },
+      {
+        "en": "Amphiarthrosis",
+        "vi": "Khớp bán động",
+        "page": 88
+      },
+      {
+        "en": "Intervertebral disc",
+        "vi": "Đĩa gian đốt sống",
+        "page": 94
+      },
+      {
+        "en": "Anulus fibrosus",
+        "vi": "Vòng sợi",
+        "page": 94
+      },
+      {
+        "en": "Nucleus pulposus",
+        "vi": "Nhân tủy",
+        "page": 94
+      },
+      {
+        "en": "Longitudinal bands",
+        "vi": "Các bó dọc",
+        "page": 94
+      },
+      {
+        "en": "Xiphisternal joint",
+        "vi": "Khớp mũi kiếm-thân ức",
+        "page": 96
+      },
+      {
+        "en": "Manubriosternal joint",
+        "vi": "Khớp cán ức-thân ức",
+        "page": 96
+      },
+      {
+        "en": "Lumbocostal ligament",
+        "vi": "Dây chằng thắt lưng-",
+        "page": 96
+      },
+      {
+        "en": "Trapezoid ligament",
+        "vi": "Dây chằng thang",
+        "page": 98
+      },
+      {
+        "en": "Conoid ligament",
+        "vi": "Dây chằng nón",
+        "page": 98
+      },
+      {
+        "en": "Midcarpal joint",
+        "vi": "Khớp giữa cổ tay",
+        "page": 101
+      },
+      {
+        "en": "Pisiform joint",
+        "vi": "Khớp của xương đậu",
+        "page": 101
+      },
+      {
+        "en": "Collateral ligaments",
+        "vi": "Các dây chằng bên",
+        "page": 102
+      },
+      {
+        "en": "Palmar ligaments",
+        "vi": "Các dây chằng gan tay",
+        "page": 102
+      },
+      {
+        "en": "Falciform process",
+        "vi": "Mỏm hình liềm",
+        "page": 103
+      },
+      {
+        "en": "Transverse part",
+        "vi": "Phần ngang",
+        "page": 104
+      },
+      {
+        "en": "Descending part",
+        "vi": "Phần xuống",
+        "page": 104
+      },
+      {
+        "en": "Alar folds",
+        "vi": "Các nếp cánh",
+        "page": 105
+      },
+      {
+        "en": "Tibionavicular part",
+        "vi": "Phần chày-thuyền",
+        "page": 106
+      },
+      {
+        "en": "Tibiocalcaneal part",
+        "vi": "Phần chày-gót",
+        "page": 106
+      },
+      {
+        "en": "Calcaneocuboid joint",
+        "vi": "Dây chằng gót-hộp",
+        "page": 107
+      },
+      {
+        "en": "Bifurcate ligament",
+        "vi": "Dây chằng chẽ",
+        "page": 108
+      },
+      {
+        "en": "Plantar ligaments",
+        "vi": "Các dây chằng gan",
+        "page": 110
+      }
+    ]
+  },
+  "A04": {
+    "name": "Hệ cơ",
+    "count": 140,
+    "terms": [
+      {
+        "en": "tiếng Pháp nó loại trừ cả lá mỡ và mô liên kết lỏng lẻo",
+        "vi": "bên",
+        "page": 114
+      },
+      {
+        "en": "Scarpa, nay là",
+        "vi": "lớp màng của bụng ), của dương vật (Mạc",
+        "page": 114
+      },
+      {
+        "en": "Fascia of trunk",
+        "vi": "Mạc của thân",
+        "page": 114
+      },
+      {
+        "en": "Parietal fascia",
+        "vi": "Mạc thành",
+        "page": 114
+      },
+      {
+        "en": "Extraserosal fascia",
+        "vi": "Mạc ngoài thanh",
+        "page": 114
+      },
+      {
+        "en": "Visceral fascia",
+        "vi": "Mạc tạng",
+        "page": 114
+      },
+      {
+        "en": "Fascia of limbs",
+        "vi": "Mạc của các chi",
+        "page": 114
+      },
+      {
+        "en": "Fascia of muscles",
+        "vi": "Mạc của các cơ",
+        "page": 114
+      },
+      {
+        "en": "Intermediate tendon",
+        "vi": "Gân trung gian",
+        "page": 115
+      },
+      {
+        "en": "Occipitofrontalis",
+        "vi": "Cơ chẩm-trán",
+        "page": 116
+      },
+      {
+        "en": "Frontal belly",
+        "vi": "Bụng trán",
+        "page": 116
+      },
+      {
+        "en": "Occipital belly",
+        "vi": "Bụng chẩm",
+        "page": 116
+      },
+      {
+        "en": "Temporoparietalis",
+        "vi": "Cơ thái dương-đỉnh",
+        "page": 116
+      },
+      {
+        "en": "Transverse part",
+        "vi": "Phần ngang",
+        "page": 116
+      },
+      {
+        "en": "Alar part",
+        "vi": "Phần cánh",
+        "page": 116
+      },
+      {
+        "en": "Palpebral part",
+        "vi": "Phần mí",
+        "page": 116
+      },
+      {
+        "en": "Ciliary bundle",
+        "vi": "Bó mi",
+        "page": 116
+      },
+      {
+        "en": "Deep part",
+        "vi": "Phần sâu",
+        "page": 117
+      },
+      {
+        "en": "Orbital part",
+        "vi": "Phần ổ mắt",
+        "page": 117
+      },
+      {
+        "en": "fascia/extraserosal fascia/visceral fascia",
+        "vi": "Mạc thành là một từ",
+        "page": 117
+      },
+      {
+        "en": "Marginal part",
+        "vi": "Phần bờ",
+        "page": 118
+      },
+      {
+        "en": "Labial part",
+        "vi": "Phần môi",
+        "page": 118
+      },
+      {
+        "en": "Superficial part",
+        "vi": "Phần nông",
+        "page": 119
+      },
+      {
+        "en": "Superficial layer",
+        "vi": "Lá nông",
+        "page": 119
+      },
+      {
+        "en": "Deep layer",
+        "vi": "Lá sâu",
+        "page": 119
+      },
+      {
+        "en": "Anterior belly",
+        "vi": "Bụng trước",
+        "page": 121
+      },
+      {
+        "en": "Posterior belly",
+        "vi": "Bụng sau",
+        "page": 121
+      },
+      {
+        "en": "Superior belly",
+        "vi": "Bụng trên",
+        "page": 121
+      },
+      {
+        "en": "Inferior belly",
+        "vi": "Bụng dưới",
+        "page": 121
+      },
+      {
+        "en": "Suprasternal space",
+        "vi": "Khoang trên ức",
+        "page": 122
+      },
+      {
+        "en": "Dorsal part",
+        "vi": "Phần lưng",
+        "page": 123
+      },
+      {
+        "en": "Ventral part",
+        "vi": "Phần bụng",
+        "page": 123
+      },
+      {
+        "en": "Thoracic part",
+        "vi": "Phần ngực",
+        "page": 124
+      },
+      {
+        "en": "nghĩa này, các cơ gian ngang trước , các cơ sau bên cổ",
+        "vi": "và các",
+        "page": 124
+      },
+      {
+        "en": "đương với các cơ nâng sườn",
+        "vi": "và được chi phối bởi các nhánh",
+        "page": 124
+      },
+      {
+        "en": "Iliocostalis cervicis",
+        "vi": "Cơ chậu-sườn cổ",
+        "page": 124
+      },
+      {
+        "en": "Longisimus thoracis",
+        "vi": "Cơ dài ngực",
+        "page": 124
+      },
+      {
+        "en": "Longissimus cervicis",
+        "vi": "Cơ dài cổ",
+        "page": 125
+      },
+      {
+        "en": "Longissimus capitis",
+        "vi": "Cơ dài đầu",
+        "page": 125
+      },
+      {
+        "en": "Spinalis thoracis",
+        "vi": "Cơ gai-ngực",
+        "page": 125
+      },
+      {
+        "en": "Spinalis cervicis",
+        "vi": "Cơ gai-cổ",
+        "page": 125
+      },
+      {
+        "en": "Spinalis capitis",
+        "vi": "Cơ gai-đầu",
+        "page": 125
+      },
+      {
+        "en": "Splenius capitis",
+        "vi": "Cơ gối đầu",
+        "page": 125
+      },
+      {
+        "en": "Splenius cervicis",
+        "vi": "Cơ gối cổ",
+        "page": 125
+      },
+      {
+        "en": "Multifidus lumborum",
+        "vi": "Cơ nhiều chân thắt",
+        "page": 125
+      },
+      {
+        "en": "Multifidus thoracis",
+        "vi": "Cơ nhiều chân",
+        "page": 125
+      },
+      {
+        "en": "Multifidus cervicis",
+        "vi": "Cơ nhiều chân cổ",
+        "page": 125
+      },
+      {
+        "en": "Semispinalis thoracis",
+        "vi": "Cơ bán gai-ngực",
+        "page": 126
+      },
+      {
+        "en": "Semispinalis cervicis",
+        "vi": "Cơ bán gai-cổ",
+        "page": 126
+      },
+      {
+        "en": "Semispinalis capitis",
+        "vi": "Cơ bán gai-đầu",
+        "page": 126
+      },
+      {
+        "en": "Rotatores thoracis",
+        "vi": "Các cơ xoay ngực",
+        "page": 126
+      },
+      {
+        "en": "Rotatores cervicis",
+        "vi": "Các cơ xoay cổ",
+        "page": 126
+      },
+      {
+        "en": "Clavicular head",
+        "vi": "Phần đòn; Đầu đòn",
+        "page": 127
+      },
+      {
+        "en": "Sternocostal head",
+        "vi": "Phần ức-sườn; Đầu",
+        "page": 127
+      },
+      {
+        "en": "Abdominal part",
+        "vi": "Phần bụng",
+        "page": 127
+      },
+      {
+        "en": "loạt các cơ gai-ngang",
+        "vi": "được chi phối thần kinh đơn đoạn gối",
+        "page": 128
+      },
+      {
+        "en": "Right crus",
+        "vi": "Trụ phải",
+        "page": 129
+      },
+      {
+        "en": "Left crus",
+        "vi": "Trụ trái",
+        "page": 129
+      },
+      {
+        "en": "Rectus sheath",
+        "vi": "Bao cơ thẳng bụng",
+        "page": 130
+      },
+      {
+        "en": "Anterior layer",
+        "vi": "Lá trước",
+        "page": 130
+      },
+      {
+        "en": "Posterior layer",
+        "vi": "Lá sau",
+        "page": 130
+      },
+      {
+        "en": "Arcuate line",
+        "vi": "Đường cung",
+        "page": 130
+      },
+      {
+        "en": "Inguinal ligament",
+        "vi": "Dây chằng bẹn;",
+        "page": 130
+      },
+      {
+        "en": "Lacunar ligament",
+        "vi": "Dây chằng khuyết",
+        "page": 130
+      },
+      {
+        "en": "Pectineal ligament",
+        "vi": "Dây chằng lược",
+        "page": 130
+      },
+      {
+        "en": "Medial crus",
+        "vi": "Trụ trong*",
+        "page": 131
+      },
+      {
+        "en": "Lateral crus",
+        "vi": "Trụ ngoài*",
+        "page": 131
+      },
+      {
+        "en": "Intercrural fibres",
+        "vi": "Các sợi gian trụ",
+        "page": 131
+      },
+      {
+        "en": "Cremaster ♂",
+        "vi": "Cơ bìu ♂",
+        "page": 131
+      },
+      {
+        "en": "Deep inguinal ring",
+        "vi": "Lỗ bẹn sâu; Vòng",
+        "page": 131
+      },
+      {
+        "en": "Umbilical ring",
+        "vi": "Vòng rốn",
+        "page": 131
+      },
+      {
+        "en": "Psoas fascia",
+        "vi": "Mạc cơ thắt lưng",
+        "page": 132
+      },
+      {
+        "en": "Iliac fascia",
+        "vi": "Mạc cơ chậu",
+        "page": 132
+      },
+      {
+        "en": "Iliopectineal arch",
+        "vi": "Cung chậu-lược",
+        "page": 132
+      },
+      {
+        "en": "Transversalis fascia",
+        "vi": "Mạc ngang",
+        "page": 132
+      },
+      {
+        "en": "Iliopubic tract",
+        "vi": "Dải chậu-mu",
+        "page": 132
+      },
+      {
+        "en": "Umbilical fascia",
+        "vi": "Mạc rốn",
+        "page": 132
+      },
+      {
+        "en": "Deep investing fascia",
+        "vi": "Mạc bọc sâu",
+        "page": 133
+      },
+      {
+        "en": "Membranous layer",
+        "vi": "Lớp màng",
+        "page": 133
+      },
+      {
+        "en": "Fatty layer",
+        "vi": "Lớp mỡ",
+        "page": 133
+      },
+      {
+        "en": "Obturator fascia",
+        "vi": "Mạc cơ bịt",
+        "page": 134
+      },
+      {
+        "en": "Piriformis fascia",
+        "vi": "Mạc cơ hình quả",
+        "page": 134
+      },
+      {
+        "en": "Pubovesicalis",
+        "vi": "Cơ mu-bàng",
+        "page": 135
+      },
+      {
+        "en": "Rectovesicalis",
+        "vi": "Cơ trực tràng-",
+        "page": 135
+      },
+      {
+        "en": "Presacral fascia",
+        "vi": "Mạc trước cùng",
+        "page": 135
+      },
+      {
+        "en": "Rectosacral fascia",
+        "vi": "Mạc trực tràng-",
+        "page": 135
+      },
+      {
+        "en": "Pubococcygeus",
+        "vi": "Cơ mu-cụt",
+        "page": 136
+      },
+      {
+        "en": "Puboperinealis",
+        "vi": "Cơ mu-đáy chậu",
+        "page": 136
+      },
+      {
+        "en": "Pubovaginalis ♀",
+        "vi": "Cơ mu-âm đạo",
+        "page": 136
+      },
+      {
+        "en": "Pubo-analis",
+        "vi": "Cơ mu-hậu môn",
+        "page": 136
+      },
+      {
+        "en": "Puborectalis",
+        "vi": "Cơ mu-trực tràng",
+        "page": 136
+      },
+      {
+        "en": "Iliococcygeus",
+        "vi": "Cơ chậu-cụt",
+        "page": 136
+      },
+      {
+        "en": "Subcutaneous part",
+        "vi": "Phần dưới da",
+        "page": 136
+      },
+      {
+        "en": "Pubococcygeal tendon",
+        "vi": "Gân cơ mu-cụt",
+        "page": 137
+      },
+      {
+        "en": "Iliococcygeal raphe",
+        "vi": "Đường đan cơ",
+        "page": 137
+      },
+      {
+        "en": "Clavicular part",
+        "vi": "Phần đòn",
+        "page": 138
+      },
+      {
+        "en": "Acromial part",
+        "vi": "Phần cùng vai",
+        "page": 138
+      },
+      {
+        "en": "Spinal part",
+        "vi": "Phần gai vai",
+        "page": 138
+      },
+      {
+        "en": "Supraspinous fascia",
+        "vi": "Mạc cơ trên gai",
+        "page": 138
+      },
+      {
+        "en": "Infraspinous fascia",
+        "vi": "Mạc cơ dưới gai",
+        "page": 138
+      },
+      {
+        "en": "Long head",
+        "vi": "Đầu dài",
+        "page": 139
+      },
+      {
+        "en": "Short head",
+        "vi": "Đầu ngắn",
+        "page": 139
+      },
+      {
+        "en": "Bicipital aponeurosis",
+        "vi": "Trẽ cân cơ nhị đầu",
+        "page": 139
+      },
+      {
+        "en": "Lateral head",
+        "vi": "Đầu ngoài*",
+        "page": 139
+      },
+      {
+        "en": "Humeral head",
+        "vi": "Đầu cánh tay",
+        "page": 139
+      },
+      {
+        "en": "Ulnar head",
+        "vi": "Đầu trụ",
+        "page": 139
+      },
+      {
+        "en": "Humero-ulnar head",
+        "vi": "Đầu cánh tay-trụ",
+        "page": 140
+      },
+      {
+        "en": "Radial head",
+        "vi": "Đầu quay",
+        "page": 140
+      },
+      {
+        "en": "Superficial head",
+        "vi": "Đầu nông",
+        "page": 141
+      },
+      {
+        "en": "Deep head",
+        "vi": "Đầu sâu",
+        "page": 141
+      },
+      {
+        "en": "Oblique head",
+        "vi": "Đầu chéo",
+        "page": 142
+      },
+      {
+        "en": "Transverse head",
+        "vi": "Đầu ngang",
+        "page": 142
+      },
+      {
+        "en": "Superficial part",
+        "vi": "Phần nông; Phần",
+        "page": 144
+      },
+      {
+        "en": "Deep part",
+        "vi": "Phần sâu; Phần cơ",
+        "page": 144
+      },
+      {
+        "en": "Iliacus",
+        "vi": "Cơ chậu",
+        "page": 144
+      },
+      {
+        "en": "Psoas major",
+        "vi": "Cơ thắt lưng lớn",
+        "page": 144
+      },
+      {
+        "en": "Rectus femoris",
+        "vi": "Cơ thẳng đùi",
+        "page": 145
+      },
+      {
+        "en": "Straight head",
+        "vi": "Đầu thẳng",
+        "page": 145
+      },
+      {
+        "en": "Reflected head",
+        "vi": "Đầu quặt",
+        "page": 145
+      },
+      {
+        "en": "Vastus lateralis",
+        "vi": "Cơ rộng ngoài*",
+        "page": 145
+      },
+      {
+        "en": "Vastus intermedius",
+        "vi": "Cơ rộng giữa",
+        "page": 145
+      },
+      {
+        "en": "Vastus medialis",
+        "vi": "Cơ rộng trong*",
+        "page": 145
+      },
+      {
+        "en": "Gastrocnemius",
+        "vi": "Cơ bụng chân",
+        "page": 147
+      },
+      {
+        "en": "Medial head",
+        "vi": "Đầu trong*",
+        "page": 147
+      },
+      {
+        "en": "Soleus",
+        "vi": "Cơ dép",
+        "page": 147
+      },
+      {
+        "en": "Calcaneal tendon",
+        "vi": "Gân gót",
+        "page": 147
+      },
+      {
+        "en": "Iliotibial tract",
+        "vi": "Dải chậu-chày",
+        "page": 148
+      },
+      {
+        "en": "Falciform margin",
+        "vi": "Bờ hình liềm; Bờ",
+        "page": 149
+      },
+      {
+        "en": "Inferior horn",
+        "vi": "Sừng dưới; Trụ",
+        "page": 150
+      },
+      {
+        "en": "Cribriform fascia",
+        "vi": "Mạc sàng",
+        "page": 150
+      },
+      {
+        "en": "Transverse fascicles",
+        "vi": "Các bó ngang",
+        "page": 150
+      },
+      {
+        "en": "Fibrous sheath",
+        "vi": "Bao sợi",
+        "page": 151
+      },
+      {
+        "en": "Synovial sheath",
+        "vi": "Bao hoạt dịch",
+        "page": 151
+      },
+      {
+        "en": "Mesotendon",
+        "vi": "Mạc treo gân",
+        "page": 151
+      },
+      {
+        "en": "Vincula tendinum",
+        "vi": "Các dây treo gân",
+        "page": 154
+      },
+      {
+        "en": "Vinculum longum",
+        "vi": "Dây treo gân dài",
+        "page": 154
+      },
+      {
+        "en": "Vinculum breve",
+        "vi": "Dây treo gân ngắn",
+        "page": 154
+      },
+      {
+        "en": "Anular part",
+        "vi": "Phần vòng",
+        "page": 157
+      },
+      {
+        "en": "Cruciform part",
+        "vi": "Phần bắt chéo",
+        "page": 157
+      },
+      {
+        "en": "Vincula tendinum",
+        "vi": "Dây treo gân",
+        "page": 157
+      }
+    ]
+  },
+  "A05": {
+    "name": "Hệ tiêu hóa (Gan, Mật, Tụy, Ống tiêu hóa)",
+    "count": 133,
+    "terms": [
+      {
+        "en": "Upper lip",
+        "vi": "Môi trên",
+        "page": 158
+      },
+      {
+        "en": "Philtrum",
+        "vi": "Nhân trung",
+        "page": 158
+      },
+      {
+        "en": "Tubercle",
+        "vi": "Củ môi trên",
+        "page": 158
+      },
+      {
+        "en": "Lower lip",
+        "vi": "Môi dưới",
+        "page": 158
+      },
+      {
+        "en": "Buccal fat pad",
+        "vi": "Thể mỡ má; Cục",
+        "page": 159
+      },
+      {
+        "en": "Juxta-oral organ",
+        "vi": "Cơ quan cận miệng",
+        "page": 159
+      },
+      {
+        "en": "Hard palate",
+        "vi": "Khẩu cái cứng",
+        "page": 159
+      },
+      {
+        "en": "Soft palate",
+        "vi": "Khẩu cái mềm",
+        "page": 159
+      },
+      {
+        "en": "Palatine raphe",
+        "vi": "Đường đan khẩu",
+        "page": 159
+      },
+      {
+        "en": "Incisive papilla",
+        "vi": "Nhú răng cửa",
+        "page": 159
+      },
+      {
+        "en": "Gingival margin",
+        "vi": "Bờ lợi",
+        "page": 160
+      },
+      {
+        "en": "Superficial part",
+        "vi": "Phần nông",
+        "page": 160
+      },
+      {
+        "en": "Deep part",
+        "vi": "Phần sâu",
+        "page": 160
+      },
+      {
+        "en": "Parotid duct",
+        "vi": "Ống tuyến mang tai",
+        "page": 160
+      },
+      {
+        "en": "Submandibular duct",
+        "vi": "Ống tuyến dưới",
+        "page": 161
+      },
+      {
+        "en": "Cusp; Cuspid",
+        "vi": "Mấu",
+        "page": 162
+      },
+      {
+        "en": "Apex of cusp",
+        "vi": "Đỉnh mấu",
+        "page": 162
+      },
+      {
+        "en": "Accessory cusp",
+        "vi": "Mấu phụ",
+        "page": 162
+      },
+      {
+        "en": "Transverse ridge",
+        "vi": "Mào ngang",
+        "page": 162
+      },
+      {
+        "en": "Triangular ridge",
+        "vi": "Mào tam giác",
+        "page": 162
+      },
+      {
+        "en": "Oblique ridge",
+        "vi": "Mào chéo",
+        "page": 162
+      },
+      {
+        "en": "Occlusal fissure",
+        "vi": "Khe cắn",
+        "page": 162
+      },
+      {
+        "en": "Occlusal fossa",
+        "vi": "Hố cắn",
+        "page": 162
+      },
+      {
+        "en": "Buccal cusp",
+        "vi": "Mấu má",
+        "page": 162
+      },
+      {
+        "en": "Palatal cusp",
+        "vi": "Mấu khẩu cái",
+        "page": 162
+      },
+      {
+        "en": "Lingual cusp",
+        "vi": "Mấu lưỡi",
+        "page": 162
+      },
+      {
+        "en": "Mesiobuccal cusp",
+        "vi": "Mấu má gần",
+        "page": 163
+      },
+      {
+        "en": "Mesiopalatal cusp",
+        "vi": "Mấu khẩu cái gần",
+        "page": 163
+      },
+      {
+        "en": "Mesiolingual cusp",
+        "vi": "Mấu lưỡi gần",
+        "page": 163
+      },
+      {
+        "en": "Distobuccal cusp",
+        "vi": "Mấu má xa",
+        "page": 163
+      },
+      {
+        "en": "Distopalatal cusp",
+        "vi": "Mấu khẩu cái xa",
+        "page": 163
+      },
+      {
+        "en": "Distolingual cusp",
+        "vi": "Mấu lưỡi xa",
+        "page": 163
+      },
+      {
+        "en": "Root apex",
+        "vi": "Đỉnh chân răng",
+        "page": 163
+      },
+      {
+        "en": "Buccal surface",
+        "vi": "Mặt má",
+        "page": 163
+      },
+      {
+        "en": "Labial surface",
+        "vi": "Mặt môi",
+        "page": 163
+      },
+      {
+        "en": "Contact zone",
+        "vi": "Vùng tiếp xúc",
+        "page": 164
+      },
+      {
+        "en": "Pulp cavity of crown",
+        "vi": "Ổ tủy thân răng",
+        "page": 164
+      },
+      {
+        "en": "Apical foramen",
+        "vi": "Lỗ đỉnh ống chân",
+        "page": 164
+      },
+      {
+        "en": "Crown pulp",
+        "vi": "Tủy thân răng",
+        "page": 164
+      },
+      {
+        "en": "Root pulp",
+        "vi": "Tủy chân răng",
+        "page": 164
+      },
+      {
+        "en": "Fimbriated fold",
+        "vi": "Nếp tua",
+        "page": 167
+      },
+      {
+        "en": "Filiform papillae",
+        "vi": "Các nhú dạng",
+        "page": 167
+      },
+      {
+        "en": "Fungiform papillae",
+        "vi": "Các nhú dạng",
+        "page": 167
+      },
+      {
+        "en": "Vallate papillae",
+        "vi": "Các nhú dạng",
+        "page": 167
+      },
+      {
+        "en": "Foliate papillae",
+        "vi": "Các nhú dạng lá",
+        "page": 167
+      },
+      {
+        "en": "(Thyroglossal duct)",
+        "vi": "(Ống giáp-lưỡi)",
+        "page": 167
+      },
+      {
+        "en": "Lymphoid nodules",
+        "vi": "Các tiểu hạch",
+        "page": 168
+      },
+      {
+        "en": "Chondroglossus",
+        "vi": "Cơ sụn-lưỡi",
+        "page": 168
+      },
+      {
+        "en": "Ceratoglossus",
+        "vi": "Cơ sừng-lưỡi",
+        "page": 168
+      },
+      {
+        "en": "Uvula",
+        "vi": "Lưỡi gà",
+        "page": 169
+      },
+      {
+        "en": "(Triangular fold)",
+        "vi": "(Nếp tam giác)",
+        "page": 169
+      },
+      {
+        "en": "(Semilunar fold)",
+        "vi": "(Nếp bán nguyệt)",
+        "page": 169
+      },
+      {
+        "en": "Supratonsillar fossa",
+        "vi": "Hố trên hạnh nhân",
+        "page": 169
+      },
+      {
+        "en": "Tonsillar capsule",
+        "vi": "Bao hạnh nhân",
+        "page": 169
+      },
+      {
+        "en": "Tonsillar pits",
+        "vi": "Các tiểu hố hạnh",
+        "page": 169
+      },
+      {
+        "en": "Tonsillar crypts",
+        "vi": "Các hốc hạnh",
+        "page": 169
+      },
+      {
+        "en": "Anterior fascicle",
+        "vi": "Bó trước",
+        "page": 170
+      },
+      {
+        "en": "Pharyngeal tonsil",
+        "vi": "Hạnh nhân hầu",
+        "page": 170
+      },
+      {
+        "en": "Salpingopalatine fold",
+        "vi": "Nếp vòi-khẩu cái",
+        "page": 171
+      },
+      {
+        "en": "Pharyngeal glands",
+        "vi": "Các tuyến hầu",
+        "page": 172
+      },
+      {
+        "en": "Buccopharyngeal part",
+        "vi": "Phần má-hầu",
+        "page": 173
+      },
+      {
+        "en": "Mylopharyngeal part",
+        "vi": "Phần hàm-hầu",
+        "page": 173
+      },
+      {
+        "en": "Glossopharyngeal part",
+        "vi": "Phần lưỡi-hầu",
+        "page": 173
+      },
+      {
+        "en": "Ceratopharyngeal part",
+        "vi": "Phần sừng-hầu",
+        "page": 173
+      },
+      {
+        "en": "Retropharyngeal space",
+        "vi": "Khoang sau hầu",
+        "page": 173
+      },
+      {
+        "en": "Broncho-oesophageus",
+        "vi": "Cơ phế quản-thực",
+        "page": 174
+      },
+      {
+        "en": "Pleuro-oesophageus",
+        "vi": "Cơ màng phổi-",
+        "page": 174
+      },
+      {
+        "en": "Muscularis mucosae",
+        "vi": "Cơ niêm mạc; Lá",
+        "page": 175
+      },
+      {
+        "en": "Angular incisure",
+        "vi": "Khuyết góc",
+        "page": 175
+      },
+      {
+        "en": "Cardial orifice",
+        "vi": "Lỗ tâm vị",
+        "page": 175
+      },
+      {
+        "en": "Cardial notch",
+        "vi": "Khuyết tâm vị",
+        "page": 175
+      },
+      {
+        "en": "Pyloric antrum",
+        "vi": "Hang môn vị",
+        "page": 176
+      },
+      {
+        "en": "Pyloric canal",
+        "vi": "Ống môn vị",
+        "page": 176
+      },
+      {
+        "en": "Pylorus",
+        "vi": "Môn vị",
+        "page": 176
+      },
+      {
+        "en": "Pyloric orifice",
+        "vi": "Lỗ môn vị",
+        "page": 176
+      },
+      {
+        "en": "Longitudinal layer",
+        "vi": "Lớp dọc",
+        "page": 176
+      },
+      {
+        "en": "Circular layer",
+        "vi": "Lớp vòng",
+        "page": 176
+      },
+      {
+        "en": "Pyloric sphincter",
+        "vi": "Cơ thắt môn vị",
+        "page": 176
+      },
+      {
+        "en": "Oblique fibres",
+        "vi": "Các sợi chéo",
+        "page": 176
+      },
+      {
+        "en": "Gatric areas",
+        "vi": "Các diện vị",
+        "page": 177
+      },
+      {
+        "en": "Villous folds",
+        "vi": "Các nếp nhung",
+        "page": 177
+      },
+      {
+        "en": "Gastric pits",
+        "vi": "Các tiểu hõm vị",
+        "page": 177
+      },
+      {
+        "en": "Gastric glands",
+        "vi": "Các tuyến vị",
+        "page": 177
+      },
+      {
+        "en": "Intestinal glands",
+        "vi": "Các tuyến ruột",
+        "page": 178
+      },
+      {
+        "en": "layer/short pitch helicoidal layer",
+        "vi": "Những từ mới này thừa nhận",
+        "page": 178
+      },
+      {
+        "en": "Taeniae coli",
+        "vi": "Các dải sán đại",
+        "page": 182
+      },
+      {
+        "en": "Mesocolic taenia",
+        "vi": "Dải sán mạc treo",
+        "page": 182
+      },
+      {
+        "en": "Omental taenia",
+        "vi": "Dải sán mạc nối",
+        "page": 182
+      },
+      {
+        "en": "Free taenia",
+        "vi": "Dải sán tự do",
+        "page": 182
+      },
+      {
+        "en": "Rectococcygeus",
+        "vi": "Cơ trực tràng-cụt",
+        "page": 183
+      },
+      {
+        "en": "Rectovesicalis",
+        "vi": "Cơ trực tràng-bàng",
+        "page": 183
+      },
+      {
+        "en": "Subcutaneous part",
+        "vi": "Phần dưới da",
+        "page": 184
+      },
+      {
+        "en": "Superior part",
+        "vi": "Phần trên",
+        "page": 184
+      },
+      {
+        "en": "Cardiac impression",
+        "vi": "Ấn tim",
+        "page": 185
+      },
+      {
+        "en": "Anterior part",
+        "vi": "Phần trước",
+        "page": 185
+      },
+      {
+        "en": "Right part",
+        "vi": "Phần phải",
+        "page": 185
+      },
+      {
+        "en": "Posterior part",
+        "vi": "Phần sau",
+        "page": 185
+      },
+      {
+        "en": "Bare area",
+        "vi": "Vùng trần",
+        "page": 185
+      },
+      {
+        "en": "Groove for vena cava",
+        "vi": "Rãnh tĩnh mạch",
+        "page": 185
+      },
+      {
+        "en": "Ligamentum venosum",
+        "vi": "Dây chằng tĩnh",
+        "page": 185
+      },
+      {
+        "en": "Fossa for gallbladder",
+        "vi": "Hố túi mật",
+        "page": 185
+      },
+      {
+        "en": "Porta hepatis",
+        "vi": "Cửa gan",
+        "page": 185
+      },
+      {
+        "en": "Omental tuberosity",
+        "vi": "Củ mạc nối",
+        "page": 185
+      },
+      {
+        "en": "Oesophageal impression",
+        "vi": "Ấn thực quản",
+        "page": 185
+      },
+      {
+        "en": "Gastric impression",
+        "vi": "Ấn dạ dày",
+        "page": 186
+      },
+      {
+        "en": "Duodenal impression",
+        "vi": "Ấn tá tràng",
+        "page": 186
+      },
+      {
+        "en": "Colic impression",
+        "vi": "Ấn đại tràng",
+        "page": 186
+      },
+      {
+        "en": "Renal impression",
+        "vi": "Ấn thận",
+        "page": 186
+      },
+      {
+        "en": "Suprarenal impression",
+        "vi": "Ấn thượng thận",
+        "page": 186
+      },
+      {
+        "en": "Fibrous appendix of liver",
+        "vi": "Mấu phụ bằng xơ",
+        "page": 186
+      },
+      {
+        "en": "Papillary process",
+        "vi": "Mỏm nhú",
+        "page": 186
+      },
+      {
+        "en": "Caudate process",
+        "vi": "Mỏm đuôi",
+        "page": 186
+      },
+      {
+        "en": "Left lateral division",
+        "vi": "Tiểu phần trái-bên*",
+        "page": 187
+      },
+      {
+        "en": "and segments",
+        "vi": "Đây là những đơn vị phát triển, chức năng và có",
+        "page": 187
+      },
+      {
+        "en": "Left medial division",
+        "vi": "Tiểu phần trái-",
+        "page": 188
+      },
+      {
+        "en": "Right medial divison",
+        "vi": "Tiểu phần phải-",
+        "page": 188
+      },
+      {
+        "en": "Right lateral divison",
+        "vi": "Tiểu phần phải-",
+        "page": 188
+      },
+      {
+        "en": "Anterior branch",
+        "vi": "Nhánh trước",
+        "page": 189
+      },
+      {
+        "en": "Posterior branch",
+        "vi": "Nhánh sau",
+        "page": 189
+      },
+      {
+        "en": "Lateral branch",
+        "vi": "Nhánh bên*",
+        "page": 189
+      },
+      {
+        "en": "Mucosal folds; Rugae",
+        "vi": "Các nếp niêm mạc",
+        "page": 190
+      },
+      {
+        "en": "Superior sphincter",
+        "vi": "Cơ thắt trên",
+        "page": 191
+      },
+      {
+        "en": "Inferior sphincter",
+        "vi": "Cơ thắt dưới",
+        "page": 191
+      },
+      {
+        "en": "Sphincter of ampulla",
+        "vi": "Cơ thắt bóng gan",
+        "page": 191
+      },
+      {
+        "en": "Uncinate process",
+        "vi": "Mỏm móc",
+        "page": 191
+      },
+      {
+        "en": "Pancreatic notch",
+        "vi": "Khuyết tụy",
+        "page": 191
+      },
+      {
+        "en": "Anterosuperior surface",
+        "vi": "Mặt trước-trên",
+        "page": 191
+      },
+      {
+        "en": "Posterior surface",
+        "vi": "Mặt sau",
+        "page": 191
+      },
+      {
+        "en": "Antero-inferior surface",
+        "vi": "Mặt trước-dưới",
+        "page": 191
+      },
+      {
+        "en": "Superior border",
+        "vi": "Bờ trên",
+        "page": 192
+      },
+      {
+        "en": "Anterior border",
+        "vi": "Bờ trước",
+        "page": 192
+      },
+      {
+        "en": "Inferior border",
+        "vi": "Bờ dưới",
+        "page": 192
+      },
+      {
+        "en": "Omental eminence",
+        "vi": "Lồi mạc nối; Củ",
+        "page": 192
+      }
+    ]
+  },
+  "A06": {
+    "name": "Hệ hô hấp (Phổi, Màng phổi)",
+    "count": 38,
+    "terms": [
+      {
+        "en": "Major alar cartilage",
+        "vi": "Sụn cánh mũi lớn",
+        "page": 193
+      },
+      {
+        "en": "Medial crus",
+        "vi": "Trụ giữa*",
+        "page": 193
+      },
+      {
+        "en": "Lateral crus",
+        "vi": "Trụ bên*",
+        "page": 194
+      },
+      {
+        "en": "Minor alar cartilages",
+        "vi": "Các sụn cánh mũi",
+        "page": 194
+      },
+      {
+        "en": "Septal nasal cartilage",
+        "vi": "Sụn vách mũi",
+        "page": 194
+      },
+      {
+        "en": "Lateral process",
+        "vi": "Mỏm bên*",
+        "page": 194
+      },
+      {
+        "en": "Membranous part",
+        "vi": "Phần màng",
+        "page": 194
+      },
+      {
+        "en": "Cartilaginous part",
+        "vi": "Phần sụn",
+        "page": 194
+      },
+      {
+        "en": "Bony part",
+        "vi": "Phần xương",
+        "page": 194
+      },
+      {
+        "en": "Vomeronasal organ",
+        "vi": "Cơ quan lá mía-mũi",
+        "page": 194
+      },
+      {
+        "en": "Ethmoidal bulla",
+        "vi": "Bọt sàng",
+        "page": 196
+      },
+      {
+        "en": "Semilunar hiatus",
+        "vi": "Lỗ bán nguyệt",
+        "page": 196
+      },
+      {
+        "en": "Retrohyoid bursa",
+        "vi": "Túi sau móng",
+        "page": 198
+      },
+      {
+        "en": "Infrahyoid bursa",
+        "vi": "Túi dưới móng",
+        "page": 198
+      },
+      {
+        "en": "Triticeal cartilage",
+        "vi": "Sụn thóc",
+        "page": 198
+      },
+      {
+        "en": "Vocal process",
+        "vi": "Mỏm thanh âm",
+        "page": 199
+      },
+      {
+        "en": "Arcuate crest",
+        "vi": "Mào cung",
+        "page": 199
+      },
+      {
+        "en": "Oblong fovea",
+        "vi": "Hõm trám",
+        "page": 199
+      },
+      {
+        "en": "Triangular fovea",
+        "vi": "Hõm tam giác",
+        "page": 199
+      },
+      {
+        "en": "Oblique part",
+        "vi": "Phần chéo",
+        "page": 201
+      },
+      {
+        "en": "Thyro-epiglottic part",
+        "vi": "Phần giáp-thượng",
+        "page": 201
+      },
+      {
+        "en": "Ary-epiglottic part",
+        "vi": "Phần phễu-thượng",
+        "page": 201
+      },
+      {
+        "en": "Ary-epiglottic fold",
+        "vi": "Nếp phễu-thượng",
+        "page": 201
+      },
+      {
+        "en": "Cuneiform tubercle",
+        "vi": "Củ chêm",
+        "page": 201
+      },
+      {
+        "en": "Vestibular fold",
+        "vi": "Nếp tiền đình",
+        "page": 202
+      },
+      {
+        "en": "Rima vestibuli",
+        "vi": "Khe tiền đình",
+        "page": 202
+      },
+      {
+        "en": "Laryngeal saccule",
+        "vi": "Túi thanh quản",
+        "page": 202
+      },
+      {
+        "en": "Vocal fold",
+        "vi": "Nếp thanh âm",
+        "page": 202
+      },
+      {
+        "en": "Rima glottidis",
+        "vi": "Khe thanh môn",
+        "page": 202
+      },
+      {
+        "en": "Interarytenoid fold",
+        "vi": "Nếp gian phễu",
+        "page": 202
+      },
+      {
+        "en": "Laryngeal glands",
+        "vi": "Các tuyến thanh",
+        "page": 202
+      },
+      {
+        "en": "Vestibular ligament",
+        "vi": "Dây chằng tiền",
+        "page": 203
+      },
+      {
+        "en": "Vocal ligament",
+        "vi": "Dây chằng thanh",
+        "page": 203
+      },
+      {
+        "en": "Tracheal glands",
+        "vi": "Các tuyến khí",
+        "page": 203
+      },
+      {
+        "en": "Bronchial glands",
+        "vi": "Các tuyến phế",
+        "page": 206
+      },
+      {
+        "en": "Vertebral part",
+        "vi": "Phần cột sống",
+        "page": 206
+      },
+      {
+        "en": "Cardiac impression",
+        "vi": "Ấn tim",
+        "page": 207
+      },
+      {
+        "en": "Apical segment [S I]",
+        "vi": "Phân thuỳ đỉnh [PT",
+        "page": 208
+      }
+    ]
+  },
+  "A07": {
+    "name": "Khoang ngực & Trung thất",
+    "count": 8,
+    "terms": [
+      {
+        "en": "Serosa; Serous coat",
+        "vi": "Thanh mạc; Áo",
+        "page": 210
+      },
+      {
+        "en": "Costal part",
+        "vi": "Phần sườn",
+        "page": 210
+      },
+      {
+        "en": "Diaphragmatic part",
+        "vi": "Phần hoành",
+        "page": 210
+      },
+      {
+        "en": "Mediastinal part",
+        "vi": "Phần trung thất",
+        "page": 210
+      },
+      {
+        "en": "Phrenicopleural fascia",
+        "vi": "Mạc hoành-màng",
+        "page": 211
+      },
+      {
+        "en": "Anterior mediastinum",
+        "vi": "Trung thất trước",
+        "page": 211
+      },
+      {
+        "en": "Middle mediastinum",
+        "vi": "Trung thất giữa",
+        "page": 211
+      },
+      {
+        "en": "Posterior mediastinum",
+        "vi": "Trung thất sau",
+        "page": 211
+      }
+    ]
+  },
+  "A08": {
+    "name": "Hệ tiết niệu (Thận, Niệu quản, Bàng quang)",
+    "count": 34,
+    "terms": [
+      {
+        "en": "Hilum of kidney",
+        "vi": "Rốn thận",
+        "page": 212
+      },
+      {
+        "en": "Renal sinus",
+        "vi": "Xoang thận",
+        "page": 212
+      },
+      {
+        "en": "Cortical labyrinth",
+        "vi": "Mê đạo vỏ",
+        "page": 213
+      },
+      {
+        "en": "Cortex corticis",
+        "vi": "Vỏ của vỏ",
+        "page": 213
+      },
+      {
+        "en": "Medullary rays",
+        "vi": "Các tia tủy",
+        "page": 213
+      },
+      {
+        "en": "Outer zone",
+        "vi": "Vòng đai ngoài",
+        "page": 213
+      },
+      {
+        "en": "Outer stripe",
+        "vi": "Vân ngoài",
+        "page": 213
+      },
+      {
+        "en": "Inner stripe",
+        "vi": "Vân trong",
+        "page": 213
+      },
+      {
+        "en": "Vascular bundles",
+        "vi": "Các bó mạch",
+        "page": 213
+      },
+      {
+        "en": "Interbundle region",
+        "vi": "Vùng gian bó",
+        "page": 213
+      },
+      {
+        "en": "Inner zone",
+        "vi": "Vòng đai trong",
+        "page": 213
+      },
+      {
+        "en": "Renal papilla",
+        "vi": "Nhú thận",
+        "page": 214
+      },
+      {
+        "en": "Renal crest",
+        "vi": "Mào thận",
+        "page": 214
+      },
+      {
+        "en": "Renal pyramids",
+        "vi": "Các tháp thận",
+        "page": 214
+      },
+      {
+        "en": "Cribriform area",
+        "vi": "Diện sàng",
+        "page": 214
+      },
+      {
+        "en": "* A08.1.03.001 / A08.1.04.001 Intrarenal arteries/veins",
+        "vi": "Với các",
+        "page": 215
+      },
+      {
+        "en": "Major calices",
+        "vi": "Các đài thận lớn",
+        "page": 216
+      },
+      {
+        "en": "Superior calyx",
+        "vi": "Đài lớn trên",
+        "page": 216
+      },
+      {
+        "en": "Middle calyx",
+        "vi": "Đài lớn giữa",
+        "page": 216
+      },
+      {
+        "en": "Inferior calyx",
+        "vi": "Đài lớn dưới",
+        "page": 216
+      },
+      {
+        "en": "Minor calices",
+        "vi": "Các đài thận nhỏ",
+        "page": 216
+      },
+      {
+        "en": "Trigonal muscles",
+        "vi": "Các cơ tam giác",
+        "page": 217
+      },
+      {
+        "en": "Superficial trigone",
+        "vi": "Cơ tam giác nông",
+        "page": 217
+      },
+      {
+        "en": "Detrusor",
+        "vi": "Cơ bức niệu",
+        "page": 218
+      },
+      {
+        "en": "Unstratified part",
+        "vi": "Phần không phân",
+        "page": 218
+      },
+      {
+        "en": "Bladder neck part",
+        "vi": "Phần cổ bàng",
+        "page": 218
+      },
+      {
+        "en": "Circular layer",
+        "vi": "Lớp vòng",
+        "page": 218
+      },
+      {
+        "en": "Pubovesicalis",
+        "vi": "Cơ mu-bàng quang",
+        "page": 218
+      },
+      {
+        "en": "Rectovesicalis",
+        "vi": "Cơ trực tràng-bàng",
+        "page": 218
+      },
+      {
+        "en": "Vesicoprostaticus ♂",
+        "vi": "Cơ bàng quang-tiền",
+        "page": 218
+      },
+      {
+        "en": "Vesicovaginalis ♀",
+        "vi": "Cơ bàng quang-âm",
+        "page": 218
+      },
+      {
+        "en": "Interureteric crest",
+        "vi": "Mào gian niệu quản",
+        "page": 218
+      },
+      {
+        "en": "Ureteric orifice",
+        "vi": "Lỗ niệu quản",
+        "page": 218
+      },
+      {
+        "en": "Internal urethral",
+        "vi": "Lỗ niệu đạo trong;",
+        "page": 218
+      }
+    ]
+  },
+  "A09": {
+    "name": "Hệ sinh dục (Tiền liệt tuyến, Tử cung, Phần phụ)",
+    "count": 63,
+    "terms": [
+      {
+        "en": "Lỗ niệu đạo trong khi bàng quang rỗng",
+        "vi": "nằm gần hơn với lỗ",
+        "page": 220
+      },
+      {
+        "en": "Ovarian fimbria",
+        "vi": "Tua buồng trứng",
+        "page": 222
+      },
+      {
+        "en": "Supravaginal part",
+        "vi": "Phần trên âm đạo",
+        "page": 223
+      },
+      {
+        "en": "Isthmus of uterus",
+        "vi": "Eo tử cung",
+        "page": 223
+      },
+      {
+        "en": "Vaginal part",
+        "vi": "Phần âm đạo",
+        "page": 223
+      },
+      {
+        "en": "Anterior lip",
+        "vi": "Môi trước",
+        "page": 223
+      },
+      {
+        "en": "Posterior lip",
+        "vi": "Môi sau",
+        "page": 223
+      },
+      {
+        "en": "Palmate folds",
+        "vi": "Các nếp lá cọ",
+        "page": 224
+      },
+      {
+        "en": "Cervical glands",
+        "vi": "Các tuyến cổ",
+        "page": 224
+      },
+      {
+        "en": "Paracervix",
+        "vi": "Mô cận cổ tử cung",
+        "page": 224
+      },
+      {
+        "en": "Recto-uterinus",
+        "vi": "Cơ trực tràng-tử",
+        "page": 224
+      },
+      {
+        "en": "Uterine glands",
+        "vi": "Các tuyến tử cung",
+        "page": 224
+      },
+      {
+        "en": "Anterior part",
+        "vi": "Phần trước",
+        "page": 225
+      },
+      {
+        "en": "Posterior part",
+        "vi": "Phần sau",
+        "page": 225
+      },
+      {
+        "en": "Lateral part",
+        "vi": "Phần bên*",
+        "page": 225
+      },
+      {
+        "en": "Vaginal rugae",
+        "vi": "Các nếp nhăn âm",
+        "page": 225
+      },
+      {
+        "en": "Vaginal columns",
+        "vi": "Các cột nếp nhăn",
+        "page": 225
+      },
+      {
+        "en": "Transverse ductules",
+        "vi": "Các ống",
+        "page": 226
+      },
+      {
+        "en": "Anterior commissure",
+        "vi": "Mép trước",
+        "page": 226
+      },
+      {
+        "en": "Prepuce of clitoris",
+        "vi": "Bao âm vật",
+        "page": 227
+      },
+      {
+        "en": "Frenulum of clitoris",
+        "vi": "Hãm âm vật",
+        "page": 227
+      },
+      {
+        "en": "Vestibular fossa",
+        "vi": "Hố tiền đình âm",
+        "page": 227
+      },
+      {
+        "en": "Commissure of bulbs",
+        "vi": "Mép của các hành",
+        "page": 227
+      },
+      {
+        "en": "Glans of clitoris",
+        "vi": "Quy đầu âm vật",
+        "page": 228
+      },
+      {
+        "en": "Longitudinal layer",
+        "vi": "Lớp dọc",
+        "page": 229
+      },
+      {
+        "en": "Urethral glands",
+        "vi": "Các tuyến niệu đạo",
+        "page": 229
+      },
+      {
+        "en": "Urethral lacunae",
+        "vi": "Các hốc niệu đạo",
+        "page": 229
+      },
+      {
+        "en": "(Para-urethral ducts)",
+        "vi": "(Các ống cạnh niệu",
+        "page": 229
+      },
+      {
+        "en": "Parietal layer",
+        "vi": "Lá thành",
+        "page": 230
+      },
+      {
+        "en": "Visceral layer",
+        "vi": "Lá tạng",
+        "page": 230
+      },
+      {
+        "en": "Sinus of epididymis",
+        "vi": "Xoang mào tinh",
+        "page": 230
+      },
+      {
+        "en": "Serosa; Serous coat",
+        "vi": "Thanh mạc; Áo",
+        "page": 230
+      },
+      {
+        "en": "Appendix of testis",
+        "vi": "Mẩu phụ tinh hoàn",
+        "page": 232
+      },
+      {
+        "en": "Inferoposterior lobule",
+        "vi": "Tiểu thuỳ dưới-sau",
+        "page": 234
+      },
+      {
+        "en": "Inferolateral lobule",
+        "vi": "Tiểu thuỳ dưới-bên*",
+        "page": 234
+      },
+      {
+        "en": "Superomedial lobule",
+        "vi": "Tiểu thuỳ trên-giữa*",
+        "page": 234
+      },
+      {
+        "en": "Anteromedial lobule",
+        "vi": "Tiểu thuỳ trước-giữa*",
+        "page": 235
+      },
+      {
+        "en": "(Middle lobe)",
+        "vi": "(Thuỳ giữa)",
+        "page": 235
+      },
+      {
+        "en": "Lobules of prostate",
+        "vi": "Trong mỗi thuỳ của tiền liệt, bốn tiểu thuỳ",
+        "page": 236
+      },
+      {
+        "en": "niệu đạo, ở dưới bởi cơ hậu môn-đáy chậu",
+        "vi": "và ở sau bởi góc",
+        "page": 236
+      },
+      {
+        "en": "Corona of glans",
+        "vi": "Vành quy đầu",
+        "page": 237
+      },
+      {
+        "en": "Septum of glans",
+        "vi": "Vách quy đầu",
+        "page": 237
+      },
+      {
+        "en": "Neck of glans",
+        "vi": "Cổ quy đầu",
+        "page": 237
+      },
+      {
+        "en": "Frenulum",
+        "vi": "Hãm bao quy đầu",
+        "page": 237
+      },
+      {
+        "en": "Bulb of penis",
+        "vi": "Hành dương vật",
+        "page": 237
+      },
+      {
+        "en": "Proximal part",
+        "vi": "Phần gần",
+        "page": 239
+      },
+      {
+        "en": "Distal part",
+        "vi": "Phần xa",
+        "page": 239
+      },
+      {
+        "en": "Urethral crest",
+        "vi": "Mào niệu đạo",
+        "page": 239
+      },
+      {
+        "en": "Seminal colliculus",
+        "vi": "Gò tinh",
+        "page": 239
+      },
+      {
+        "en": "Prostatic utricle",
+        "vi": "Túi bầu dục tiền",
+        "page": 239
+      },
+      {
+        "en": "Prostatic sinus",
+        "vi": "Xoang tiền liệt",
+        "page": 239
+      },
+      {
+        "en": "Circular layer",
+        "vi": "Lớp vòng",
+        "page": 239
+      },
+      {
+        "en": "niệu đạo trong khi bàng quang rỗng",
+        "vi": "nằm gần hơn với lỗ niệu",
+        "page": 240
+      },
+      {
+        "en": "Navicular fossa",
+        "vi": "Hố thuyền",
+        "page": 240
+      },
+      {
+        "en": "Urethral glands",
+        "vi": "Các tuyến niệu",
+        "page": 240
+      },
+      {
+        "en": "Para-urethral ducts",
+        "vi": "Các ống cạnh niệu",
+        "page": 240
+      },
+      {
+        "en": "Septum of scrotum",
+        "vi": "Vách bìu",
+        "page": 241
+      },
+      {
+        "en": "Dartos muscle",
+        "vi": "Cơ dartos",
+        "page": 241
+      },
+      {
+        "en": "Membranous layer",
+        "vi": "Lớp màng",
+        "page": 242
+      },
+      {
+        "en": "nó là phần nằm giữa niệu đạo tiền liệt",
+        "vi": "và niệu đạo xốp",
+        "page": 242
+      },
+      {
+        "en": "perineal pouch",
+        "vi": "Túi dưới da đáy chậu",
+        "page": 245
+      },
+      {
+        "en": "ở dưới bởi mạc đáy chậu",
+        "vi": "(lớp nông của mạc bọc các cơ đáy",
+        "page": 245
+      },
+      {
+        "en": "chậu nhưng mở rộng vào chậu hông, làm cho các từ",
+        "vi": "hoành",
+        "page": 245
+      }
+    ]
+  },
+  "A10": {
+    "name": "Khoang bụng, chậu & Phúc mạc",
+    "count": 13,
+    "terms": [
+      {
+        "en": "urethrovaginalis ♀",
+        "vi": "Biểu tượng nam hiện lên sau cơ ngang",
+        "page": 246
+      },
+      {
+        "en": "Falciform ligament",
+        "vi": "Dây chằng liềm",
+        "page": 248
+      },
+      {
+        "en": "Vestibule",
+        "vi": "Tiền đình",
+        "page": 249
+      },
+      {
+        "en": "Superior recess",
+        "vi": "Ngách trên",
+        "page": 249
+      },
+      {
+        "en": "Inferior recess",
+        "vi": "Ngách dưới",
+        "page": 249
+      },
+      {
+        "en": "Splenic recess",
+        "vi": "Ngách tỳ",
+        "page": 249
+      },
+      {
+        "en": "Gastropancreatic fold",
+        "vi": "Nếp vị-tụỵỵy",
+        "page": 249
+      },
+      {
+        "en": "Hepatopancreatic fold",
+        "vi": "Nếp gan-tụy",
+        "page": 249
+      },
+      {
+        "en": "Caecal",
+        "vi": "folds Các nếp manh tràng",
+        "page": 250
+      },
+      {
+        "en": "Hepatorenal recess",
+        "vi": "Ngách gan-thận",
+        "page": 250
+      },
+      {
+        "en": "Mesometrium ♀",
+        "vi": "Mạc treo tử cung",
+        "page": 251
+      },
+      {
+        "en": "Mesosalpinx ♀",
+        "vi": "Mạc treo vòi tử",
+        "page": 251
+      },
+      {
+        "en": "Mesovarium ♀",
+        "vi": "Mạc treo buồng",
+        "page": 251
+      }
+    ]
+  },
+  "A11": {
+    "name": "Các tuyến nội tiết (Thượng thận, Tuyến giáp)",
+    "count": 3,
+    "terms": [
+      {
+        "en": "Pars tuberalis",
+        "vi": "Phần củ",
+        "page": 252
+      },
+      {
+        "en": "Pars intermedia",
+        "vi": "Phần trung gian",
+        "page": 253
+      },
+      {
+        "en": "Infundibulum",
+        "vi": "Phễu",
+        "page": 253
+      }
+    ]
+  },
+  "A12": {
+    "name": "Hệ tim mạch (Tim, Động mạch, Tĩnh mạch cửa)",
+    "count": 184,
+    "terms": [
+      {
+        "en": "Valvula",
+        "vi": "Lá van; Van nhỏ",
+        "page": 256
+      },
+      {
+        "en": "Deep lymph vessel",
+        "vi": "Mạch bạch huyết",
+        "page": 258
+      },
+      {
+        "en": "Lymphatic plexus",
+        "vi": "Đám rối mạch bạch",
+        "page": 258
+      },
+      {
+        "en": "Lymphatic valvule",
+        "vi": "Van mạch bạch",
+        "page": 258
+      },
+      {
+        "en": "tiếp nối động mạch-tĩnh mạch",
+        "vi": "được dùng rộng rãi, nhưng để",
+        "page": 258
+      },
+      {
+        "en": "Muscular part",
+        "vi": "Phần cơ",
+        "page": 259
+      },
+      {
+        "en": "Membranous part",
+        "vi": "Phần màng",
+        "page": 259
+      },
+      {
+        "en": "Auricle",
+        "vi": "Tiểu nhĩ",
+        "page": 259
+      },
+      {
+        "en": "Anterior cusp",
+        "vi": "Lá van trước",
+        "page": 261
+      },
+      {
+        "en": "Posterior cusp",
+        "vi": "Lá van sau",
+        "page": 261
+      },
+      {
+        "en": "Septal cusp",
+        "vi": "Lá van vách",
+        "page": 262
+      },
+      {
+        "en": "Right semilunar cusp",
+        "vi": "Lá van bán nguyệt",
+        "page": 262
+      },
+      {
+        "en": "Left semilunar cusp",
+        "vi": "Lá van bán nguyệt trái",
+        "page": 262
+      },
+      {
+        "en": "Anterior semilunar cusp",
+        "vi": "Lá van bán nguyệt",
+        "page": 262
+      },
+      {
+        "en": "Commissural cusps",
+        "vi": "Các lá van mép",
+        "page": 263
+      },
+      {
+        "en": "Sinu-atrial node",
+        "vi": "Nút xoang-nhĩ",
+        "page": 264
+      },
+      {
+        "en": "Atrioventricular node",
+        "vi": "Nút nhĩ-thất",
+        "page": 264
+      },
+      {
+        "en": "cusps of pulmonary valve",
+        "vi": "Vì mục đích giảng dạy, các lá (mấu)",
+        "page": 265
+      },
+      {
+        "en": "cusps of aortic valve",
+        "vi": "Vì mục đích giảng dạy, các lá (mấu) của",
+        "page": 265
+      },
+      {
+        "en": "Parietal layer",
+        "vi": "Lá thành",
+        "page": 266
+      },
+      {
+        "en": "Visceral layer",
+        "vi": "Lá tạng",
+        "page": 266
+      },
+      {
+        "en": "Serosa; Serous coat",
+        "vi": "Áo thanh mạc",
+        "page": 266
+      },
+      {
+        "en": "Ascending branch",
+        "vi": "Nhánh lên",
+        "page": 267
+      },
+      {
+        "en": "Descending branch",
+        "vi": "Nhánh xuống",
+        "page": 267
+      },
+      {
+        "en": "Basal part",
+        "vi": "Phần đáy",
+        "page": 267
+      },
+      {
+        "en": "Apical segmental artery",
+        "vi": "Động mạch phân thuỳ",
+        "page": 268
+      },
+      {
+        "en": "Lingular artery",
+        "vi": "Động mạch lưỡi",
+        "page": 269
+      },
+      {
+        "en": "Inferior lingular artery",
+        "vi": "Động mạch lưỡi dưới",
+        "page": 269
+      },
+      {
+        "en": "Conus branch",
+        "vi": "Nhánh nón động mạch",
+        "page": 270
+      },
+      {
+        "en": "Lateral branch",
+        "vi": "Nhánh bên*",
+        "page": 270
+      },
+      {
+        "en": "Left marginal artery",
+        "vi": "Động mạch bờ trái",
+        "page": 271
+      },
+      {
+        "en": "Atrial branches",
+        "vi": "Các nhánh tâm nhĩ",
+        "page": 271
+      },
+      {
+        "en": "Nasal septal branch",
+        "vi": "Nhánh vách mũi",
+        "page": 273
+      },
+      {
+        "en": "Mastoid branch",
+        "vi": "Nhánh chẩm",
+        "page": 274
+      },
+      {
+        "en": "(Stapedial branch)",
+        "vi": "(Nhánh bàn đạp)",
+        "page": 274
+      },
+      {
+        "en": "Dental branches",
+        "vi": "Các nhánh răng",
+        "page": 275
+      },
+      {
+        "en": "Peridental branches",
+        "vi": "Các nhánh quanh",
+        "page": 275
+      },
+      {
+        "en": "Mental branch",
+        "vi": "Nhánh cằm",
+        "page": 275
+      },
+      {
+        "en": "Mylohyoid branch",
+        "vi": "Nhánh hàm-móng",
+        "page": 276
+      },
+      {
+        "en": "Accessory branch",
+        "vi": "Nhánh phụ",
+        "page": 276
+      },
+      {
+        "en": "Frontal branch",
+        "vi": "Nhánh trán",
+        "page": 276
+      },
+      {
+        "en": "Orbital branch",
+        "vi": "Nhánh ổ mắt",
+        "page": 276
+      },
+      {
+        "en": "Parietal branch",
+        "vi": "Nhánh đỉnh",
+        "page": 276
+      },
+      {
+        "en": "Petrosal branch",
+        "vi": "Nhánh đá",
+        "page": 276
+      },
+      {
+        "en": "Pterygoid branches",
+        "vi": "Các nhánh chân",
+        "page": 276
+      },
+      {
+        "en": "Pharyngeal branch",
+        "vi": "Nhánh hầu",
+        "page": 277
+      },
+      {
+        "en": "Extraocular part",
+        "vi": "Phần ngoại nhãn",
+        "page": 279
+      },
+      {
+        "en": "Intraocular part",
+        "vi": "Phần nội nhãn cầu",
+        "page": 279
+      },
+      {
+        "en": "Episcleral arteries",
+        "vi": "Các động mạch",
+        "page": 280
+      },
+      {
+        "en": "Diploic branch",
+        "vi": "Nhánh lõi xốp",
+        "page": 280
+      },
+      {
+        "en": "Inferior palpebral arch",
+        "vi": "Cung mí dưới",
+        "page": 280
+      },
+      {
+        "en": "Các nhánh tới",
+        "vi": "phần",
+        "page": 281
+      },
+      {
+        "en": "Supraoptic artery",
+        "vi": "Động mạch trên thị",
+        "page": 282
+      },
+      {
+        "en": "Polar frontal artery",
+        "vi": "Động mạch cực trán",
+        "page": 283
+      },
+      {
+        "en": "Cingular branch",
+        "vi": "Nhánh đai",
+        "page": 283
+      },
+      {
+        "en": "Pericallosal artery",
+        "vi": "Động mạch quanh",
+        "page": 284
+      },
+      {
+        "en": "(Uncal artery)",
+        "vi": "(Động mạch móc)",
+        "page": 284
+      },
+      {
+        "en": "Insular arteries",
+        "vi": "Các động mạch thuỳ",
+        "page": 284
+      },
+      {
+        "en": "Prefrontal artery",
+        "vi": "Động mạch trước",
+        "page": 285
+      },
+      {
+        "en": "Anterior branches",
+        "vi": "Các nhánh trước",
+        "page": 286
+      },
+      {
+        "en": "Posterior branches",
+        "vi": "Các nhánh sau",
+        "page": 286
+      },
+      {
+        "en": "Medial branches",
+        "vi": "Các nhánh giữa*",
+        "page": 286
+      },
+      {
+        "en": "Lateral branches",
+        "vi": "Các nhánh bên*",
+        "page": 286
+      },
+      {
+        "en": "Calcarine branch",
+        "vi": "Nhánh cựa",
+        "page": 288
+      },
+      {
+        "en": "Spinal branches",
+        "vi": "Các nhánh tủy sống",
+        "page": 289
+      },
+      {
+        "en": "Radicular branches",
+        "vi": "Các nhánh rễ",
+        "page": 289
+      },
+      {
+        "en": "Muscular branches",
+        "vi": "Các nhánh cơ",
+        "page": 289
+      },
+      {
+        "en": "Meningeal branches",
+        "vi": "Các nhánh màng",
+        "page": 289
+      },
+      {
+        "en": "Labyrinthine artery",
+        "vi": "Động mạch mê đạo",
+        "page": 290
+      },
+      {
+        "en": "Glandular branches",
+        "vi": "Các nhánh tuyến",
+        "page": 291
+      },
+      {
+        "en": "Pharyngeal branches",
+        "vi": "Các nhánh hầu",
+        "page": 291
+      },
+      {
+        "en": "Tracheal branches",
+        "vi": "Các nhánh khí quản",
+        "page": 292
+      },
+      {
+        "en": "Acromial branch",
+        "vi": "Nhánh cùng vai",
+        "page": 292
+      },
+      {
+        "en": "Dorsal branches",
+        "vi": "Các nhánh lưng",
+        "page": 293
+      },
+      {
+        "en": "Spinal branches",
+        "vi": "Các nhánh tủy",
+        "page": 293
+      },
+      {
+        "en": "Clavicular branch",
+        "vi": "Nhánh đòn",
+        "page": 293
+      },
+      {
+        "en": "Detoid branch",
+        "vi": "Nhánh delta",
+        "page": 293
+      },
+      {
+        "en": "Pecrotal branches",
+        "vi": "Các nhánh ngực",
+        "page": 293
+      },
+      {
+        "en": "Thoracodorsal artery",
+        "vi": "Động mạch ngực-",
+        "page": 294
+      },
+      {
+        "en": "Deltoid branch",
+        "vi": "Nhánh delta",
+        "page": 294
+      },
+      {
+        "en": "Dorsal carpal arch",
+        "vi": "Cung mu cổ tay",
+        "page": 295
+      },
+      {
+        "en": "Perforating branches",
+        "vi": "Các nhánh xuyên",
+        "page": 295
+      },
+      {
+        "en": "Anterior branch",
+        "vi": "Nhánh trước",
+        "page": 295
+      },
+      {
+        "en": "Median artery",
+        "vi": "Động mạch giữa",
+        "page": 296
+      },
+      {
+        "en": "Perforating branch",
+        "vi": "Nhánh xuyên",
+        "page": 296
+      },
+      {
+        "en": "Dorsal branch",
+        "vi": "Nhánh lưng",
+        "page": 297
+      },
+      {
+        "en": "Postcentral branch",
+        "vi": "Nhánh sau trung",
+        "page": 297
+      },
+      {
+        "en": "Prelaminar branch",
+        "vi": "Nhánh trước",
+        "page": 297
+      },
+      {
+        "en": "Collateral branch",
+        "vi": "Nhánh bên",
+        "page": 298
+      },
+      {
+        "en": "Spinal branch",
+        "vi": "Nhánh tủy sống",
+        "page": 298
+      },
+      {
+        "en": "Duodenal branches",
+        "vi": "Các nhánh tá",
+        "page": 300
+      },
+      {
+        "en": "Gastric branches",
+        "vi": "Các nhánh vị",
+        "page": 300
+      },
+      {
+        "en": "Omental branches",
+        "vi": "Các nhánh mạc",
+        "page": 300
+      },
+      {
+        "en": "Right gastric artery",
+        "vi": "Động mạch vị phải",
+        "page": 300
+      },
+      {
+        "en": "Hepatic artery proper",
+        "vi": "Động mạch gan",
+        "page": 300
+      },
+      {
+        "en": "Right branch",
+        "vi": "Nhánh phải",
+        "page": 300
+      },
+      {
+        "en": "Cystic artery",
+        "vi": "Động mạch túi",
+        "page": 300
+      },
+      {
+        "en": "Left branch",
+        "vi": "Nhánh trái",
+        "page": 301
+      },
+      {
+        "en": "Pancreatic branches",
+        "vi": "Các nhánh tụy",
+        "page": 301
+      },
+      {
+        "en": "Prepancreatic artery",
+        "vi": "Động mạch trước",
+        "page": 301
+      },
+      {
+        "en": "Short gastric arteries",
+        "vi": "Các động mạch vị",
+        "page": 301
+      },
+      {
+        "en": "Splenic branches",
+        "vi": "Các nhánh tỳ",
+        "page": 302
+      },
+      {
+        "en": "Posterior branch",
+        "vi": "Nhánh sau",
+        "page": 302
+      },
+      {
+        "en": "Anterior caecal artery",
+        "vi": "Động mạch manh",
+        "page": 302
+      },
+      {
+        "en": "Appendicular artery",
+        "vi": "Động mạch ruột",
+        "page": 302
+      },
+      {
+        "en": "Ileal branch",
+        "vi": "Nhánh hồi tràng",
+        "page": 302
+      },
+      {
+        "en": "Colic branch",
+        "vi": "Nhánh đại tràng",
+        "page": 302
+      },
+      {
+        "en": "Superior branch",
+        "vi": "Nhánh trên",
+        "page": 305
+      },
+      {
+        "en": "Inferior branch",
+        "vi": "Nhánh dưới",
+        "page": 306
+      },
+      {
+        "en": "Ureteric branches",
+        "vi": "Các nhánh niệu",
+        "page": 306
+      },
+      {
+        "en": "Pubic branch",
+        "vi": "Nhánh mu",
+        "page": 308
+      },
+      {
+        "en": "Obturator branch",
+        "vi": "Nhánh bịt",
+        "page": 308
+      },
+      {
+        "en": "Cremasteric artery ♂",
+        "vi": "Động mạch cơ bìu",
+        "page": 308
+      },
+      {
+        "en": "Inguinal branches",
+        "vi": "Các nhánh bẹn",
+        "page": 309
+      },
+      {
+        "en": "Saphenous branch",
+        "vi": "Nhánh hiển",
+        "page": 309
+      },
+      {
+        "en": "Articular branches",
+        "vi": "Các nhánh khớp",
+        "page": 309
+      },
+      {
+        "en": "Superficial branch",
+        "vi": "Nhánh nông",
+        "page": 309
+      },
+      {
+        "en": "Deep branch",
+        "vi": "Nhánh sâu",
+        "page": 309
+      },
+      {
+        "en": "Acetabular branch",
+        "vi": "Nhánh ổ cối",
+        "page": 309
+      },
+      {
+        "en": "Transverse branch",
+        "vi": "Nhánh ngang",
+        "page": 310
+      },
+      {
+        "en": "Calcaneal branches",
+        "vi": "Các nhánh gót",
+        "page": 313
+      },
+      {
+        "en": "Left marginal vein",
+        "vi": "Tĩnh mạch bờ trái",
+        "page": 313
+      },
+      {
+        "en": "Right marginal vein",
+        "vi": "Tĩnh mạch bờ phải",
+        "page": 314
+      },
+      {
+        "en": "Right atrial veins",
+        "vi": "Các tĩnh mạch tâm",
+        "page": 314
+      },
+      {
+        "en": "(Left atrial veins)",
+        "vi": "(Các tĩnh mạch",
+        "page": 314
+      },
+      {
+        "en": "Intrasegmental part",
+        "vi": "Phần nội phân thuỳ",
+        "page": 314
+      },
+      {
+        "en": "Intersegmental part",
+        "vi": "Phần gian phân",
+        "page": 314
+      },
+      {
+        "en": "Infralobar part",
+        "vi": "Phần dưới thuỳ",
+        "page": 315
+      },
+      {
+        "en": "Intralobar part",
+        "vi": "Phần nội thuỳ",
+        "page": 315
+      },
+      {
+        "en": "Lateral part",
+        "vi": "Phần bên*",
+        "page": 315
+      },
+      {
+        "en": "Medial part",
+        "vi": "Phần giữa*",
+        "page": 315
+      },
+      {
+        "en": "Superior basal vein",
+        "vi": "Tĩnh mạch đáy",
+        "page": 315
+      },
+      {
+        "en": "Inferior basal vein",
+        "vi": "Tĩnh mạch đáy dưới",
+        "page": 316
+      },
+      {
+        "en": "Superior part",
+        "vi": "Phần trên",
+        "page": 316
+      },
+      {
+        "en": "Inferior part",
+        "vi": "Phần dưới",
+        "page": 316
+      },
+      {
+        "en": "Occipital vein",
+        "vi": "Tĩnh mạch chẩm",
+        "page": 318
+      },
+      {
+        "en": "Tiểu thể tĩnh mạch cảnh; Tiểu thể nhĩ;",
+        "vi": "Cuộn mạch tĩnh mạch cảnh",
+        "page": 319
+      },
+      {
+        "en": "Dorsal lingual veins",
+        "vi": "Các tĩnh mạch lưng",
+        "page": 319
+      },
+      {
+        "en": "Sublingual vein",
+        "vi": "Tĩnh mạch dưới",
+        "page": 319
+      },
+      {
+        "en": "Deep lingual vein",
+        "vi": "Tĩnh mạch lưỡi sâu",
+        "page": 320
+      },
+      {
+        "en": "Deep temporal veins",
+        "vi": "Các tĩnh mạch thái",
+        "page": 321
+      },
+      {
+        "en": "Parotid veins",
+        "vi": "Các tĩnh mạch",
+        "page": 321
+      },
+      {
+        "en": "Articular veins",
+        "vi": "Các tĩnh mạch khớp",
+        "page": 321
+      },
+      {
+        "en": "Tympanic veins",
+        "vi": "Các tĩnh mạch hòm",
+        "page": 321
+      },
+      {
+        "en": "Stylomastoid vein",
+        "vi": "Tĩnh mạch trâm-",
+        "page": 321
+      },
+      {
+        "en": "Jugular venous arch",
+        "vi": "Cung tĩnh mạch",
+        "page": 322
+      },
+      {
+        "en": "Lateral lacunae",
+        "vi": "Các hốc bên*",
+        "page": 322
+      },
+      {
+        "en": "Labyrinthine veins",
+        "vi": "Các tĩnh mạch mê",
+        "page": 323
+      },
+      {
+        "en": "Prefrontal veins",
+        "vi": "Các tĩnh mạch trước",
+        "page": 324
+      },
+      {
+        "en": "Frontal veins",
+        "vi": "Các tĩnh mạch trán",
+        "page": 324
+      },
+      {
+        "en": "Parietal veins",
+        "vi": "Các tĩnh mạch đỉnh",
+        "page": 324
+      },
+      {
+        "en": "Temporal veins",
+        "vi": "Các tĩnh mạch thái",
+        "page": 324
+      },
+      {
+        "en": "Occipital veins",
+        "vi": "Các tĩnh mạch chẩm",
+        "page": 324
+      },
+      {
+        "en": "Vein of uncus",
+        "vi": "Tĩnh mạch móc",
+        "page": 325
+      },
+      {
+        "en": "Orbital veins",
+        "vi": "Các tĩnh mạch ổ mắt",
+        "page": 325
+      },
+      {
+        "en": "Insular veins",
+        "vi": "Các tĩnh mạch đảo",
+        "page": 325
+      },
+      {
+        "en": "Lateral direct veins",
+        "vi": "Các tĩnh mạch thẳng",
+        "page": 326
+      },
+      {
+        "en": "Lateral pontine vein",
+        "vi": "Tĩnh mạch cầu não",
+        "page": 327
+      },
+      {
+        "en": "Scleral venous sinus",
+        "vi": "Xoang tĩnh mạch",
+        "page": 329
+      },
+      {
+        "en": "Scleral veins",
+        "vi": "Các tĩnh mạch củng",
+        "page": 329
+      },
+      {
+        "en": "Extraocular part",
+        "vi": "Phần ngoại nhãn cầu",
+        "page": 329
+      },
+      {
+        "en": "Palpebral veins",
+        "vi": "Các tĩnh mạch mí",
+        "page": 329
+      },
+      {
+        "en": "Conjunctival veins",
+        "vi": "Các tĩnh mạch kết",
+        "page": 329
+      },
+      {
+        "en": "Lumbar veins",
+        "vi": "Các tĩnh mạch thắt",
+        "page": 330
+      },
+      {
+        "en": "Intervertebral vein",
+        "vi": "Tĩnh mạch gian đốt",
+        "page": 330
+      },
+      {
+        "en": "Veins of spinal cord",
+        "vi": "Các tĩnh mạch tủy",
+        "page": 331
+      },
+      {
+        "en": "Anterior spinal veins",
+        "vi": "Các tĩnh mạch tủy",
+        "page": 331
+      },
+      {
+        "en": "Thoracodorsal vein",
+        "vi": "Tĩnh mạch ngực-",
+        "page": 331
+      },
+      {
+        "en": "Intercapitular veins",
+        "vi": "Các tĩnh mạch gian",
+        "page": 332
+      },
+      {
+        "en": "Right hepatic vein",
+        "vi": "Tĩnh mạch gan phải",
+        "page": 333
+      },
+      {
+        "en": "Capsular veins",
+        "vi": "Các tĩnh mạch bao",
+        "page": 334
+      },
+      {
+        "en": "Left suprarenal vein",
+        "vi": "Tĩnh mạch thượng",
+        "page": 334
+      },
+      {
+        "en": "Left ovarian vein ♀",
+        "vi": "Tĩnh mạch buồng",
+        "page": 334
+      },
+      {
+        "en": "Intrarenal veins",
+        "vi": "Các tĩnh mạch nội",
+        "page": 334
+      },
+      {
+        "en": "Pampiniform plexus",
+        "vi": "Đám rối tĩnh mạch",
+        "page": 334
+      },
+      {
+        "en": "Inferior rectal veins",
+        "vi": "Các tĩnh mạch trực",
+        "page": 336
+      },
+      {
+        "en": "Transverse part",
+        "vi": "Phần ngang",
+        "page": 339
+      },
+      {
+        "en": "Caudate branches",
+        "vi": "Các nhánh thuỳ",
+        "page": 339
+      },
+      {
+        "en": "Umbilical part",
+        "vi": "Phần rốn",
+        "page": 339
+      },
+      {
+        "en": "Umbilical vein",
+        "vi": "Tĩnh mạch rốn",
+        "page": 339
+      },
+      {
+        "en": "Appendicular vein",
+        "vi": "Tĩnh mạch ruột",
+        "page": 340
+      },
+      {
+        "en": "Left colic vein",
+        "vi": "Tĩnh mạch đại",
+        "page": 341
+      },
+      {
+        "en": "Sigmoid veins",
+        "vi": "Các tĩnh mạch",
+        "page": 341
+      },
+      {
+        "en": "Superior rectal vein",
+        "vi": "Tĩnh mạch trực",
+        "page": 341
+      }
+    ]
+  },
+  "A13": {
+    "name": "Hệ bạch huyết & Hạch",
+    "count": 72,
+    "terms": [
+      {
+        "en": "Arch of thoracic duct",
+        "vi": "Cung của ống ngực",
+        "page": 342
+      },
+      {
+        "en": "Cervical part",
+        "vi": "Phần cổ",
+        "page": 342
+      },
+      {
+        "en": "Thoracic part",
+        "vi": "Phần ngực",
+        "page": 342
+      },
+      {
+        "en": "Abdominal part",
+        "vi": "Phần bụng",
+        "page": 342
+      },
+      {
+        "en": "Red pulp",
+        "vi": "Tủy đỏ",
+        "page": 343
+      },
+      {
+        "en": "White pulp",
+        "vi": "Tủy trắng",
+        "page": 344
+      },
+      {
+        "en": "Renal impression",
+        "vi": "Ấn thận; Mặt thận",
+        "page": 344
+      },
+      {
+        "en": "Colic impression",
+        "vi": "Ấn đại tràng; Mặt đại",
+        "page": 344
+      },
+      {
+        "en": "Tonsillar crypts",
+        "vi": "Các hốc hạnh nhân",
+        "page": 345
+      },
+      {
+        "en": "Tonsillar pits",
+        "vi": "Các tiểu hố hạnh nhân",
+        "page": 345
+      },
+      {
+        "en": "Tonsillar capsule",
+        "vi": "Bao hạnh nhân",
+        "page": 345
+      },
+      {
+        "en": "Pre-auricular nodes",
+        "vi": "Các hạch trước loa",
+        "page": 347
+      },
+      {
+        "en": "Buccinator node",
+        "vi": "Hạch mút",
+        "page": 347
+      },
+      {
+        "en": "Nasolabial node",
+        "vi": "Hạch mũi-môi",
+        "page": 347
+      },
+      {
+        "en": "Malar node",
+        "vi": "Hạch gò má",
+        "page": 347
+      },
+      {
+        "en": "Mandibular node",
+        "vi": "Hạch dưới hàm",
+        "page": 347
+      },
+      {
+        "en": "Deep nodes",
+        "vi": "Các hạch sâu",
+        "page": 347
+      },
+      {
+        "en": "Infrahyoid nodes",
+        "vi": "Các hạch dưới",
+        "page": 347
+      },
+      {
+        "en": "Thyroid nodes",
+        "vi": "Các hạch tuyến",
+        "page": 348
+      },
+      {
+        "en": "Pretracheal nodes",
+        "vi": "Các hạch trước khí",
+        "page": 348
+      },
+      {
+        "en": "Paratracheal nodes",
+        "vi": "Các hạch cạnh khí",
+        "page": 348
+      },
+      {
+        "en": "Superficial nodes",
+        "vi": "Các hạch nông",
+        "page": 348
+      },
+      {
+        "en": "Lateral node",
+        "vi": "Hạch bên*",
+        "page": 348
+      },
+      {
+        "en": "Anterior node",
+        "vi": "Hạch trước",
+        "page": 348
+      },
+      {
+        "en": "Inferior deep nodes",
+        "vi": "Các hạch sâu dưới",
+        "page": 348
+      },
+      {
+        "en": "Anterior nodes",
+        "vi": "Các hạch trước",
+        "page": 348
+      },
+      {
+        "en": "Apical nodes",
+        "vi": "Các hạch đỉnh",
+        "page": 349
+      },
+      {
+        "en": "Central nodes",
+        "vi": "Các hạch trung tâm",
+        "page": 349
+      },
+      {
+        "en": "Left lumbar nodes",
+        "vi": "Các hạch thắt lưng",
+        "page": 351
+      },
+      {
+        "en": "Pre-aortic nodes",
+        "vi": "Các hạch trước",
+        "page": 351
+      },
+      {
+        "en": "Postaortic nodes",
+        "vi": "Các hạch sau động",
+        "page": 351
+      },
+      {
+        "en": "Right lumbar nodes",
+        "vi": "Các hạch thắt lưng",
+        "page": 351
+      },
+      {
+        "en": "Precaval nodes",
+        "vi": "Các hạch trước tĩnh",
+        "page": 351
+      },
+      {
+        "en": "Postcaval nodes",
+        "vi": "Các hạch sau tĩnh",
+        "page": 351
+      },
+      {
+        "en": "Coeliac nodes",
+        "vi": "Các hạch thân tạng",
+        "page": 352
+      },
+      {
+        "en": "Pyloric nodes",
+        "vi": "Các hạch môn vị",
+        "page": 352
+      },
+      {
+        "en": "(Subpyloric nodes)",
+        "vi": "(Các hạch dưới",
+        "page": 352
+      },
+      {
+        "en": "Pancreatic nodes",
+        "vi": "Các hạch tụyỵ",
+        "page": 352
+      },
+      {
+        "en": "Superior nodes",
+        "vi": "Các hạch trên",
+        "page": 352
+      },
+      {
+        "en": "Inferior nodes",
+        "vi": "Các hạch dưới",
+        "page": 352
+      },
+      {
+        "en": "Splenic nodes",
+        "vi": "Các hạch tỳ",
+        "page": 352
+      },
+      {
+        "en": "Hepatic nodes",
+        "vi": "Các hạch gan",
+        "page": 353
+      },
+      {
+        "en": "Cystic node",
+        "vi": "Hạch túi mật",
+        "page": 353
+      },
+      {
+        "en": "Ileocolic nodes",
+        "vi": "Các hạch hồi-đại",
+        "page": 353
+      },
+      {
+        "en": "Precaecal nodes",
+        "vi": "Các hạch trước",
+        "page": 353
+      },
+      {
+        "en": "Retrocaecal nodes",
+        "vi": "Các hạch sau",
+        "page": 353
+      },
+      {
+        "en": "Appendicular nodes",
+        "vi": "Các hạch ruột",
+        "page": 353
+      },
+      {
+        "en": "Mesocolic nodes",
+        "vi": "Các hạch mạc treo",
+        "page": 353
+      },
+      {
+        "en": "Paracolic nodes",
+        "vi": "Các hạch cạnh",
+        "page": 353
+      },
+      {
+        "en": "Sigmoid nodes",
+        "vi": "Các hạch sigma",
+        "page": 354
+      },
+      {
+        "en": "Common iliac nodes",
+        "vi": "Các hạch chậu",
+        "page": 354
+      },
+      {
+        "en": "Medial nodes",
+        "vi": "Các hạch trong*",
+        "page": 354
+      },
+      {
+        "en": "Intermediate nodes",
+        "vi": "Các hạch trung",
+        "page": 354
+      },
+      {
+        "en": "Lateral nodes",
+        "vi": "Các hạch ngoài*",
+        "page": 354
+      },
+      {
+        "en": "Subaortic nodes",
+        "vi": "Các hạch dưới",
+        "page": 354
+      },
+      {
+        "en": "Promontorial nodes",
+        "vi": "Các hạch ụ nhô",
+        "page": 354
+      },
+      {
+        "en": "External iliac nodes",
+        "vi": "Các hạch chậu",
+        "page": 354
+      },
+      {
+        "en": "Interiliac nodes",
+        "vi": "Các hạch gian",
+        "page": 355
+      },
+      {
+        "en": "Obturator nodes",
+        "vi": "Các hạch bịt",
+        "page": 355
+      },
+      {
+        "en": "Internal iliac nodes",
+        "vi": "Các hạch chậu",
+        "page": 355
+      },
+      {
+        "en": "Gluteal nodes",
+        "vi": "Các hạch mông",
+        "page": 355
+      },
+      {
+        "en": "Sacral nodes",
+        "vi": "Các hạch cùng",
+        "page": 355
+      },
+      {
+        "en": "Prevesical nodes",
+        "vi": "Các hạch trước",
+        "page": 355
+      },
+      {
+        "en": "Postvesical nodes",
+        "vi": "Các hạch sau",
+        "page": 355
+      },
+      {
+        "en": "Para-uterine nodes",
+        "vi": "Các hạch cạnh tử",
+        "page": 355
+      },
+      {
+        "en": "Paravaginal nodes",
+        "vi": "Các hạch cạnh âm",
+        "page": 355
+      },
+      {
+        "en": "Superomedial nodes",
+        "vi": "Các hạch trên-",
+        "page": 356
+      },
+      {
+        "en": "Superolateral nodes",
+        "vi": "Các hạch trên-",
+        "page": 356
+      },
+      {
+        "en": "Deep inguinal nodes",
+        "vi": "Các hạch bẹn sâu",
+        "page": 356
+      },
+      {
+        "en": "(Proximal node)",
+        "vi": "(Hạch gần)",
+        "page": 356
+      },
+      {
+        "en": "(Intermediate node)",
+        "vi": "(Hạch trung gian)",
+        "page": 356
+      },
+      {
+        "en": "Distal node",
+        "vi": "Hạch xa",
+        "page": 356
+      }
+    ]
+  },
+  "A14": {
+    "name": "Hệ thần kinh, Não bộ & Cột sống",
+    "count": 290,
+    "terms": [
+      {
+        "en": "Nucleus",
+        "vi": "Nhân",
+        "page": 358
+      },
+      {
+        "en": "Nucleus of origin",
+        "vi": "Nhân nguyên uỷ",
+        "page": 358
+      },
+      {
+        "en": "Terminal nucleus",
+        "vi": "Nhân tận",
+        "page": 358
+      },
+      {
+        "en": "Column",
+        "vi": "Cột",
+        "page": 358
+      },
+      {
+        "en": "Funiculus",
+        "vi": "Thừng",
+        "page": 359
+      },
+      {
+        "en": "Tract",
+        "vi": "Dải",
+        "page": 359
+      },
+      {
+        "en": "Commissure",
+        "vi": "Mép",
+        "page": 359
+      },
+      {
+        "en": "Lemniscus",
+        "vi": "Liềm",
+        "page": 359
+      },
+      {
+        "en": "Fibre",
+        "vi": "Sợi",
+        "page": 359
+      },
+      {
+        "en": "Association fibre",
+        "vi": "Sợi liên hợp",
+        "page": 359
+      },
+      {
+        "en": "Commissural fibre",
+        "vi": "Sợi mép",
+        "page": 359
+      },
+      {
+        "en": "Projection fibre",
+        "vi": "Sợi chiếu",
+        "page": 359
+      },
+      {
+        "en": "Decussation",
+        "vi": "Bắt chéo",
+        "page": 359
+      },
+      {
+        "en": "Stria",
+        "vi": "Vân",
+        "page": 359
+      },
+      {
+        "en": "(Subdural space)",
+        "vi": "(Khoang dưới cứng)",
+        "page": 360
+      },
+      {
+        "en": "Epidural space",
+        "vi": "Khoang trên cứng;",
+        "page": 360
+      },
+      {
+        "en": "extradural/epidural space",
+        "vi": "Tuy là những từ thường được sử",
+        "page": 360
+      },
+      {
+        "en": "Cerebrospinal fluid",
+        "vi": "Dịch não-tủy",
+        "page": 361
+      },
+      {
+        "en": "Arachnoid trabeculae",
+        "vi": "Các bè màng nhện",
+        "page": 361
+      },
+      {
+        "en": "Subarachnoid cisterns",
+        "vi": "Các bể dưới nhện",
+        "page": 361
+      },
+      {
+        "en": "Chiasmatic cistern",
+        "vi": "Bể giao thoa",
+        "page": 361
+      },
+      {
+        "en": "Pericallosal cistern",
+        "vi": "Bể quanh thể trai",
+        "page": 362
+      },
+      {
+        "en": "Lumbar cistern",
+        "vi": "Bể thắt lưng",
+        "page": 362
+      },
+      {
+        "en": "Choroid enlargement",
+        "vi": "Cuộn phình mạch",
+        "page": 362
+      },
+      {
+        "en": "Denticulate ligament",
+        "vi": "Dây chằng răng",
+        "page": 363
+      },
+      {
+        "en": "Lateral horn",
+        "vi": "Sừng bên*",
+        "page": 365
+      },
+      {
+        "en": "Spinal laminae VII-IX",
+        "vi": "Các lá tủy VII-IX",
+        "page": 365
+      },
+      {
+        "en": "Anterior nucleus",
+        "vi": "Nhân trước",
+        "page": 365
+      },
+      {
+        "en": "Central nucleus",
+        "vi": "Nhân trung tâm",
+        "page": 366
+      },
+      {
+        "en": "Apex",
+        "vi": "Đỉnh",
+        "page": 366
+      },
+      {
+        "en": "Head",
+        "vi": "Chỏm",
+        "page": 366
+      },
+      {
+        "en": "Spinal lamina V",
+        "vi": "Lá tủy V",
+        "page": 366
+      },
+      {
+        "en": "Base",
+        "vi": "Nền",
+        "page": 366
+      },
+      {
+        "en": "Spinal lamina VI",
+        "vi": "Lá tủy VI",
+        "page": 366
+      },
+      {
+        "en": "Diencephalon",
+        "vi": "Gian não",
+        "page": 373
+      },
+      {
+        "en": "Telencephalon",
+        "vi": "Đoan não",
+        "page": 373
+      },
+      {
+        "en": "fasciculus, gracile nucleus và cuneate nucleus",
+        "vi": "thường được",
+        "page": 374
+      },
+      {
+        "en": "commissure và posterior grey commissure",
+        "vi": "Đây là những lá",
+        "page": 374
+      },
+      {
+        "en": "Restiform body",
+        "vi": "Thể thừng",
+        "page": 374
+      },
+      {
+        "en": "Corticospinal fibres",
+        "vi": "Các sợi vỏ-tủy",
+        "page": 375
+      },
+      {
+        "en": "Juxtarestiform body",
+        "vi": "Thể cận thừng",
+        "page": 376
+      },
+      {
+        "en": "* A14.1.04.013",
+        "vi": "Inferior cerebellar peduncle và restiform body",
+        "page": 377
+      },
+      {
+        "en": "nghĩa. Tuy nhiên, inferior cerebellar peduncle",
+        "vi": "bao gồm hai",
+        "page": 377
+      },
+      {
+        "en": "Spinothalamic fibres",
+        "vi": "Các sợi tủy-đồi thị",
+        "page": 378
+      },
+      {
+        "en": "Spinoreticular fibres",
+        "vi": "Các sợi tủy-lưới",
+        "page": 378
+      },
+      {
+        "en": "Spinotectal fibres",
+        "vi": "Các sợi tủy-mái",
+        "page": 379
+      },
+      {
+        "en": "Spinobulbar fibres",
+        "vi": "Các sợi tủy-hành",
+        "page": 379
+      },
+      {
+        "en": "Spino-olivary fibres",
+        "vi": "Các sợi tủy-trám",
+        "page": 379
+      },
+      {
+        "en": "Caudal part",
+        "vi": "Phần đuôi",
+        "page": 380
+      },
+      {
+        "en": "Zonal subnucleus",
+        "vi": "Dưới nhân vòng",
+        "page": 380
+      },
+      {
+        "en": "Interpolar part",
+        "vi": "Phần gian cực",
+        "page": 380
+      },
+      {
+        "en": "Dorsal lamella",
+        "vi": "Lá lưng",
+        "page": 380
+      },
+      {
+        "en": "Ventral lamella",
+        "vi": "Lá bụng",
+        "page": 381
+      },
+      {
+        "en": "Lateral lamella",
+        "vi": "Lá bên*",
+        "page": 381
+      },
+      {
+        "en": "Các nhân",
+        "vi": "của dải",
+        "page": 381
+      },
+      {
+        "en": "Parasolitary nucleus",
+        "vi": "Nhân cạnh đơn",
+        "page": 381
+      },
+      {
+        "en": "Anterior part",
+        "vi": "Phần trước",
+        "page": 383
+      },
+      {
+        "en": "Posterior part",
+        "vi": "Phần sau",
+        "page": 383
+      },
+      {
+        "en": "Intercalated nucleus",
+        "vi": "Nhân xen (hành",
+        "page": 384
+      },
+      {
+        "en": "Prepositus nucleus",
+        "vi": "Nhân trước nhân",
+        "page": 384
+      },
+      {
+        "en": "Pars alpha",
+        "vi": "Phần alpha",
+        "page": 384
+      },
+      {
+        "en": "Magnocellular part",
+        "vi": "Phần tế bào lớn",
+        "page": 385
+      },
+      {
+        "en": "Parvocellular part",
+        "vi": "Phần tế bào nhỏ",
+        "page": 385
+      },
+      {
+        "en": "Subtrigeminal part",
+        "vi": "Phần dưới thần kinh",
+        "page": 385
+      },
+      {
+        "en": "Dorsal part",
+        "vi": "Phần lưng",
+        "page": 385
+      },
+      {
+        "en": "Ventral part",
+        "vi": "Phần bụng",
+        "page": 386
+      },
+      {
+        "en": "Corticopontine fibres",
+        "vi": "Các sợi vỏ-cầu",
+        "page": 387
+      },
+      {
+        "en": "Tectopontine fibres",
+        "vi": "Các sợi mái-cầu",
+        "page": 387
+      },
+      {
+        "en": "Lateral nucleus",
+        "vi": "Nhân bên*",
+        "page": 387
+      },
+      {
+        "en": "Paramedian nucleus",
+        "vi": "Nhân cạnh giữa",
+        "page": 388
+      },
+      {
+        "en": "Rubro-olivary fibres",
+        "vi": "Các sợi đỏ-trám",
+        "page": 391
+      },
+      {
+        "en": "Anulo-olivary fibres",
+        "vi": "Các sợi vòng-trám",
+        "page": 391
+      },
+      {
+        "en": "Nhân",
+        "vi": "trước",
+        "page": 394
+      },
+      {
+        "en": "liềm",
+        "vi": "bên*;",
+        "page": 394
+      },
+      {
+        "en": "Nhân",
+        "vi": "trần",
+        "page": 394
+      },
+      {
+        "en": "Median sulcus",
+        "vi": "Rãnh giữa",
+        "page": 396
+      },
+      {
+        "en": "Medial eminence",
+        "vi": "Lồi giữa*",
+        "page": 396
+      },
+      {
+        "en": "Facial colliculus",
+        "vi": "Gò mặt",
+        "page": 396
+      },
+      {
+        "en": "Locus caeruleus",
+        "vi": "Vết lục",
+        "page": 396
+      },
+      {
+        "en": "Vestibular area",
+        "vi": "Diện tiền đình",
+        "page": 397
+      },
+      {
+        "en": "Funiculus separans",
+        "vi": "Thừng phân cách",
+        "page": 397
+      },
+      {
+        "en": "Fastigium",
+        "vi": "Nóc",
+        "page": 397
+      },
+      {
+        "en": "Choroid plexus",
+        "vi": "Đám rối mạch mạc",
+        "page": 397
+      },
+      {
+        "en": "Choroid membrane",
+        "vi": "Tấm mạch mạc",
+        "page": 397
+      },
+      {
+        "en": "Lateral recess",
+        "vi": "Ngách bên*",
+        "page": 397
+      },
+      {
+        "en": "Lateral aperture",
+        "vi": "Lỗ bên*",
+        "page": 397
+      },
+      {
+        "en": "Area postrema",
+        "vi": "Diện sau cùng",
+        "page": 398
+      },
+      {
+        "en": "Obex",
+        "vi": "Chốt",
+        "page": 398
+      },
+      {
+        "en": "và caudal pontine reticular nucleus",
+        "vi": "Những từ này đã được",
+        "page": 398
+      },
+      {
+        "en": "Cerebral crus",
+        "vi": "Trụ đại não",
+        "page": 398
+      },
+      {
+        "en": "Inferior colliculus",
+        "vi": "Gò dưới",
+        "page": 399
+      },
+      {
+        "en": "Superior colliculus",
+        "vi": "Gò trên",
+        "page": 399
+      },
+      {
+        "en": "Corticonuclear fibres",
+        "vi": "Các sợi vỏ-nhân",
+        "page": 400
+      },
+      {
+        "en": "Frontopontine fibres",
+        "vi": "Các sợi trán-cầu",
+        "page": 400
+      },
+      {
+        "en": "Parietopontine fibres",
+        "vi": "Các sợi đỉnh-cầu",
+        "page": 400
+      },
+      {
+        "en": "* A14.1.06.015",
+        "vi": "Superior colliculus bao gồm hai lớp tế bào và",
+        "page": 401
+      },
+      {
+        "en": "Interstitial subdivision",
+        "vi": "Phần kẽ",
+        "page": 404
+      },
+      {
+        "en": "Dorsal subdivision",
+        "vi": "Phần lưng",
+        "page": 404
+      },
+      {
+        "en": "Medial nucleus",
+        "vi": "Nhân giữa*",
+        "page": 404
+      },
+      {
+        "en": "* A14.1.06.223 Corticomesencephalic fibres",
+        "vi": "Đây là những sợi",
+        "page": 404
+      },
+      {
+        "en": "Interfascicular nucleus",
+        "vi": "Nhân gian bó",
+        "page": 405
+      },
+      {
+        "en": "Paranigral nucleus",
+        "vi": "Nhân cạnh đen",
+        "page": 405
+      },
+      {
+        "en": "External nucleus",
+        "vi": "Nhân ngoài",
+        "page": 407
+      },
+      {
+        "en": "Pericentral nucleus",
+        "vi": "Nhân quanh trung",
+        "page": 407
+      },
+      {
+        "en": "Zonal layer; Layer I",
+        "vi": "Lớp vòng đai; Lá I",
+        "page": 407
+      },
+      {
+        "en": "Optic layer; Layer III",
+        "vi": "Lớp thị giác; Lá",
+        "page": 407
+      },
+      {
+        "en": "Declive [VI]",
+        "vi": "Chếch [VI]",
+        "page": 410
+      },
+      {
+        "en": "neocerebellum",
+        "vi": "Các từ tiền đình-tiểu não và tủy-tiểu não phản",
+        "page": 411
+      },
+      {
+        "en": "kinh điển, các từ cổ tiểu não, cựu tiểu não",
+        "vi": "và tân tiểu não lần",
+        "page": 411
+      },
+      {
+        "en": "Habenular sulcus",
+        "vi": "Rãnh cương",
+        "page": 414
+      },
+      {
+        "en": "Habenular trigone",
+        "vi": "Tam giác cương",
+        "page": 414
+      },
+      {
+        "en": "Infundibulum",
+        "vi": "Phễu",
+        "page": 416
+      },
+      {
+        "en": "Pars nervosa",
+        "vi": "Phần thần kinh",
+        "page": 416
+      },
+      {
+        "en": "Lateral root",
+        "vi": "Rễ bên*",
+        "page": 416
+      },
+      {
+        "en": "Medial root",
+        "vi": "Rễ giữa*",
+        "page": 416
+      },
+      {
+        "en": "Median eminence",
+        "vi": "Lồi giữa",
+        "page": 416
+      },
+      {
+        "en": "Anterodorsal nucleus",
+        "vi": "Nhân trước-lưng",
+        "page": 419
+      },
+      {
+        "en": "Pulvinar nuclei",
+        "vi": "Các nhân của đồi",
+        "page": 419
+      },
+      {
+        "en": "Paracentral nucleus",
+        "vi": "Nhân cạnh trung",
+        "page": 420
+      },
+      {
+        "en": "Parataenial nucleus",
+        "vi": "Nhân cạnh dải sán",
+        "page": 420
+      },
+      {
+        "en": "Nucleus reuniens",
+        "vi": "Nhân nối",
+        "page": 421
+      },
+      {
+        "en": "Rhomboid nucleus",
+        "vi": "Nhân trám",
+        "page": 421
+      },
+      {
+        "en": "Nucleus limitans",
+        "vi": "Nhân giới hạn",
+        "page": 421
+      },
+      {
+        "en": "Posterior nucleus",
+        "vi": "Nhân sau",
+        "page": 421
+      },
+      {
+        "en": "Ventrobasal complex",
+        "vi": "Các nhân bụng-nền;",
+        "page": 421
+      },
+      {
+        "en": "Các nhân",
+        "vi": "bụng giữa*;",
+        "page": 421
+      },
+      {
+        "en": "Submedial nucleus",
+        "vi": "Nhân dưới giữa*",
+        "page": 421
+      },
+      {
+        "en": "Principal division",
+        "vi": "Phần chính",
+        "page": 422
+      },
+      {
+        "en": "Koniocellular layer",
+        "vi": "Lớp tế bào hạt",
+        "page": 424
+      },
+      {
+        "en": "Magnocellular layers",
+        "vi": "Các lớp tế bào lớn",
+        "page": 424
+      },
+      {
+        "en": "Parvocellular layers",
+        "vi": "Các lớp tế bào nhỏ",
+        "page": 425
+      },
+      {
+        "en": "Dorsal nucleus",
+        "vi": "Nhân lưng",
+        "page": 425
+      },
+      {
+        "en": "Supra-optic nucleus",
+        "vi": "Nhân trên thị",
+        "page": 426
+      },
+      {
+        "en": "Dorsolateral part",
+        "vi": "Phần lưng-bên*",
+        "page": 426
+      },
+      {
+        "en": "Dorsomedial part",
+        "vi": "Phần lưng-giữa*",
+        "page": 426
+      },
+      {
+        "en": "Ventromedial part",
+        "vi": "Phần bụng-giữa*",
+        "page": 426
+      },
+      {
+        "en": "Dorsomedial nucleus",
+        "vi": "Nhân lưng-giữa*",
+        "page": 426
+      },
+      {
+        "en": "Lateral tuberal nuclei",
+        "vi": "Các nhân củ bên*",
+        "page": 427
+      },
+      {
+        "en": "của",
+        "vi": "hạ đồi",
+        "page": 427
+      },
+      {
+        "en": "Preoptic area",
+        "vi": "Vùng trước thị",
+        "page": 427
+      },
+      {
+        "en": "Perifornical nucleus",
+        "vi": "Nhân quanh vòm",
+        "page": 427
+      },
+      {
+        "en": "Periventricular zone",
+        "vi": "Vòng đai quanh",
+        "page": 428
+      },
+      {
+        "en": "Medial zone",
+        "vi": "Vòng đai giữa*",
+        "page": 428
+      },
+      {
+        "en": "Lateral zone",
+        "vi": "Vòng đai bên*",
+        "page": 428
+      },
+      {
+        "en": "Paraventricular fibres",
+        "vi": "Các sợi cạnh",
+        "page": 429
+      },
+      {
+        "en": "Supra-optic fibres",
+        "vi": "Các sợi trên thị",
+        "page": 429
+      },
+      {
+        "en": "Central sulcus",
+        "vi": "Rãnh trung tâm",
+        "page": 430
+      },
+      {
+        "en": "Lateral sulcus",
+        "vi": "Rãnh bên*",
+        "page": 430
+      },
+      {
+        "en": "Posterior ramus",
+        "vi": "Ngành sau",
+        "page": 430
+      },
+      {
+        "en": "Ascending ramus",
+        "vi": "Ngành lên",
+        "page": 430
+      },
+      {
+        "en": "Anterior ramus",
+        "vi": "Ngành trước",
+        "page": 430
+      },
+      {
+        "en": "Parieto-occipital sulcus",
+        "vi": "Rãnh đỉnh-chẩm",
+        "page": 430
+      },
+      {
+        "en": "Preoccipital notch",
+        "vi": "Khuyết trước",
+        "page": 431
+      },
+      {
+        "en": "Orbital part",
+        "vi": "Phần ổ mắt",
+        "page": 431
+      },
+      {
+        "en": "Triangular part",
+        "vi": "Phần tam giác",
+        "page": 431
+      },
+      {
+        "en": "Opercular part",
+        "vi": "Phần nắp",
+        "page": 431
+      },
+      {
+        "en": "Temporal operculum",
+        "vi": "Nắp thái dương",
+        "page": 432
+      },
+      {
+        "en": "Long gyrus of insula",
+        "vi": "Hồi dài thuỳ đảo",
+        "page": 433
+      },
+      {
+        "en": "Short gyri of insula",
+        "vi": "Các hồi ngắn thuỳ",
+        "page": 433
+      },
+      {
+        "en": "Cingulate sulcus",
+        "vi": "Rãnh đai",
+        "page": 434
+      },
+      {
+        "en": "Subparietal sulcus",
+        "vi": "Rãnh dưới đỉnh",
+        "page": 434
+      },
+      {
+        "en": "Collateral sulcus",
+        "vi": "Rãnh bên phụ",
+        "page": 434
+      },
+      {
+        "en": "Paraterminal gyrus",
+        "vi": "Hồi cạnh tận cùng",
+        "page": 434
+      },
+      {
+        "en": "Paraolfactory gyri",
+        "vi": "Các hồi cạnh khứu",
+        "page": 435
+      },
+      {
+        "en": "hemisphere",
+        "vi": "Từ khứu não đã được bỏ đi vì nó không còn thích",
+        "page": 435
+      },
+      {
+        "en": "Paraolfactory sulci",
+        "vi": "Các rãnh cạnh khứu",
+        "page": 435
+      },
+      {
+        "en": "Uncus",
+        "vi": "Móc",
+        "page": 437
+      },
+      {
+        "en": "* A14.1.09.230",
+        "vi": "Limbic lobe bao gồm những cấu trúc tạo nên",
+        "page": 438
+      },
+      {
+        "en": "Tapetum",
+        "vi": "Thảm",
+        "page": 439
+      },
+      {
+        "en": "Tangential fibres",
+        "vi": "Các sợi tiếp tuyến",
+        "page": 443
+      },
+      {
+        "en": "Region I; CA1",
+        "vi": "Vùng I; CA1",
+        "page": 443
+      },
+      {
+        "en": "Region II; CA 2",
+        "vi": "Vùng II; CA2",
+        "page": 443
+      },
+      {
+        "en": "Region III; CA3",
+        "vi": "Vùng III; CA3",
+        "page": 443
+      },
+      {
+        "en": "Region IV; CA4",
+        "vi": "Vùng IV; CA4",
+        "page": 443
+      },
+      {
+        "en": "Oriens layer",
+        "vi": "Lớp định hướng",
+        "page": 444
+      },
+      {
+        "en": "Pyramidal layer",
+        "vi": "Lớp tháp",
+        "page": 444
+      },
+      {
+        "en": "Radiate layer",
+        "vi": "Lớp tia",
+        "page": 444
+      },
+      {
+        "en": "Molecular layer",
+        "vi": "Lớp phân tử",
+        "page": 444
+      },
+      {
+        "en": "Granular layer",
+        "vi": "Lớp hạt",
+        "page": 444
+      },
+      {
+        "en": "Multiform layer",
+        "vi": "Lớp đa hình",
+        "page": 444
+      },
+      {
+        "en": "Basal nucleus",
+        "vi": "Nhân nền",
+        "page": 446
+      },
+      {
+        "en": "Horizontal limb",
+        "vi": "Trụ ngang",
+        "page": 446
+      },
+      {
+        "en": "Vertical limb",
+        "vi": "Trụ thẳng đứng",
+        "page": 446
+      },
+      {
+        "en": "Olfactory peduncle",
+        "vi": "Cuống khứu",
+        "page": 446
+      },
+      {
+        "en": "Olfactory tract",
+        "vi": "Dải khứu",
+        "page": 446
+      },
+      {
+        "en": "Olfactory trigone",
+        "vi": "Tam giác khứu",
+        "page": 447
+      },
+      {
+        "en": "Olfactory tubercle",
+        "vi": "Củ khứu",
+        "page": 447
+      },
+      {
+        "en": "Medial stria",
+        "vi": "Vân giữa*",
+        "page": 447
+      },
+      {
+        "en": "Lateral stria",
+        "vi": "Vân bên*",
+        "page": 447
+      },
+      {
+        "en": "Nucleus accumbens",
+        "vi": "Nhân cạp",
+        "page": 447
+      },
+      {
+        "en": "Subfornical organ",
+        "vi": "Cơ quan dưới vòm",
+        "page": 448
+      },
+      {
+        "en": "substance",
+        "vi": "Ở phần nền đoan não , phần dưới bèo của hạnh",
+        "page": 448
+      },
+      {
+        "en": "Lateral part",
+        "vi": "Phần bên*",
+        "page": 449
+      },
+      {
+        "en": "Medial part",
+        "vi": "Phần giữa*",
+        "page": 449
+      },
+      {
+        "en": "Dorsal striatum",
+        "vi": "Vân lưng",
+        "page": 449
+      },
+      {
+        "en": "Ventral striatum",
+        "vi": "Vân bụng",
+        "page": 449
+      },
+      {
+        "en": "Dorsal pallidum",
+        "vi": "Nhạt lưng",
+        "page": 450
+      },
+      {
+        "en": "Ventral pallidum",
+        "vi": "Nhạt bụng",
+        "page": 450
+      },
+      {
+        "en": "Corticoreticular fibres",
+        "vi": "Các sợi vỏ-lưới",
+        "page": 451
+      },
+      {
+        "en": "Corticorubral fibres",
+        "vi": "Các sợi vỏ-đỏ",
+        "page": 451
+      },
+      {
+        "en": "Corticothalamic fibres",
+        "vi": "Các sợi vỏ-đồi thị",
+        "page": 451
+      },
+      {
+        "en": "Thalamoparietal fibres",
+        "vi": "Các sợi đồi thị-",
+        "page": 451
+      },
+      {
+        "en": "Occipitotectal fibres",
+        "vi": "Các sợi chẩm-",
+        "page": 451
+      },
+      {
+        "en": "xác. Hiện nay từ",
+        "vi": "vỏ-nhân theo sau bởi",
+        "page": 452
+      },
+      {
+        "en": "Corticotectal fibres",
+        "vi": "Các sợi vỏ-mái",
+        "page": 452
+      },
+      {
+        "en": "Optic radiation",
+        "vi": "Tia thị giác",
+        "page": 452
+      },
+      {
+        "en": "Lateral fibres",
+        "vi": "Các sợi bên*",
+        "page": 453
+      },
+      {
+        "en": "Caudal fibres",
+        "vi": "Các sợi đuôi",
+        "page": 453
+      },
+      {
+        "en": "Cuneus fibres",
+        "vi": "Các sợi chêm",
+        "page": 453
+      },
+      {
+        "en": "Lingual fibres",
+        "vi": "Các sợi lưỡi",
+        "page": 453
+      },
+      {
+        "en": "Dopaminergic cells",
+        "vi": "Các tế bào tiết",
+        "page": 455
+      },
+      {
+        "en": "Capsule of ganglion",
+        "vi": "Bao hạch",
+        "page": 458
+      },
+      {
+        "en": "Stroma of ganglion",
+        "vi": "Chất đệm của hạch",
+        "page": 459
+      },
+      {
+        "en": "Endoneurium",
+        "vi": "Màng trong thần",
+        "page": 459
+      },
+      {
+        "en": "Perineurium",
+        "vi": "Màng quanh thần",
+        "page": 459
+      },
+      {
+        "en": "Epineurium",
+        "vi": "Màng trên thần",
+        "page": 459
+      },
+      {
+        "en": "Afferent nerve fibres",
+        "vi": "Các sợi thần kinh",
+        "page": 459
+      },
+      {
+        "en": "Efferent nerve fibres",
+        "vi": "Các sợi thần kinh đi",
+        "page": 459
+      },
+      {
+        "en": "Somatic nerve fibres",
+        "vi": "Các sợi thần kinh",
+        "page": 459
+      },
+      {
+        "en": "Cutaneous branch",
+        "vi": "Nhánh bì",
+        "page": 460
+      },
+      {
+        "en": "Articular branch",
+        "vi": "Nhánh khớp",
+        "page": 460
+      },
+      {
+        "en": "Muscular branch",
+        "vi": "Nhánh cơ",
+        "page": 460
+      },
+      {
+        "en": "Rootlets",
+        "vi": "Các rễ nhỏ",
+        "page": 460
+      },
+      {
+        "en": "Spinal nerve plexus",
+        "vi": "Đám rối thần kinh",
+        "page": 461
+      },
+      {
+        "en": "Vascular plexus",
+        "vi": "Đám rối mạch",
+        "page": 461
+      },
+      {
+        "en": "Periarterial plexus",
+        "vi": "Đám rối quanh",
+        "page": 461
+      },
+      {
+        "en": "Vascular nerves",
+        "vi": "Các thần kinh của",
+        "page": 461
+      },
+      {
+        "en": "Trigeminal ganglion",
+        "vi": "Hạch sinh ba",
+        "page": 462
+      },
+      {
+        "en": "Supra-orbital nerve",
+        "vi": "Thần kinh trên ổ",
+        "page": 463
+      },
+      {
+        "en": "Lateral branch",
+        "vi": "Nhánh bên*",
+        "page": 463
+      },
+      {
+        "en": "Medial branch",
+        "vi": "Nhánh giữa*",
+        "page": 463
+      },
+      {
+        "en": "Supratrochlear nerve",
+        "vi": "Thần kinh trên",
+        "page": 463
+      },
+      {
+        "en": "Long ciliary nerves",
+        "vi": "Các thần kinh mi",
+        "page": 463
+      },
+      {
+        "en": "External nasal nerve",
+        "vi": "Thần kinh mũi",
+        "page": 464
+      },
+      {
+        "en": "Infratrochlear nerve",
+        "vi": "Thần kinh dưới",
+        "page": 464
+      },
+      {
+        "en": "Palpebral branches",
+        "vi": "Các nhánh mí",
+        "page": 464
+      },
+      {
+        "en": "Tonsillar branches",
+        "vi": "Các nhánh hạnh",
+        "page": 465
+      },
+      {
+        "en": "Parotid branches",
+        "vi": "Các nhánh mang",
+        "page": 467
+      },
+      {
+        "en": "Chorda tympani",
+        "vi": "Thừng nhĩ",
+        "page": 467
+      },
+      {
+        "en": "Sublingual nerve",
+        "vi": "Thần kinh dưới",
+        "page": 467
+      },
+      {
+        "en": "Lingual branches",
+        "vi": "Các nhánh lưỡi",
+        "page": 467
+      },
+      {
+        "en": "Nerve to mylohyoid",
+        "vi": "Thần kinh cơ",
+        "page": 468
+      },
+      {
+        "en": "Inferior dental plexus",
+        "vi": "Đám rối răng dưới",
+        "page": 468
+      },
+      {
+        "en": "Mental branches",
+        "vi": "Các nhánh cằm",
+        "page": 468
+      },
+      {
+        "en": "Labial branches",
+        "vi": "Các nhánh môi",
+        "page": 468
+      },
+      {
+        "en": "Gingival branches",
+        "vi": "Các nhánh lợi",
+        "page": 468
+      },
+      {
+        "en": "Occipital branch",
+        "vi": "Nhánh chẩm",
+        "page": 469
+      },
+      {
+        "en": "Auricular branch",
+        "vi": "Nhánh loa tai",
+        "page": 469
+      },
+      {
+        "en": "Utricular nerve",
+        "vi": "Thần kinh soan",
+        "page": 470
+      },
+      {
+        "en": "Saccular nerve",
+        "vi": "Thần kinh cầu nang",
+        "page": 471
+      },
+      {
+        "en": "Tympanic plexus",
+        "vi": "Đám rối nhĩ",
+        "page": 471
+      },
+      {
+        "en": "Tubal branch",
+        "vi": "Nhánh vòi",
+        "page": 471
+      },
+      {
+        "en": "Pharyngeal plexus",
+        "vi": "Đám rối hầu",
+        "page": 473
+      },
+      {
+        "en": "External branch",
+        "vi": "Nhánh ngoài",
+        "page": 473
+      },
+      {
+        "en": "Internal branch",
+        "vi": "Nhánh trong",
+        "page": 473
+      },
+      {
+        "en": "Nhánh nối với thần kinh thanh quản",
+        "vi": "quặt ngược",
+        "page": 473
+      },
+      {
+        "en": "Tracheal branches",
+        "vi": "Các nhánh khí quản",
+        "page": 473
+      },
+      {
+        "en": "Pharyngeal branches",
+        "vi": "Các nhánh hầu",
+        "page": 473
+      },
+      {
+        "en": "Hepatic branches",
+        "vi": "Các nhánh gan",
+        "page": 474
+      },
+      {
+        "en": "Pyloric branch",
+        "vi": "Nhánh môn vị",
+        "page": 474
+      },
+      {
+        "en": "Coeliac branches",
+        "vi": "Các nhánh thân tạng;",
+        "page": 474
+      },
+      {
+        "en": "Muscular branches",
+        "vi": "Các nhánh cơ",
+        "page": 475
+      },
+      {
+        "en": "Thyrohyoid branch",
+        "vi": "Nhánh cơ giáp-",
+        "page": 476
+      },
+      {
+        "en": "Posterior branch",
+        "vi": "Nhánh sau",
+        "page": 476
+      },
+      {
+        "en": "Anterior branch",
+        "vi": "Nhánh trước",
+        "page": 476
+      },
+      {
+        "en": "Superior branches",
+        "vi": "Các nhánh trên",
+        "page": 476
+      },
+      {
+        "en": "Inferior branches",
+        "vi": "Các nhánh dưới",
+        "page": 476
+      },
+      {
+        "en": "Middle trunk",
+        "vi": "Thân giữa",
+        "page": 477
+      },
+      {
+        "en": "Dorsal digital nerves",
+        "vi": "Các thần kinh mu",
+        "page": 480
+      },
+      {
+        "en": "Infrapatellar branch",
+        "vi": "Nhánh dưới bánh",
+        "page": 485
+      },
+      {
+        "en": "Perineal branches",
+        "vi": "Các nhánh đáy chậu",
+        "page": 486
+      },
+      {
+        "en": "Superficial branch",
+        "vi": "Nhánh nông",
+        "page": 489
+      },
+      {
+        "en": "Deep branch",
+        "vi": "Nhánh sâu",
+        "page": 489
+      },
+      {
+        "en": "Pineal nerve",
+        "vi": "Thần kinh tuyến",
+        "page": 490
+      },
+      {
+        "en": "* A14.3.01.012",
+        "vi": "Pineal nerve trước kia được gọi là n.conarii",
+        "page": 492
+      },
+      {
+        "en": "Sympathetic root",
+        "vi": "Rễ giao cảm",
+        "page": 492
+      },
+      {
+        "en": "Short ciliary nerves",
+        "vi": "Các thần kinh mi",
+        "page": 493
+      },
+      {
+        "en": "Sensory root",
+        "vi": "Rễ cảm giác",
+        "page": 494
+      },
+      {
+        "en": "Hepatic plexus",
+        "vi": "Đám rối gan",
+        "page": 496
+      },
+      {
+        "en": "Splenic plexus",
+        "vi": "Đám rối tỳ",
+        "page": 496
+      },
+      {
+        "en": "Gastric plexuses",
+        "vi": "Các đám rối vị",
+        "page": 496
+      },
+      {
+        "en": "Pancreatic plexus",
+        "vi": "Đám rối tụy",
+        "page": 496
+      },
+      {
+        "en": "Suprarenal plexus",
+        "vi": "Đám rối thượng thận",
+        "page": 496
+      },
+      {
+        "en": "Coeliac ganglia",
+        "vi": "Các hạch thân tạng",
+        "page": 496
+      },
+      {
+        "en": "Renal ganglia",
+        "vi": "Các hạch thận",
+        "page": 497
+      },
+      {
+        "en": "Subserous plexus",
+        "vi": "Đám rối dưới thanh",
+        "page": 497
+      },
+      {
+        "en": "Myenteric plexus",
+        "vi": "Đám rối áo cơ ruột",
+        "page": 497
+      },
+      {
+        "en": "Submucous plexus",
+        "vi": "Đám rối dưới niêm",
+        "page": 497
+      },
+      {
+        "en": "Hypogastric nerve",
+        "vi": "Thần kinh hạ vị",
+        "page": 498
+      },
+      {
+        "en": "Vaginal nerves ♀",
+        "vi": "Các thần kinh âm",
+        "page": 498
+      }
+    ]
+  },
+  "A15": {
+    "name": "Các giác quan",
+    "count": 92,
+    "terms": [
+      {
+        "en": "Corneoscleral part",
+        "vi": "Phần giác mạc-củng",
+        "page": 500
+      },
+      {
+        "en": "Uveal part",
+        "vi": "Phần mạch mạc",
+        "page": 500
+      },
+      {
+        "en": "Scleral spur",
+        "vi": "Cựa củng mạc",
+        "page": 500
+      },
+      {
+        "en": "Meridional fibres",
+        "vi": "Các sợi kinh tuyến",
+        "page": 502
+      },
+      {
+        "en": "Longitudinal fibres",
+        "vi": "Các sợi dọc",
+        "page": 502
+      },
+      {
+        "en": "Radial fibres",
+        "vi": "Các sợi tia",
+        "page": 502
+      },
+      {
+        "en": "Circular fibres",
+        "vi": "Các sợi vòng",
+        "page": 502
+      },
+      {
+        "en": "Sphincter pupillae",
+        "vi": "Cơ thắt đồng tử",
+        "page": 503
+      },
+      {
+        "en": "Dilator pupillae",
+        "vi": "Cơ giãn đồng tử",
+        "page": 503
+      },
+      {
+        "en": "Iridial part of retina",
+        "vi": "Phần mống mắt của",
+        "page": 504
+      },
+      {
+        "en": "Pigmented layer",
+        "vi": "Lớp sắc tố",
+        "page": 504
+      },
+      {
+        "en": "Neural layer",
+        "vi": "Lớp thần kinh",
+        "page": 504
+      },
+      {
+        "en": "Inner nuclear layer",
+        "vi": "Lớp nhân trong",
+        "page": 504
+      },
+      {
+        "en": "Ganglionic layer",
+        "vi": "Lớp hạch",
+        "page": 504
+      },
+      {
+        "en": "Hố đĩa thần kinh thị giác; Hõm sinh lí",
+        "vi": "thần kinh thị giác",
+        "page": 505
+      },
+      {
+        "en": "Fovea centralis",
+        "vi": "Hõm trung tâm",
+        "page": 505
+      },
+      {
+        "en": "Foveola",
+        "vi": "Tiểu hõm",
+        "page": 505
+      },
+      {
+        "en": "Postlaminar part",
+        "vi": "Phần sau lá",
+        "page": 505
+      },
+      {
+        "en": "Intralaminar part",
+        "vi": "Phần nội lá",
+        "page": 505
+      },
+      {
+        "en": "Zonular fibres",
+        "vi": "Các sợi vòng đai",
+        "page": 508
+      },
+      {
+        "en": "Zonular spaces",
+        "vi": "Các khoang vòng đai",
+        "page": 508
+      },
+      {
+        "en": "Iridocorneal angle",
+        "vi": "Góc mống mắt-giác",
+        "page": 508
+      },
+      {
+        "en": "Trochlear",
+        "vi": "Ròng rọc",
+        "page": 510
+      },
+      {
+        "en": "Superficial layer",
+        "vi": "Lớp nông",
+        "page": 511
+      },
+      {
+        "en": "Deep layer",
+        "vi": "Lớp sâu",
+        "page": 511
+      },
+      {
+        "en": "Orbital part",
+        "vi": "Phần ổ mắt",
+        "page": 513
+      },
+      {
+        "en": "Palpebral part",
+        "vi": "Phần mí",
+        "page": 513
+      },
+      {
+        "en": "Excretory ducts",
+        "vi": "Các ống tiết",
+        "page": 513
+      },
+      {
+        "en": "Fornix of lacrimal sac",
+        "vi": "Vòm túi lệ",
+        "page": 514
+      },
+      {
+        "en": "Lacrimal fold",
+        "vi": "Nếp lệ",
+        "page": 514
+      },
+      {
+        "en": "Crus of helix",
+        "vi": "Trụ gờ luân",
+        "page": 514
+      },
+      {
+        "en": "Spine of helix",
+        "vi": "Gai gờ luân",
+        "page": 514
+      },
+      {
+        "en": "Tail of helix",
+        "vi": "Đuôi gờ luân",
+        "page": 514
+      },
+      {
+        "en": "Triangular fossa",
+        "vi": "Hố tam giác",
+        "page": 515
+      },
+      {
+        "en": "Crura of antihelix",
+        "vi": "Các trụ gờ đối",
+        "page": 515
+      },
+      {
+        "en": "Cymba conchae",
+        "vi": "Hõm xoăn",
+        "page": 515
+      },
+      {
+        "en": "Cavity of concha",
+        "vi": "Ổ xoăn",
+        "page": 515
+      },
+      {
+        "en": "Epitympanic recess",
+        "vi": "Ngách thượng nhĩ",
+        "page": 518
+      },
+      {
+        "en": "Cupular part",
+        "vi": "Phần vòm",
+        "page": 518
+      },
+      {
+        "en": "Styloid prominence",
+        "vi": "Lồi trâm",
+        "page": 518
+      },
+      {
+        "en": "Oval window",
+        "vi": "Cửa sổ tiền đình;",
+        "page": 518
+      },
+      {
+        "en": "Fossa of oval window",
+        "vi": "Hố cửa sổ tiền",
+        "page": 518
+      },
+      {
+        "en": "Promontory",
+        "vi": "Ụ nhô",
+        "page": 518
+      },
+      {
+        "en": "Sinus tympani",
+        "vi": "Xoang nhĩ",
+        "page": 519
+      },
+      {
+        "en": "Round window",
+        "vi": "Cửa sổ ốc tai; Cửa",
+        "page": 519
+      },
+      {
+        "en": "Pyramidal eminence",
+        "vi": "Lồi tháp; Mỏm",
+        "page": 519
+      },
+      {
+        "en": "Fossa of incus",
+        "vi": "Hố xương đe",
+        "page": 519
+      },
+      {
+        "en": "7 canaliculus for",
+        "vi": "chordatympani quản thừng nhĩ",
+        "page": 520
+      },
+      {
+        "en": "Mastoid cells",
+        "vi": "Các tiểu xoang",
+        "page": 520
+      },
+      {
+        "en": "Tympanic cells",
+        "vi": "Các tiểu xoang nhĩ",
+        "page": 520
+      },
+      {
+        "en": "Lenticular process",
+        "vi": "Mỏm thấu kính",
+        "page": 520
+      },
+      {
+        "en": "Anterior recess",
+        "vi": "Ngách trước",
+        "page": 522
+      },
+      {
+        "en": "Superior recess",
+        "vi": "Ngách trên",
+        "page": 522
+      },
+      {
+        "en": "Posterior recess",
+        "vi": "Ngách sau",
+        "page": 522
+      },
+      {
+        "en": "Medial lamina",
+        "vi": "Lá giữa*",
+        "page": 523
+      },
+      {
+        "en": "Lateral lamina",
+        "vi": "Lá bên*",
+        "page": 523
+      },
+      {
+        "en": "Membranous lamina",
+        "vi": "Lá màng",
+        "page": 523
+      },
+      {
+        "en": "Tubal glands",
+        "vi": "Các tuyến vòi",
+        "page": 523
+      },
+      {
+        "en": "Pyramid of vestibule",
+        "vi": "Tháp tiền đình",
+        "page": 524
+      },
+      {
+        "en": "Lateral bony ampulla",
+        "vi": "Bóng xương ngoài*",
+        "page": 525
+      },
+      {
+        "en": "Simple bony limb",
+        "vi": "Trụ xương đơn",
+        "page": 525
+      },
+      {
+        "en": "Vestibular lamella",
+        "vi": "Lá tiền đình",
+        "page": 525
+      },
+      {
+        "en": "Tympanic lamella",
+        "vi": "Lá nhĩ",
+        "page": 525
+      },
+      {
+        "en": "Foramina nervosa",
+        "vi": "Các lỗ thần kinh",
+        "page": 525
+      },
+      {
+        "en": "Base of modiolus",
+        "vi": "Nền trụ ốc",
+        "page": 526
+      },
+      {
+        "en": "Lamina of modiolus",
+        "vi": "Mảnh trụ ốc",
+        "page": 526
+      },
+      {
+        "en": "Transverse crest",
+        "vi": "Mào ngang",
+        "page": 526
+      },
+      {
+        "en": "Facial area",
+        "vi": "Diện thần kinh mặt",
+        "page": 527
+      },
+      {
+        "en": "Vertical crest",
+        "vi": "Mào thẳng đứng",
+        "page": 527
+      },
+      {
+        "en": "Foramen singulare",
+        "vi": "Lỗ đơn",
+        "page": 527
+      },
+      {
+        "en": "Cochlear area",
+        "vi": "Diện ốc tai",
+        "page": 527
+      },
+      {
+        "en": "Endolymph",
+        "vi": "Nội dịch; Nội bạch",
+        "page": 527
+      },
+      {
+        "en": "Macula of utricle",
+        "vi": "Vết soan nang",
+        "page": 529
+      },
+      {
+        "en": "Macula of saccule",
+        "vi": "Vết cầu nang",
+        "page": 529
+      },
+      {
+        "en": "Otolithic membrane",
+        "vi": "Màng bụi nhĩ",
+        "page": 529
+      },
+      {
+        "en": "Otolith",
+        "vi": "Bụi nhĩ",
+        "page": 529
+      },
+      {
+        "en": "Striola",
+        "vi": "Các vân nhỏ",
+        "page": 529
+      },
+      {
+        "en": "Ampullary groove",
+        "vi": "Rãnh bóng",
+        "page": 529
+      },
+      {
+        "en": "Ampullary cupula",
+        "vi": "Vòm bóng",
+        "page": 529
+      },
+      {
+        "en": "Stria vascularis",
+        "vi": "Vân mạch",
+        "page": 530
+      },
+      {
+        "en": "Spiral prominence",
+        "vi": "Lồi xoắn",
+        "page": 530
+      },
+      {
+        "en": "Vas prominens",
+        "vi": "Mạch lồi",
+        "page": 530
+      },
+      {
+        "en": "Spiral ligament",
+        "vi": "Dây chằng xoắn",
+        "page": 530
+      },
+      {
+        "en": "Basal lamina",
+        "vi": "Lá nền",
+        "page": 530
+      },
+      {
+        "en": "Vas spirale",
+        "vi": "Mạch xoắn",
+        "page": 530
+      },
+      {
+        "en": "Tympanic lip",
+        "vi": "Mép nhĩ",
+        "page": 530
+      },
+      {
+        "en": "Vestibular lip",
+        "vi": "Mép tiền đình",
+        "page": 530
+      },
+      {
+        "en": "Acoustic teeth",
+        "vi": "Các răng thính",
+        "page": 530
+      },
+      {
+        "en": "Reticular membrane",
+        "vi": "Màng lưới",
+        "page": 531
+      },
+      {
+        "en": "Inner spiral sulcus",
+        "vi": "Rãnh xoắn trong",
+        "page": 531
+      },
+      {
+        "en": "Outer spiral sulcus",
+        "vi": "Rãnh xoắn ngoài",
+        "page": 531
+      },
+      {
+        "en": "Cochlear branch",
+        "vi": "Nhánh ốc tai",
+        "page": 531
+      }
+    ]
+  },
+  "A16": {
+    "name": "Hệ vỏ bọc",
+    "count": 11,
+    "terms": [
+      {
+        "en": "Papillae",
+        "vi": "Các nhú",
+        "page": 534
+      },
+      {
+        "en": "Sweat glands",
+        "vi": "Các tuyến mồ hôi",
+        "page": 535
+      },
+      {
+        "en": "Sebaceous glands",
+        "vi": "Các tuyến bã",
+        "page": 535
+      },
+      {
+        "en": "Mỏm nách;",
+        "vi": "Đuôi",
+        "page": 536
+      },
+      {
+        "en": "Lactiferous duct",
+        "vi": "Ống tiết sữa",
+        "page": 537
+      },
+      {
+        "en": "Lactiferous sinus",
+        "vi": "Xoang sữa",
+        "page": 537
+      },
+      {
+        "en": "Areola",
+        "vi": "Quầng vú",
+        "page": 537
+      },
+      {
+        "en": "Areolar glands",
+        "vi": "Các tuyến quầng",
+        "page": 537
+      },
+      {
+        "en": "Areolar tubercles",
+        "vi": "Các củ quầng vú",
+        "page": 537
+      },
+      {
+        "en": "Muscle layer",
+        "vi": "Lớp cơ",
+        "page": 537
+      },
+      {
+        "en": "Fibrous layer",
+        "vi": "Lớp sợi",
+        "page": 537
+      }
+    ]
+  }
+}
