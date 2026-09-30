@@ -198,6 +198,16 @@ Mô tả trong mỗi phổi theo thứ tự: thuỳ trên, thuỳ giữa (chỉ 
     + ĐÚNG CHUẨN: "Hình ảnh vài nốt vôi hoá hai phổi (Lung-RADS 1)."
     + SAI (CẤM): "Hình ảnh nốt đặc hai phổi (thuỳ dưới phổi phải, thuỳ dưới phổi trái) - Lung-RADS 2."
   - Chỉ ghi tên thuỳ trong Kết luận khi tổn thương chỉ nằm khu trú ở DUY NHẤT một thuỳ của một bên phổi (Ví dụ: "Hình ảnh nốt đặc thuỳ trên phổi phải (Lung-RADS 2).").
+* **QUY TẮC CÁC CÂU KHÁC MỨC LUNG-RADS TRONG KẾT LUẬN (BẮT BUỘC TÁCH CÂU RIÊNG)**:
+  - Mỗi mức Lung-RADS khác nhau (hoặc tổn thương kèm theo) là MỘT CÂU RIÊNG BIỆT kết thúc bằng dấu chấm: "(Lung-RADS [X]).".
+  - Chữ cái đầu của câu tiếp theo BẮT BUỘC viết hoa (Ví dụ: ". Nốt bán đặc...", ". Nốt đặc...", ". Nốt vôi hoá...", ". Nút nhầy...").
+  - TUYỆT ĐỐI CẤM dùng dấu phẩy, dấu chấm phẩy hoặc từ "và" để nối các câu khác mức Lung-RADS (CẤM ghi "(Lung-RADS 4X)., nốt...", CẤM ghi "(Lung-RADS 2)., và nốt...").
+  - CHỈ DÙNG từ "và" để gộp các nốt CÙNG MỨC Lung-RADS ở bên trong câu đó trước "(Lung-RADS [X]).".
+  - TỔN THƯƠNG KÈM THEO (nút nhầy phế quản, giãn phế quản, dày thành phế quản, tràn dịch...) nằm ở câu cuối cùng, BẮT ĐẦU BẰNG CHỮ CÁI VIẾT HOA, TUYỆT ĐỐI KHÔNG dùng lại từ "Hình ảnh".
+  - VÍ DỤ ĐÚNG CHUẨN:
+    "Hình ảnh các nốt trung tâm tiểu thuỳ thuỳ trên phổi phải (Lung-RADS 4X). Nốt bán đặc thuỳ trên phổi phải (Lung-RADS 4A). Nốt đặc thuỳ trên phổi trái và nốt kính mờ thuỳ dưới phổi phải (Lung-RADS 2). Nốt vôi hoá thuỳ trên phổi phải (Lung-RADS 1). Nút nhầy phế quản thùy trên và thùy dưới phổi trái."
+  - VÍ DỤ SAI (CẤM):
+    "Hình ảnh các nốt trung tâm tiểu thuỳ thuỳ trên phổi phải (Lung-RADS 4X)., nốt bán đặc thuỳ trên phổi phải (Lung-RADS 4A)., nốt đặc thuỳ trên phổi trái và nốt kính mờ thuỳ dưới phổi phải (Lung-RADS 2)., và nốt vôi hoá thuỳ trên phổi phải (Lung-RADS 1). Hình ảnh nút nhầy phế quản thùy trên và thùy dưới phổi trái."
 * Ưu tiên câu nốt nguy cơ cao (4X, 4B, 4A) lên đầu tiên. BỎ TOÀN BỘ MÔ TẢ HÌNH THÁI TRONG KẾT LUẬN (chỉ ghi loại tổn thương + vị trí + Lung-RADS).
 * Mỗi mức Lung-RADS chỉ xuất hiện ĐÚNG 1 LẦN trong kết luận.
 * Thứ tự các câu trong dòng Kết luận:
@@ -206,7 +216,7 @@ Mô tả trong mỗi phổi theo thứ tự: thuỳ trên, thuỳ giữa (chỉ 
      - Câu gom nốt Lung-RADS 3 (nếu có).
      - Câu gom nốt Lung-RADS 2 (nếu có). Ví dụ: "Vài nốt đặc hai phổi (Lung-RADS 2)."
      - Câu gom nốt vôi hoá Lung-RADS 1. Ví dụ: "Vài nốt vôi hoá hai phổi (Lung-RADS 1)."
-  3. Câu tổn thương kèm theo ở cuối cùng.
+  3. Câu tổn thương kèm theo ở cuối cùng (viết hoa chữ đầu, KHÔNG dùng từ "Hình ảnh").
 * CHỈ DÙNG ĐÚNG 1 TỪ 'Hình ảnh' DUY NHẤT ở đầu dòng kết luận.
 * Không ghi kích thước trong Kết luận.
 
@@ -253,10 +263,7 @@ function sanitizeLungRADSConclusion(conclusionText) {
     return " (" + lr + ").";
   });
 
-  // 4. Loại bỏ các cụm phân cách lỗi do AI sinh ra như '.,' hoặc ',.' hoặc '., '
-  text = text.replace(/[.,;]{2,}/g, ", ");
-
-  // 5. GỘP CÁC TỔN THƯƠNG CÙNG MỨC LUNG-RADS TRONG CÂU:
+  // 4. GỘP CÁC TỔN THƯƠNG CÙNG MỨC LUNG-RADS TRONG CÂU:
   // Ví dụ: "Hình ảnh nốt đặc thuỳ trên phổi trái (Lung-RADS 2), nốt kính mờ thuỳ trên phổi phải (Lung-RADS 2)."
   // -> "Hình ảnh nốt đặc thuỳ trên phổi trái và nốt kính mờ thuỳ trên phổi phải (Lung-RADS 2)."
   const sameTierRegex = /\((Lung-RADS\s+[0-9][A-Za-z]?)\)[.,;\s]+(?:và\s+)?([^().]+?)\s*\(\1\)/i;
@@ -280,13 +287,32 @@ function sanitizeLungRADSConclusion(conclusionText) {
     text = joined;
   }
 
-  // 6. Đảm bảo có dấu chấm sau (Lung-RADS X)
-  text = text.replace(/(\(Lung-RADS\s+[0-9][A-Za-z]?\))(?!\.)/gi, function(_, lr) {
-    return lr + ".";
+  // 5. TÁCH CÁC CÂU KHÁC MỨC LUNG-RADS:
+  // Sửa lỗi '., nốt', '., và nốt', ', nốt', '., và' sau (Lung-RADS X) thành '. Nốt'
+  text = text.replace(/(\(Lung-RADS\s+[0-9][A-Za-z]?\))[.,;\s]+(?:và\s+)?([a-zà-ỹ\p{L}])/gui, function(_, lr, nextChar) {
+    return lr + ". " + nextChar.toUpperCase();
+  });
+
+  // Đảm bảo có dấu chấm sau (Lung-RADS X) nếu chưa có
+  text = text.replace(/(\(Lung-RADS\s+[0-9][A-Za-z]?\))(?!\.)/gi, "$1.");
+
+  // 6. Xoá từ 'Hình ảnh' lặp lại ở các câu phía sau (chỉ giữ đúng 1 từ 'Hình ảnh' ở đầu kết luận)
+  text = text.replace(/(?:^|[.!?\n]\s+)Hình\s+ảnh\s+/gui, function(match, offset) {
+    if (offset === 0) return match; // Giữ nguyên 'Hình ảnh' đầu tiên của toàn bộ kết luận
+    return ". ";
+  });
+  // Viết hoa chữ cái đầu câu sau dấu chấm nếu bị viết thường
+  text = text.replace(/\.\s+([a-zà-ỹ\p{L}])/gui, function(_, c) {
+    return ". " + c.toUpperCase();
   });
 
   // 7. Dọn dẹp khoảng trắng và dấu chấm trùng lặp
-  text = text.replace(/\.{2,}/g, ".").replace(/\s{2,}/g, " ").trim();
+  text = text.replace(/[.,;]{2,}/g, ".").replace(/\s{2,}/g, " ").trim();
+
+  // Đảm bảo kết thúc bằng dấu chấm
+  if (!/[.!?]$/.test(text)) {
+    text += ".";
+  }
 
   return text;
 }
