@@ -9,12 +9,37 @@ services:
       - ./data/benchmark_results_device:/app/benchmark_results_device
       - ./data/benchmark_results_v2:/app/benchmark_results_v2
       - ./data/release_apk:/app/release_apk
+      - ./data/feedback_cases:/app/feedback_cases
     networks:
       - default
       - coolify
     environment:
       - PYTHONUNBUFFERED=1
       - PORT=8080
+      - LLM_SERVER_URL=http://qwen-secretary:8080/v1/chat/completions
+    depends_on:
+      - qwen-secretary
+
+  qwen-secretary:
+    image: ghcr.io/ggml-org/llama.cpp:server
+    container_name: qwen-secretary
+    restart: unless-stopped
+    volumes:
+      - ./data/models:/models
+    command: >
+      -m /models/qwen2.5-1.5b-instruct-q4_k_m.gguf
+      -c 2048
+      -t 2
+      -np 1
+      --host 0.0.0.0
+      --port 8080
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1800M
+    networks:
+      - default
 
 networks:
   coolify:

@@ -564,6 +564,46 @@
     return false;
   }
 
+  /**
+   * Gọi Thư ký AI trên VPS (Qwen LLM Docker) cho các câu lệnh phức tạp
+   */
+  async function callVPSSecretaryAI(currentMota, currentKetluan, commandText) {
+    let serverUrl = DEFAULT_CONFIG.serverUrl;
+    try {
+      if (isExtensionValid()) {
+        const stored = await chrome.storage.local.get([STORAGE_KEYS.SERVER_URL]);
+        if (stored[STORAGE_KEYS.SERVER_URL]) {
+          serverUrl = stored[STORAGE_KEYS.SERVER_URL];
+        }
+      }
+    } catch (e) {}
+
+    serverUrl = serverUrl.replace(/\/+$/, "");
+    const res = await fetch(`${serverUrl}/api/secretary/edit`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        current_mota: currentMota,
+        current_ketluan: currentKetluan,
+        command: commandText
+      })
+    });
+
+    if (!res.ok) {
+      throw new Error(`Máy chủ báo lỗi HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    if (data.status === "error") {
+      throw new Error(data.message || "Lỗi xử lý từ máy chủ AI");
+    }
+    return {
+      mota: data.mota,
+      ketluan: data.ketluan,
+      summary: data.summary || "Đã áp dụng chỉnh sửa từ Thư ký Y khoa AI",
+      isSecretary: true
+    };
+  }
+
   // =========================================================================
   // 4. TIẾN TRÌNH XỬ LÝ LỜI ĐỌC ĐIỆN THOẠI TRÊN TRANG RIS
   // =========================================================================
@@ -583,7 +623,7 @@
     const cleanDictation = rawClean;
     lastDictationText = cleanDictation;
 
-    updateFloatingPreview(cleanDictation, null, "Đang phân bổ giải phẫu...");
+    updateFloatingPreview(cleanDictation, null, "Đang xử lý...");
 
     let storedConfig = {};
     try {
@@ -621,16 +661,46 @@
     }
 
     let synthesizedResult = null;
-    try {
-      synthesizedResult = await ClinicalSynthesizer.synthesize(
-        currentMota,
-        currentKetluan,
-        cleanDictation,
-        useSmartSynthesize
-      );
-    } catch (err) {
-      console.error("[AutoRIS Content] Synthesizer error:", err);
-      synthesizedResult = ClinicalSynthesizer.localDeterministicFallback(currentMota, currentKetluan, cleanDictation);
+
+    // KIỂM TRA LỆNH THƯ KÝ Y KHOA (TIER 1 & TIER 2)
+    if (ClinicalSynthesizer.isSecretaryCommand(cleanDictation)) {
+      updateFloatingPreview(cleanDictation, null, "Thư ký y khoa đang xử lý lệnh...");
+      const localCmd = ClinicalSynthesizer.executeSecretaryCommand(currentMota, currentKetluan, cleanDictation);
+      if (localCmd.handled) {
+        if (localCmd.action === "undo") {
+          handleUndo();
+          return true;
+        }
+        synthesizedResult = {
+          mota: localCmd.mota,
+          ketluan: localCmd.ketluan,
+          summary: localCmd.summary,
+          isSecretary: true
+        };
+      } else {
+        // Lệnh phức tạp -> Gửi lên VPS AI Secretary
+        try {
+          updateFloatingPreview(cleanDictation, null, "Thư ký AI (VPS) đang xử lý...");
+          synthesizedResult = await callVPSSecretaryAI(currentMota, currentKetluan, cleanDictation);
+        } catch (err) {
+          console.warn("[AutoRIS Content] VPS Secretary error:", err);
+          showToast(`⚠️ Lỗi Thư ký AI: ${err.message}`, true);
+          return false;
+        }
+      }
+    } else {
+      // Phân bổ giải phẫu bệnh học thông thường
+      try {
+        synthesizedResult = await ClinicalSynthesizer.synthesize(
+          currentMota,
+          currentKetluan,
+          cleanDictation,
+          useSmartSynthesize
+        );
+      } catch (err) {
+        console.error("[AutoRIS Content] Synthesizer error:", err);
+        synthesizedResult = ClinicalSynthesizer.localDeterministicFallback(currentMota, currentKetluan, cleanDictation);
+      }
     }
 
     lastSynthesizedData = synthesizedResult;

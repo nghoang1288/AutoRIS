@@ -16,6 +16,7 @@ import queue
 import threading
 from datetime import datetime
 from urllib.parse import urlparse, parse_qs
+import urllib.request
 try:
     from http.server import ThreadingHTTPServer as BaseServer, BaseHTTPRequestHandler
 except ImportError:
@@ -481,6 +482,81 @@ def get_feedback_stats():
             "resolved": resolved
         }
 
+LLM_SERVER_URL = os.environ.get("LLM_SERVER_URL", "http://qwen-secretary:8080/v1/chat/completions")
+
+def call_qwen_secretary(current_mota: str, current_ketluan: str, command: str) -> dict:
+    prompt = f"""[MÔ TẢ HIỆN TẠI]
+{current_mota or '(Trống)'}
+
+[KẾT LUẬN HIỆN TẠI]
+{current_ketluan or '(Trống)'}
+
+[YÊU CẦU CHỈNH SỬA CỦA BÁC SĨ]
+{command}"""
+
+    system_instruction = (
+        "Bạn là Thư ký Y khoa chuyên nghiệp, hỗ trợ chỉnh sửa kết quả chẩn đoán hình ảnh.\n"
+        "Áp dụng chính xác yêu cầu chỉnh sửa của bác sĩ vào phần mô tả và kết luận.\n"
+        "Chỉ trả về DUY NHẤT một chuỗi JSON hợp lệ không có markdown:\n"
+        "{\n"
+        '  "mota": "nội dung mô tả sau khi sửa",\n'
+        '  "ketluan": "nội dung kết luận sau khi sửa",\n'
+        '  "action_summary": "tóm tắt ngắn gọn hành động đã thực hiện"\n'
+        "}"
+    )
+
+    payload = {
+        "messages": [
+            {"role": "system", "content": system_instruction},
+            {"role": "user", "content": prompt}
+        ],
+        "temperature": 0.1,
+        "max_tokens": 512,
+        "response_format": {"type": "json_object"}
+    }
+
+    req_data = json.dumps(payload).encode("utf-8")
+    urls = [LLM_SERVER_URL, "http://127.0.0.1:8081/v1/chat/completions", "http://127.0.0.1:8080/v1/chat/completions"]
+    last_err = None
+
+    for url in urls:
+        try:
+            req = urllib.request.Request(
+                url,
+                data=req_data,
+                headers={"Content-Type": "application/json"},
+                method="POST"
+            )
+            with urllib.request.urlopen(req, timeout=20) as res:
+                if res.status == 200:
+                    res_body = json.loads(res.read().decode("utf-8"))
+                    content_str = res_body["choices"][0]["message"]["content"]
+                    clean_str = content_str.strip()
+                    if clean_str.startswith("```json"):
+                        clean_str = clean_str[7:]
+                    if clean_str.startswith("```"):
+                        clean_str = clean_str[3:]
+                    if clean_str.endswith("```"):
+                        clean_str = clean_str[:-3]
+                    parsed_result = json.loads(clean_str.strip())
+                    return {
+                        "status": "success",
+                        "mota": parsed_result.get("mota", current_mota),
+                        "ketluan": parsed_result.get("ketluan", current_ketluan),
+                        "summary": parsed_result.get("action_summary", "Thư ký y khoa đã cập nhật kết quả")
+                    }
+        except Exception as e:
+            last_err = e
+            continue
+
+    return {
+        "status": "error",
+        "message": f"Không thể kết nối đến LLM server: {last_err}",
+        "mota": current_mota,
+        "ketluan": current_ketluan,
+        "summary": "Không thể kết nối đến AI server"
+    }
+
 class BenchmarkHandler(BaseHTTPRequestHandler):
 
     def do_OPTIONS(self):
@@ -888,6 +964,36 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
                 "resolved_ids": resolved_ids
             }
             self.wfile.write(json.dumps(resp, ensure_ascii=False).encode("utf-8"))
+            return
+
+        elif path == "/api/secretary/edit":
+            content_length = int(self.headers.get("Content-Length", 0))
+            if content_length == 0:
+                self.send_error(400, "Empty payload")
+                return
+            if content_length > MAX_UPLOAD_SIZE:
+                self.send_error(413, "Payload too large")
+                return
+            body = self.rfile.read(content_length).decode("utf-8")
+            try:
+                data = json.loads(body)
+            except Exception as e:
+                self.send_error(400, f"Invalid JSON: {e}")
+                return
+
+            current_mota = data.get("current_mota", "")
+            current_ketluan = data.get("current_ketluan", "")
+            command = data.get("command", "")
+            if not command:
+                self.send_error(400, "Missing command field")
+                return
+
+            result = call_qwen_secretary(current_mota, current_ketluan, command)
+            self.send_response(200)
+            self.send_cors_headers()
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.end_headers()
+            self.wfile.write(json.dumps(result, ensure_ascii=False).encode("utf-8"))
             return
 
         else:

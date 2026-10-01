@@ -719,6 +719,185 @@
     },
 
     /**
+     * BỘ THƯ KÝ Y KHOA - TẦNG 1: LOCAL DETERMINISTIC ENGINE (<5ms)
+     */
+    isSecretaryCommand(dictationText) {
+      const clean = this.cleanFillerWords(dictationText).toLowerCase();
+      if (!clean) return false;
+
+      // 1. Lệnh xóa dòng / xóa cơ quan / xóa kết luận / xóa hết
+      if (/^(?:xóa|xoá|bỏ)\s+(?:dòng|phần|mục|đoạn|kết\s*luận|mô\s*tả|toàn\s*bộ|hết|tất\s*cả|sạch)\b/i.test(clean)) return true;
+      if (/^(?:xóa|xoá|bỏ)\s+(?:phổi|thận|gan|tụy|lách|bàng quang|tiền liệt|tử cung|buồng trứng|ruột thừa|hạch|dịch|màng phổi|dạ dày|túi mật)\b/i.test(clean)) return true;
+
+      // 2. Lệnh hoàn tác
+      if (/^(?:hoàn\s*tác|quay\s*lại|undo)$/i.test(clean)) return true;
+
+      // 3. Lệnh thay thế: thay/đổi/sửa [từ A] bằng/thành [từ B]
+      if (/^(?:thay|đổi|sửa)\s+(?:từ|chữ|cụm\s*từ)?\s*.+?\s+(?:bằng|thành)\s+.+$/i.test(clean)) return true;
+
+      // 4. Lệnh mẫu bình thường
+      if (/^mẫu\s+(?:ngực|phổi|bụng|sọ\s*não|não|tiêu\s*hóa|tiết\s*niệu)\s*bình\s*thường/i.test(clean)) return true;
+      if (/^(?:tất\s*cả|toàn\s*bộ)\s*bình\s*thường/i.test(clean)) return true;
+
+      // 5. Lệnh chèn thêm
+      if (/^(?:thêm|chèn)\s+vào\s+(?:phần|mục|dòng)?\s*.+?:?\s*.+$/i.test(clean)) return true;
+
+      return false;
+    },
+
+    executeSecretaryCommand(currentMota = "", currentKetluan = "", commandText = "") {
+      const clean = this.cleanFillerWords(commandText);
+      const lower = clean.toLowerCase();
+
+      // Case 1: Lệnh Hoàn tác (Undo)
+      if (/^(?:hoàn\s*tác|quay\s*lại|undo)$/i.test(lower)) {
+        return {
+          handled: true,
+          action: "undo",
+          mota: currentMota,
+          ketluan: currentKetluan,
+          summary: "Hoàn tác thao tác trước"
+        };
+      }
+
+      // Case 2: Lệnh Xóa toàn bộ / Xóa hết
+      if (/^(?:xóa|xoá|bỏ)\s+(?:toàn\s*bộ|hết|tất\s*cả|sạch)$/i.test(lower)) {
+        return {
+          handled: true,
+          action: "delete_all",
+          mota: "",
+          ketluan: "",
+          summary: "Đã xóa toàn bộ nội dung"
+        };
+      }
+
+      // Case 3: Lệnh Xóa kết luận
+      if (/^(?:xóa|xoá|bỏ)\s+(?:phần\s*)?kết\s*luận$/i.test(lower)) {
+        return {
+          handled: true,
+          action: "delete_conclusion",
+          mota: currentMota,
+          ketluan: "Hình ảnh theo dõi lâm sàng.",
+          summary: "Đã xóa kết luận"
+        };
+      }
+
+      // Case 4: Lệnh Xóa dòng cơ quan / Xóa tổn thương cơ quan
+      const deleteOrganMatch = lower.match(/^(?:xóa|xoá|bỏ)\s+(?:dòng|phần|mục)?\s*(phổi\s*phải|phổi\s*trái|hai\s*phổi|thận\s*phải|thận\s*trái|hai\s*thận|gan|tụy|lách|bàng\s*quang|tiền\s*liệt|tử\s*cung|buồng\s*trứng|ruột\s*thừa|hạch|dịch|màng\s*phổi|dạ\s*dày|túi\s*mật)/i);
+      if (deleteOrganMatch) {
+        const targetOrganStr = deleteOrganMatch[1].trim();
+        let updatedMota = currentMota;
+
+        // Reset hoặc xóa dòng cơ quan trong mô tả
+        const lines = updatedMota.split("\n");
+        const newLines = [];
+
+        for (const line of lines) {
+          const lLower = line.toLowerCase();
+          if (lLower.includes(targetOrganStr)) {
+            // Nếu là dòng cấu trúc mẫu (e.g. - Nhu mô phổi phải: ...), reset về chuẩn bình thường
+            if (/nhu\s*mô\s*phổi\s*phải/i.test(lLower)) {
+              newLines.push("- Nhu mô phổi phải: Thông khí tốt, không thấy tổn thương khu trú.");
+            } else if (/nhu\s*mô\s*phổi\s*trái/i.test(lLower)) {
+              newLines.push("- Nhu mô phổi trái: Thông khí tốt, không thấy tổn thương khu trú.");
+            } else if (/thận\s*phải/i.test(lLower)) {
+              newLines.push("- Thận phải: Nhu mô dày đều, không sỏi, không ứ nước.");
+            } else if (/thận\s*trái/i.test(lLower)) {
+              newLines.push("- Thận trái: Nhu mô dày đều, không sỏi, không ứ nước.");
+            } else if (/gan/i.test(lLower)) {
+              newLines.push("- Gan: Kích thước bình thường, bờ đều, nhu mô đồng nhất, không nốt khu trú.");
+            } else if (/túi\s*mật/i.test(lLower)) {
+              newLines.push("- Túi mật: Thành mỏng, lòng dịch trong, không sỏi.");
+            } else if (/bàng\s*quang/i.test(lLower)) {
+              newLines.push("- Bàng quang: Thành mỏng, lòng dịch trong, không sỏi.");
+            } else if (/ruột\s*thừa/i.test(lLower)) {
+              newLines.push("- Ruột thừa: Không thấy hình ảnh bất thường vùng hố chậu phải.");
+            } else {
+              // Bỏ dòng hoàn toàn nếu là dòng bổ sung khác
+            }
+          } else {
+            newLines.push(line);
+          }
+        }
+        updatedMota = newLines.join("\n");
+
+        // Loại bỏ tổn thương cơ quan đó khỏi kết luận
+        let updatedKetluan = currentKetluan;
+        if (updatedKetluan) {
+          const clauses = updatedKetluan.split(/[.\n;]+/).map(c => c.trim()).filter(Boolean);
+          const filteredClauses = clauses.filter(c => !c.toLowerCase().includes(targetOrganStr));
+          if (filteredClauses.length === 0) {
+            updatedKetluan = "Hình ảnh theo dõi lâm sàng.";
+          } else {
+            updatedKetluan = filteredClauses.map((c, i) => {
+              const cleanC = c.replace(/^Hình\s*ảnh\s*/i, "").trim();
+              if (i === 0) return `Hình ảnh ${cleanC.charAt(0).toLowerCase() + cleanC.slice(1)}.`;
+              return `${cleanC.charAt(0).toUpperCase() + cleanC.slice(1)}.`;
+            }).join(" ");
+          }
+        }
+
+        return {
+          handled: true,
+          action: "delete_organ",
+          mota: updatedMota,
+          ketluan: updatedKetluan,
+          summary: `Đã xóa dòng ${targetOrganStr}`
+        };
+      }
+
+      // Case 5: Lệnh Thay thế từ khóa (Replace)
+      const replaceMatch = clean.match(/^(?:thay|đổi|sửa)\s+(?:từ|chữ|cụm\s*từ)?\s*["'“]?(.+?)["'”]?\s+(?:bằng|thành)\s+["'“]?(.+?)["'”]?$/i);
+      if (replaceMatch) {
+        const oldTerm = replaceMatch[1].trim();
+        const newTerm = replaceMatch[2].trim();
+
+        if (oldTerm && newTerm) {
+          const regex = new RegExp(oldTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), "gi");
+          const updatedMota = currentMota.replace(regex, newTerm);
+          const updatedKetluan = currentKetluan.replace(regex, newTerm);
+
+          return {
+            handled: true,
+            action: "replace_text",
+            mota: updatedMota,
+            ketluan: updatedKetluan,
+            summary: `Đã thay "${oldTerm}" thành "${newTerm}"`
+          };
+        }
+      }
+
+      // Case 6: Lệnh Mẫu bình thường
+      if (/^mẫu\s+(?:ngực|phổi|lồng\s*ngực)\s*bình\s*thường/i.test(lower)) {
+        return {
+          handled: true,
+          action: "apply_template",
+          mota: `- Nhu mô phổi hai bên: Thông khí tốt, không thấy nốt mờ hay đám mờ khu trú.\n- Màng phổi: Không thấy tràn dịch, tràn khí màng phổi.\n- Rốn phổi hai bên: Không to, bình thường.\n- Bóng tim và trung thất: Trong giới hạn bình thường.\n- Khung xương lồng ngực: Không thấy gãy xương hay tổn thương tiêu xương.`,
+          ketluan: `Hình ảnh tim phổi hiện tại chưa thấy bất thường.`,
+          summary: `Đã áp dụng mẫu ngực bình thường`
+        };
+      }
+      if (/^mẫu\s+(?:bụng|ổ\s*bụng|siêu\s*âm\s*bụng)\s*bình\s*thường/i.test(lower)) {
+        return {
+          handled: true,
+          action: "apply_template",
+          mota: `- Gan: Kích thước bình thường, bờ đều, nhu mô đồng nhất, không nốt khu trú.\n- Túi mật: Thành mỏng, lòng dịch trong, không sỏi.\n- Đường mật trong và ngoài gan: Không giãn, không sỏi.\n- Tụy: Kích thước và nhu mô bình thường, ống tụy không giãn.\n- Lách: Kích thước trong giới hạn bình thường.\n- Hai thận: Kích thước bình thường, nhu mô dày đều, phân biệt vỏ tủy rõ, không sỏi, không ứ nước.\n- Bàng quang: Thành mỏng đều, lòng dịch trong, không sỏi.\n- Tuyến tiền liệt / Tử cung phần phụ: Trong giới hạn bình thường.\n- Dịch ổ bụng: Hiện không thấy dịch tự do ổ bụng.`,
+          ketluan: `Hình ảnh siêu âm ổ bụng hiện tại chưa thấy bất thường.`,
+          summary: `Đã áp dụng mẫu bụng bình thường`
+        };
+      }
+
+      // Nếu không khớp lệnh cục bộ nào
+      return {
+        handled: false,
+        action: "unknown",
+        mota: currentMota,
+        ketluan: currentKetluan,
+        summary: "Cần xử lý qua AI"
+      };
+    },
+
+    /**
      * Tổng hợp báo cáo y khoa
      */
     async synthesize(currentMota, currentKetluan, dictationText, useAI = true) {
