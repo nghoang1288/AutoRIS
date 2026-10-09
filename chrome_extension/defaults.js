@@ -23,7 +23,12 @@ const STORAGE_KEYS = {
   LAST_REPORT: "lastSynthesizedReport",
   LAST_REPORT_TIME: "lastReportTime",
   SYSTEM_PROMPT: "systemPrompt",
-  ACTIVE_TARGET_TAB: "autoris_active_target_tab"
+  ACTIVE_TARGET_TAB: "autoris_active_target_tab",
+
+  // Dynamic Clinical Synthesizer (Tải từ VPS)
+  SYNTHESIZER_CODE: "clinical_synthesizer_code",
+  SYNTHESIZER_VERSION: "clinical_synthesizer_version",
+  SYNTHESIZER_SYNC_TIME: "clinical_synthesizer_sync_time"
 };
 
 const ACTIONS = {

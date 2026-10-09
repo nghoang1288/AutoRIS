@@ -10,6 +10,7 @@ services:
       - ./data/benchmark_results_v2:/app/benchmark_results_v2
       - ./data/release_apk:/app/release_apk
       - ./data/feedback_cases:/app/feedback_cases
+      - ./clinical_synthesizer.js:/app/clinical_synthesizer.js
     networks:
       - default
       - coolify

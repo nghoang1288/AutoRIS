@@ -482,6 +482,18 @@ def get_feedback_stats():
             "resolved": resolved
         }
 
+def find_clinical_synthesizer_file():
+    candidates = [
+        os.path.join(BASE_DIR, "clinical_synthesizer.js"),
+        os.path.join(BASE_DIR, "data", "clinical_synthesizer.js"),
+        os.path.join(STORAGE_DIR, "clinical_synthesizer.js"),
+        os.path.join(BASE_DIR, "chrome_extension", "clinical_synthesizer.js"),
+    ]
+    for cand in candidates:
+        if os.path.exists(cand) and os.path.isfile(cand):
+            return cand
+    return None
+
 LLM_SERVER_URL = os.environ.get("LLM_SERVER_URL", "http://qwen-secretary:8080/v1/chat/completions")
 
 def call_qwen_secretary(current_mota: str, current_ketluan: str, command: str) -> dict:
@@ -626,6 +638,45 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
                 **stats
             }
             self.wfile.write(json.dumps(resp, ensure_ascii=False).encode("utf-8"))
+            return
+
+        elif path == "/api/clinical_synthesizer.js":
+            synth_file = find_clinical_synthesizer_file()
+            if synth_file:
+                try:
+                    with open(synth_file, "rb") as f:
+                        code_bytes = f.read()
+                    mtime = int(os.path.getmtime(synth_file))
+                    self.send_response(200)
+                    self.send_cors_headers()
+                    self.send_header("Content-Type", "application/javascript; charset=utf-8")
+                    self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+                    self.send_header("X-Synthesizer-Version", str(mtime))
+                    self.send_header("Content-Length", str(len(code_bytes)))
+                    self.end_headers()
+                    self.wfile.write(code_bytes)
+                    return
+                except Exception as e:
+                    self.send_error(500, f"Error reading synthesizer file: {e}")
+                    return
+            else:
+                self.send_error(404, "clinical_synthesizer.js not found on server")
+                return
+
+        elif path == "/api/clinical_synthesizer/version":
+            synth_file = find_clinical_synthesizer_file()
+            if synth_file:
+                mtime = int(os.path.getmtime(synth_file))
+                size = os.path.getsize(synth_file)
+                resp = {"status": "ok", "version": mtime, "size": size}
+            else:
+                resp = {"status": "not_found", "version": 0, "size": 0}
+            self.send_response(200)
+            self.send_cors_headers()
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+            self.end_headers()
+            self.wfile.write(json.dumps(resp).encode("utf-8"))
             return
 
         elif path == "/api/benchmark/summary":

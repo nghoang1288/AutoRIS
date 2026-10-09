@@ -22,6 +22,184 @@
   let userExplicitlyUnchecked = false;
 
   // =========================================================================
+  // 0. BỘ KẾT NỐI SANDBOX CLINICAL SYNTHESIZER (TẢI LUẬT ĐỘNG TỪ VPS)
+  // =========================================================================
+  const SynthesizerBridge = {
+    iframe: null,
+    isReady: false,
+    pending: new Map(),
+    currentVersion: 0,
+    initStarted: false,
+
+    init() {
+      if (this.initStarted) return;
+      this.initStarted = true;
+
+      const ensureIframe = () => {
+        if (this.iframe || !document.body) return;
+        this.iframe = document.createElement("iframe");
+        this.iframe.id = "autoris-synthesizer-sandbox";
+        this.iframe.src = chrome.runtime.getURL("sandbox.html");
+        this.iframe.style.position = "absolute";
+        this.iframe.style.top = "-9999px";
+        this.iframe.style.left = "-9999px";
+        this.iframe.style.width = "1px";
+        this.iframe.style.height = "1px";
+        this.iframe.style.border = "none";
+        document.body.appendChild(this.iframe);
+
+        this.iframe.onload = async () => {
+          this.isReady = true;
+          console.log("[AutoRIS Content] Synthesizer Sandbox loaded.");
+          try {
+            const stored = await chrome.storage.local.get([
+              STORAGE_KEYS.SYNTHESIZER_CODE,
+              STORAGE_KEYS.SYNTHESIZER_VERSION
+            ]);
+            if (stored[STORAGE_KEYS.SYNTHESIZER_CODE]) {
+              await this.updateCode(
+                stored[STORAGE_KEYS.SYNTHESIZER_CODE],
+                stored[STORAGE_KEYS.SYNTHESIZER_VERSION]
+              );
+            }
+          } catch (e) {
+            console.warn("[AutoRIS Content] Lỗi khởi tạo code Sandbox:", e);
+          }
+        };
+      };
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", ensureIframe, { once: true });
+      } else {
+        ensureIframe();
+      }
+
+      window.addEventListener("message", (event) => {
+        const data = event.data;
+        if (!data || !data.id) return;
+
+        if (this.pending.has(data.id)) {
+          const { resolve, reject, timer } = this.pending.get(data.id);
+          clearTimeout(timer);
+          this.pending.delete(data.id);
+
+          if (data.success) {
+            resolve(data.result);
+          } else {
+            reject(new Error(data.error || "Lỗi thực thi Sandbox"));
+          }
+        }
+      });
+
+      if (chrome.storage && chrome.storage.onChanged) {
+        chrome.storage.onChanged.addListener((changes, area) => {
+          if (area === "local" && changes[STORAGE_KEYS.SYNTHESIZER_CODE]) {
+            const newCode = changes[STORAGE_KEYS.SYNTHESIZER_CODE].newValue;
+            const newVer = changes[STORAGE_KEYS.SYNTHESIZER_VERSION]?.newValue || Date.now();
+            if (newCode) {
+              this.updateCode(newCode, newVer)
+                .then(() => {
+                  showToast("⚡ Đã cập nhật luật mô tả lâm sàng mới từ VPS!");
+                })
+                .catch(err => {
+                  console.error("[AutoRIS Content] Lỗi cập nhật code từ storage:", err);
+                });
+            }
+          }
+        });
+      }
+    },
+
+    updateCode(code, version) {
+      return new Promise((resolve, reject) => {
+        if (!this.iframe || !this.iframe.contentWindow) {
+          return reject(new Error("Sandbox iframe chưa sẵn sàng"));
+        }
+        const id = "upd_" + Math.random().toString(36).slice(2) + "_" + Date.now();
+        const timer = setTimeout(() => {
+          this.pending.delete(id);
+          reject(new Error("Timeout cập nhật code Sandbox"));
+        }, 3000);
+
+        this.pending.set(id, {
+          resolve: () => {
+            this.currentVersion = version;
+            console.log(`[AutoRIS Content] ⚡ Sandbox đã nạp luật mới (v${version})!`);
+            resolve(true);
+          },
+          reject,
+          timer
+        });
+
+        this.iframe.contentWindow.postMessage({
+          action: "UPDATE_CODE",
+          id,
+          code,
+          version
+        }, "*");
+      });
+    },
+
+    invoke(method, args = []) {
+      return new Promise((resolve, reject) => {
+        if (!this.isReady || !this.iframe || !this.iframe.contentWindow) {
+          if (window.ClinicalSynthesizer && typeof window.ClinicalSynthesizer[method] === "function") {
+            try {
+              const res = window.ClinicalSynthesizer[method](...args);
+              return resolve(res);
+            } catch (e) {
+              return reject(e);
+            }
+          }
+          return reject(new Error("Sandbox chưa sẵn sàng và không có fallback local"));
+        }
+
+        const id = "inv_" + Math.random().toString(36).slice(2) + "_" + Date.now();
+        const timer = setTimeout(() => {
+          this.pending.delete(id);
+          if (window.ClinicalSynthesizer && typeof window.ClinicalSynthesizer[method] === "function") {
+            try {
+              const res = window.ClinicalSynthesizer[method](...args);
+              return resolve(res);
+            } catch (e) {
+              return reject(e);
+            }
+          }
+          reject(new Error(`Timeout gọi ${method} từ Sandbox`));
+        }, 4000);
+
+        this.pending.set(id, { resolve, reject, timer });
+
+        this.iframe.contentWindow.postMessage({
+          action: "INVOKE",
+          id,
+          method,
+          args
+        }, "*");
+      });
+    },
+
+    cleanFillerWords(text) {
+      return this.invoke("cleanFillerWords", [text]);
+    },
+    parseEditorSections(rawText) {
+      return this.invoke("parseEditorSections", [rawText]);
+    },
+    isSecretaryCommand(cleanDictation) {
+      return this.invoke("isSecretaryCommand", [cleanDictation]);
+    },
+    executeSecretaryCommand(currentMota, currentKetluan, cleanDictation) {
+      return this.invoke("executeSecretaryCommand", [currentMota, currentKetluan, cleanDictation]);
+    },
+    synthesize(currentMota, currentKetluan, cleanDictation, useSmartSynthesize) {
+      return this.invoke("synthesize", [currentMota, currentKetluan, cleanDictation, useSmartSynthesize]);
+    },
+    localDeterministicFallback(currentMota, currentKetluan, cleanDictation) {
+      return this.invoke("localDeterministicFallback", [currentMota, currentKetluan, cleanDictation]);
+    }
+  };
+
+  // =========================================================================
   // 1. NHẬN DIỆN TRANG WEB & BẢO VỆ PHẠM VI (GATE CHECKS)
   // =========================================================================
   function isViewerPage(urlStr) {
@@ -619,7 +797,7 @@
       console.log("[AutoRIS Content] Bỏ qua điền vì tab này chưa được tick chọn '🎯 Điền tab này'.");
       return false;
     }
-    const rawClean = ClinicalSynthesizer.cleanFillerWords(dictationText);
+    const rawClean = await SynthesizerBridge.cleanFillerWords(dictationText);
     if (!rawClean) return false;
     const cleanDictation = rawClean;
     lastDictationText = cleanDictation;
@@ -656,7 +834,7 @@
       currentKetluan = sep.ketluanEl ? getElementText(sep.ketluanEl) : "";
     } else if (editor) {
       const fullText = getElementText(editor);
-      const parsed = ClinicalSynthesizer.parseEditorSections(fullText);
+      const parsed = await SynthesizerBridge.parseEditorSections(fullText);
       currentMota = parsed.mota;
       currentKetluan = parsed.ketluan;
     }
@@ -664,9 +842,10 @@
     let synthesizedResult = null;
 
     // KIỂM TRA LỆNH THƯ KÝ Y KHOA (TIER 1 & TIER 2)
-    if (ClinicalSynthesizer.isSecretaryCommand(cleanDictation)) {
+    const isSecretary = await SynthesizerBridge.isSecretaryCommand(cleanDictation);
+    if (isSecretary) {
       updateFloatingPreview(cleanDictation, null, "Thư ký y khoa đang xử lý lệnh...");
-      const localCmd = ClinicalSynthesizer.executeSecretaryCommand(currentMota, currentKetluan, cleanDictation);
+      const localCmd = await SynthesizerBridge.executeSecretaryCommand(currentMota, currentKetluan, cleanDictation);
       if (localCmd.handled) {
         if (localCmd.action === "undo") {
           handleUndo();
@@ -692,7 +871,7 @@
     } else {
       // Phân bổ giải phẫu bệnh học thông thường
       try {
-        synthesizedResult = await ClinicalSynthesizer.synthesize(
+        synthesizedResult = await SynthesizerBridge.synthesize(
           currentMota,
           currentKetluan,
           cleanDictation,
@@ -700,7 +879,7 @@
         );
       } catch (err) {
         console.error("[AutoRIS Content] Synthesizer error:", err);
-        synthesizedResult = ClinicalSynthesizer.localDeterministicFallback(currentMota, currentKetluan, cleanDictation);
+        synthesizedResult = await SynthesizerBridge.localDeterministicFallback(currentMota, currentKetluan, cleanDictation);
       }
     }
 
@@ -1557,7 +1736,8 @@
 
 
 
-    // Khởi tạo Floating Bar
+    // Khởi tạo Sandbox Bridge & Floating Bar
+    SynthesizerBridge.init();
     if (document.readyState === "loading") {
       document.addEventListener("DOMContentLoaded", createFloatingVoiceBar);
     } else {

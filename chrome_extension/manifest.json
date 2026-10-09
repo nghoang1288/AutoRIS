@@ -19,7 +19,11 @@
     "https://9router.hoang.qzz.io/*",
     "https://generativelanguage.googleapis.com/*",
     "http://192.168.50.100:8080/*",
-    "http://localhost:8080/*"
+    "http://localhost:8080/*",
+    "http://*:8000/*",
+    "http://*:8080/*",
+    "http://*/*",
+    "https://*/*"
   ],
   "action": {
     "default_popup": "popup.html",
@@ -66,6 +70,19 @@
         "styles.css"
       ],
       "run_at": "document_idle"
+    }
+  ],
+  "sandbox": {
+    "pages": ["sandbox.html"]
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "sandbox.html",
+        "sandbox.js",
+        "clinical_synthesizer.js"
+      ],
+      "matches": ["<all_urls>"]
     }
   ],
   "icons": {

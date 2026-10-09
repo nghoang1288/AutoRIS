@@ -23,20 +23,26 @@ chrome.runtime.onInstalled.addListener(() => {
   });
 
   startPollingLoop();
+  checkAndUpdateSynthesizerCode(true);
   chrome.alarms.create('autoris-keepalive', { periodInMinutes: 0.5 });
 });
 
 chrome.runtime.onStartup.addListener(() => {
   startPollingLoop();
+  checkAndUpdateSynthesizerCode(true);
 });
 
 startPollingLoop();
+checkAndUpdateSynthesizerCode(true);
 
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === 'autoris-keepalive') {
     pollLatestDictation();
+    checkAndUpdateSynthesizerCode();
   }
 });
+
+let pollCycleCounter = 0;
 
 // 2. Vòng lặp polling kiểm tra ca đọc mới từ máy chủ AutoRIS
 function startPollingLoop() {
@@ -45,9 +51,58 @@ function startPollingLoop() {
   console.log("[AutoRIS BG] AutoRIS server polling started.");
 }
 
+// 2.2. Kiểm tra và tự động cập nhật luật ClinicalSynthesizer từ VPS
+async function checkAndUpdateSynthesizerCode(force = false) {
+  try {
+    const config = await chrome.storage.local.get([
+      STORAGE_KEYS.SERVER_URL,
+      STORAGE_KEYS.SYNTHESIZER_VERSION,
+      STORAGE_KEYS.SYNTHESIZER_CODE
+    ]);
+    const serverUrl = (config[STORAGE_KEYS.SERVER_URL] || DEFAULT_CONFIG.serverUrl).trim().replace(/\/+$/, "");
+    const currentVersion = config[STORAGE_KEYS.SYNTHESIZER_VERSION] || 0;
+    const hasCode = !!config[STORAGE_KEYS.SYNTHESIZER_CODE];
+
+    // 1. Kiểm tra version nhẹ từ server trước
+    const verUrl = `${serverUrl}/api/clinical_synthesizer/version?t=${Date.now()}`;
+    const verRes = await fetch(verUrl, { cache: "no-store" });
+    if (!verRes.ok) return { updated: false, reason: "server_offline" };
+    const verData = await verRes.json();
+
+    if (verData.status === "ok" && verData.version) {
+      if (force || !hasCode || verData.version !== currentVersion) {
+        // 2. Tải toàn bộ mã JS mới từ server
+        const codeUrl = `${serverUrl}/api/clinical_synthesizer.js?t=${Date.now()}`;
+        const codeRes = await fetch(codeUrl, { cache: "no-store" });
+        if (!codeRes.ok) return { updated: false, reason: "fetch_code_failed" };
+        const newCode = await codeRes.text();
+
+        if (newCode && newCode.includes("ClinicalSynthesizer")) {
+          await chrome.storage.local.set({
+            [STORAGE_KEYS.SYNTHESIZER_CODE]: newCode,
+            [STORAGE_KEYS.SYNTHESIZER_VERSION]: verData.version,
+            [STORAGE_KEYS.SYNTHESIZER_SYNC_TIME]: Date.now()
+          });
+          console.log(`[AutoRIS BG] ⚡ Nhận thành công luật ClinicalSynthesizer mới (v${verData.version}) từ ${serverUrl}!`);
+          return { updated: true, version: verData.version };
+        }
+      }
+    }
+    return { updated: false, reason: "already_latest", version: currentVersion };
+  } catch (err) {
+    return { updated: false, reason: err.message };
+  }
+}
+
 async function pollLatestDictation() {
   if (isPolling) return;
   isPolling = true;
+
+  // Cứ mỗi 2 chu kỳ (~1.6s) kiểm tra luật mới từ VPS
+  pollCycleCounter++;
+  if (pollCycleCounter % 2 === 0) {
+    checkAndUpdateSynthesizerCode();
+  }
 
   try {
     const config = await chrome.storage.local.get([STORAGE_KEYS.SERVER_URL, STORAGE_KEYS.LAST_APPLIED_ID]);
@@ -247,6 +302,14 @@ chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
         console.error("[AutoRIS BG] Feedback error:", err);
         sendResponse({ success: false, error: err.message });
       });
+    return true;
+  }
+
+  // G. Cập nhật thủ công luật ClinicalSynthesizer từ Popup / Content
+  if (req.action === "SYNC_SYNTHESIZER") {
+    checkAndUpdateSynthesizerCode(true)
+      .then(result => sendResponse({ success: true, data: result }))
+      .catch(err => sendResponse({ success: false, error: err.message }));
     return true;
   }
 });

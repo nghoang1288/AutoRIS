@@ -53,5 +53,50 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
+  // Quản lý đồng bộ luật lâm sàng OTA
+  const synthStatusEl = document.getElementById("synthesizer-status");
+  const synthSyncDescEl = document.getElementById("synthesizer-sync-desc");
+  const btnSyncSynth = document.getElementById("btn-sync-synthesizer");
+
+  async function updateSynthesizerUI() {
+    const synthData = await chrome.storage.local.get([
+      STORAGE_KEYS.SYNTHESIZER_VERSION,
+      STORAGE_KEYS.SYNTHESIZER_SYNC_TIME,
+      STORAGE_KEYS.SYNTHESIZER_CODE
+    ]);
+
+    if (synthData[STORAGE_KEYS.SYNTHESIZER_CODE]) {
+      const ver = synthData[STORAGE_KEYS.SYNTHESIZER_VERSION] || "Đã nạp";
+      const syncTime = synthData[STORAGE_KEYS.SYNTHESIZER_SYNC_TIME]
+        ? new Date(synthData[STORAGE_KEYS.SYNTHESIZER_SYNC_TIME]).toLocaleTimeString("vi-VN")
+        : "";
+      synthStatusEl.textContent = `🟢 v${ver}`;
+      synthStatusEl.style.color = "#34d399";
+      synthSyncDescEl.textContent = syncTime ? `Đã đồng bộ lúc: ${syncTime}` : "Đang dùng luật mới nhất từ VPS";
+    } else {
+      synthStatusEl.textContent = "⚪ Bản gốc (Mặc định)";
+      synthStatusEl.style.color = "#94a3b8";
+      synthSyncDescEl.textContent = "Chưa nạp luật từ VPS (dùng file mặc định)";
+    }
+  }
+
+  if (btnSyncSynth) {
+    btnSyncSynth.addEventListener("click", () => {
+      btnSyncSynth.disabled = true;
+      btnSyncSynth.textContent = "⏳ Đang tải từ VPS...";
+      chrome.runtime.sendMessage({ action: "SYNC_SYNTHESIZER" }, (res) => {
+        btnSyncSynth.disabled = false;
+        btnSyncSynth.textContent = "⚡ Cập nhật luật mới từ VPS ngay";
+        if (res && res.success) {
+          updateSynthesizerUI();
+          alert(res.updated ? `✅ Đã cập nhật phiên bản mới (v${res.version}) từ VPS!` : "ℹ️ Bạn đang dùng phiên bản mới nhất từ VPS!");
+        } else {
+          alert(`❌ Lỗi cập nhật: ${res?.error || res?.reason || "Không thể kết nối máy chủ"}`);
+        }
+      });
+    });
+  }
+
   checkConnection();
+  updateSynthesizerUI();
 });
