@@ -713,7 +713,7 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
                     "file_size": apk_size,
                     "updated_at": apk_mtime,
                     "release_notes": "Tự động học lâm sàng qua Gemini 3.8 Flash, tối ưu Lung-RADS v2022",
-                    "force_update": false
+                    "force_update": False
                 },
                 "extension": {
                     "version": ext_ver,
@@ -723,7 +723,7 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
                     "updated_at": ext_mtime,
                     "synthesizer_version": synth_ver,
                     "release_notes": "Tự động cập nhật luật OTA, đồng bộ dữ liệu PACS và phím tắt F9",
-                    "force_update": false
+                    "force_update": False
                 }
             }
 
