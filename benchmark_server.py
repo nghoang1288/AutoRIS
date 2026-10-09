@@ -679,6 +679,69 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps(resp).encode("utf-8"))
             return
 
+        elif path in ("/api/version", "/api/app/version", "/api/extension/version"):
+            apk_path = os.path.join(RELEASE_APK_DIR, "ViASRBenchmark_S24Ultra.apk")
+            if not os.path.exists(apk_path):
+                apk_path = os.path.join(RELEASE_APK_DIR, "app-debug.apk")
+            apk_size = os.path.getsize(apk_path) if os.path.exists(apk_path) else 0
+            apk_mtime = int(os.path.getmtime(apk_path)) if os.path.exists(apk_path) else 0
+
+            ext_zip = os.path.join(RELEASE_APK_DIR, "autoris-extension.zip")
+            ext_size = os.path.getsize(ext_zip) if os.path.exists(ext_zip) else 0
+            ext_mtime = int(os.path.getmtime(ext_zip)) if os.path.exists(ext_zip) else 0
+
+            manifest_path = os.path.join(BASE_DIR, "chrome_extension", "manifest.json")
+            ext_ver = "1.2.0"
+            if os.path.exists(manifest_path):
+                try:
+                    with open(manifest_path, "r", encoding="utf-8") as mf:
+                        mdata = json.load(mf)
+                        ext_ver = mdata.get("version", "1.2.0")
+                except Exception:
+                    pass
+
+            synth_file = find_clinical_synthesizer_file()
+            synth_ver = int(os.path.getmtime(synth_file)) if synth_file and os.path.exists(synth_file) else 0
+
+            full_resp = {
+                "status": "ok",
+                "app": {
+                    "version_name": "1.0.6",
+                    "version_code": 7,
+                    "apk_filename": "ViASRBenchmark_S24Ultra.apk",
+                    "apk_url": "/ViASRBenchmark_S24Ultra.apk",
+                    "file_size": apk_size,
+                    "updated_at": apk_mtime,
+                    "release_notes": "Tự động học lâm sàng qua Gemini 3.8 Flash, tối ưu Lung-RADS v2022",
+                    "force_update": false
+                },
+                "extension": {
+                    "version": ext_ver,
+                    "zip_filename": "autoris-extension.zip",
+                    "zip_url": "/autoris-extension.zip",
+                    "file_size": ext_size,
+                    "updated_at": ext_mtime,
+                    "synthesizer_version": synth_ver,
+                    "release_notes": "Tự động cập nhật luật OTA, đồng bộ dữ liệu PACS và phím tắt F9",
+                    "force_update": false
+                }
+            }
+
+            if path == "/api/app/version":
+                resp_payload = {"status": "ok", **full_resp["app"]}
+            elif path == "/api/extension/version":
+                resp_payload = {"status": "ok", **full_resp["extension"]}
+            else:
+                resp_payload = full_resp
+
+            self.send_response(200)
+            self.send_cors_headers()
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+            self.end_headers()
+            self.wfile.write(json.dumps(resp_payload, ensure_ascii=False).encode("utf-8"))
+            return
+
         elif path == "/api/benchmark/summary":
             sessions = get_all_sessions()
             stats = calculate_summary_stats(sessions)

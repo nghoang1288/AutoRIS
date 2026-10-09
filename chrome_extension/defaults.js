@@ -28,7 +28,14 @@ const STORAGE_KEYS = {
   // Dynamic Clinical Synthesizer (Tải từ VPS)
   SYNTHESIZER_CODE: "clinical_synthesizer_code",
   SYNTHESIZER_VERSION: "clinical_synthesizer_version",
-  SYNTHESIZER_SYNC_TIME: "clinical_synthesizer_sync_time"
+  SYNTHESIZER_SYNC_TIME: "clinical_synthesizer_sync_time",
+
+  // Extension Package Auto-Update
+  EXTENSION_UPDATE_AVAILABLE: "extension_update_available",
+  LATEST_EXTENSION_VERSION: "latest_extension_version",
+  EXTENSION_DOWNLOAD_URL: "extension_download_url",
+  EXTENSION_RELEASE_NOTES: "extension_release_notes",
+  EXTENSION_LAST_CHECK_TIME: "extension_last_check_time"
 };
 
 const ACTIONS = {
@@ -36,7 +43,9 @@ const ACTIONS = {
   SYNTHESIZE_LUNG: "synthesize_report",
   AUTO_APPLY: "auto_apply_to_ris_editor",
   AUTO_APPLY_PACS: "auto_apply_to_ris_editor",
-  OPEN_OPTIONS: "open_options"
+  OPEN_OPTIONS: "open_options",
+  CHECK_EXTENSION_UPDATE: "check_extension_update",
+  DOWNLOAD_EXTENSION_UPDATE: "download_extension_update"
 };
 
 const TIMING = {

@@ -86,6 +86,7 @@ fun SettingsScreen(
     val serverUrl by viewModel.serverUrl.collectAsState()
     val isAutoSyncEnabled by viewModel.isAutoSyncEnabled.collectAsState()
     val serverStatus by viewModel.serverStatus.collectAsState()
+    val appUpdateInfo by viewModel.appUpdateInfo.collectAsState()
 
     var inputServerUrl by remember(serverUrl) { mutableStateOf(serverUrl) }
     var trailingSilence1 by remember { mutableFloatStateOf(viewModel.vadConfig.rule1MinTrailingSilence) }
@@ -517,6 +518,139 @@ fun SettingsScreen(
                         checkedTrackColor = EmeraldGreen.copy(alpha = 0.5f)
                     )
                 )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        // === APP UPDATE SECTION ===
+        Text(
+            text = "CẬP NHẬT ỨNG DỤNG (AUTO-UPDATE)",
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            color = CyanAccent
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = DarkSurface),
+            shape = RoundedCornerShape(10.dp)
+        ) {
+            Column(modifier = Modifier.padding(14.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Phiên bản hiện tại:",
+                        fontSize = 13.sp,
+                        color = TextSecondary
+                    )
+                    Text(
+                        text = "v${appUpdateInfo.currentVersionName.ifBlank { "1.0.5" }} (Build ${if (appUpdateInfo.currentVersionCode > 0) appUpdateInfo.currentVersionCode else 6})",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                }
+
+                if (appUpdateInfo.hasUpdate) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = DarkSurfaceVariant),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.CloudDownload,
+                                    contentDescription = null,
+                                    tint = OrangeWarning,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "ĐÃ CÓ BẢN MỚI: v${appUpdateInfo.versionName}",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp,
+                                    color = OrangeWarning
+                                )
+                            }
+                            if (appUpdateInfo.releaseNotes.isNotBlank()) {
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = appUpdateInfo.releaseNotes,
+                                    fontSize = 12.sp,
+                                    color = TextSecondary
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+                    if (appUpdateInfo.isDownloading) {
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            Text(
+                                text = "Đang tải bản cập nhật: ${(appUpdateInfo.downloadProgress * 100).toInt()}%",
+                                fontSize = 12.sp,
+                                color = CyanAccent,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            LinearProgressIndicator(
+                                progress = { appUpdateInfo.downloadProgress },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(6.dp),
+                                color = CyanAccent,
+                                trackColor = DarkSurfaceVariant
+                            )
+                        }
+                    } else {
+                        Button(
+                            onClick = { viewModel.startAppUpdateDownload() },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = CyanAccent),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CloudDownload,
+                                contentDescription = null,
+                                tint = DarkBackground,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "TẢI VÀ CÀI ĐẶT BẢN MỚI NGAY",
+                                color = DarkBackground,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                } else {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedButton(
+                        onClick = { viewModel.checkForAppUpdate(silent = false) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CloudDownload,
+                            contentDescription = null,
+                            tint = CyanAccent,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Kiểm tra bản cập nhật mới",
+                            color = CyanAccent,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
             }
         }
 

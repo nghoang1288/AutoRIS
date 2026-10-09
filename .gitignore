@@ -36,6 +36,7 @@ __pycache__/
 *$py.class
 venv/
 .env
+data/
 
 # System
 .DS_Store

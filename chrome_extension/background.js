@@ -24,21 +24,25 @@ chrome.runtime.onInstalled.addListener(() => {
 
   startPollingLoop();
   checkAndUpdateSynthesizerCode(true);
+  checkExtensionPackageUpdate(true);
   chrome.alarms.create('autoris-keepalive', { periodInMinutes: 0.5 });
 });
 
 chrome.runtime.onStartup.addListener(() => {
   startPollingLoop();
   checkAndUpdateSynthesizerCode(true);
+  checkExtensionPackageUpdate(true);
 });
 
 startPollingLoop();
 checkAndUpdateSynthesizerCode(true);
+checkExtensionPackageUpdate(true);
 
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === 'autoris-keepalive') {
     pollLatestDictation();
     checkAndUpdateSynthesizerCode();
+    checkExtensionPackageUpdate();
   }
 });
 
@@ -94,6 +98,78 @@ async function checkAndUpdateSynthesizerCode(force = false) {
   }
 }
 
+// 2.3. So sánh phiên bản semver (v1.2.1 > v1.2.0)
+function compareVersions(v1, v2) {
+  const p1 = (v1 || "0").toString().replace(/^v/i, "").split(".").map(x => parseInt(x, 10) || 0);
+  const p2 = (v2 || "0").toString().replace(/^v/i, "").split(".").map(x => parseInt(x, 10) || 0);
+  const len = Math.max(p1.length, p2.length);
+  for (let i = 0; i < len; i++) {
+    const num1 = p1[i] || 0;
+    const num2 = p2[i] || 0;
+    if (num1 > num2) return 1;
+    if (num1 < num2) return -1;
+  }
+  return 0;
+}
+
+// 2.4. Kiểm tra phiên bản gói Extension từ máy chủ AutoRIS
+async function checkExtensionPackageUpdate(force = false) {
+  try {
+    const config = await chrome.storage.local.get([
+      STORAGE_KEYS.SERVER_URL,
+      STORAGE_KEYS.EXTENSION_LAST_CHECK_TIME
+    ]);
+    const serverUrl = (config[STORAGE_KEYS.SERVER_URL] || DEFAULT_CONFIG.serverUrl).trim().replace(/\/+$/, "");
+    const lastCheck = config[STORAGE_KEYS.EXTENSION_LAST_CHECK_TIME] || 0;
+
+    // Giới hạn kiểm tra 5 phút 1 lần nếu không phải ép buộc
+    if (!force && Date.now() - lastCheck < 300000) {
+      return { checked: false, reason: "throttled" };
+    }
+
+    const currentVersion = chrome.runtime.getManifest().version;
+    const url = `${serverUrl}/api/extension/version?t=${Date.now()}`;
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) return { checked: false, reason: "server_offline" };
+
+    const data = await res.json();
+    const remoteVersion = data.version || "1.0.0";
+    const downloadPath = data.zip_url || "/autoris-extension.zip";
+    const fullDownloadUrl = downloadPath.startsWith("http") ? downloadPath : `${serverUrl}${downloadPath}`;
+    const releaseNotes = data.release_notes || "";
+
+    const hasNewUpdate = compareVersions(remoteVersion, currentVersion) > 0;
+
+    await chrome.storage.local.set({
+      [STORAGE_KEYS.EXTENSION_LAST_CHECK_TIME]: Date.now(),
+      [STORAGE_KEYS.EXTENSION_UPDATE_AVAILABLE]: hasNewUpdate,
+      [STORAGE_KEYS.LATEST_EXTENSION_VERSION]: remoteVersion,
+      [STORAGE_KEYS.EXTENSION_DOWNLOAD_URL]: fullDownloadUrl,
+      [STORAGE_KEYS.EXTENSION_RELEASE_NOTES]: releaseNotes
+    });
+
+    if (hasNewUpdate) {
+      chrome.action.setBadgeText({ text: "NEW" });
+      chrome.action.setBadgeBackgroundColor({ color: "#ef4444" });
+      console.log(`[AutoRIS BG] ⚡ Có bản cập nhật Extension mới v${remoteVersion} (Hiện tại: v${currentVersion})!`);
+    } else {
+      chrome.action.setBadgeText({ text: "" });
+    }
+
+    return {
+      checked: true,
+      hasUpdate: hasNewUpdate,
+      currentVersion,
+      latestVersion: remoteVersion,
+      downloadUrl: fullDownloadUrl,
+      releaseNotes
+    };
+  } catch (err) {
+    console.warn("[AutoRIS BG] Lỗi kiểm tra cập nhật Extension:", err);
+    return { checked: false, error: err.message };
+  }
+}
+
 async function pollLatestDictation() {
   if (isPolling) return;
   isPolling = true;
@@ -102,6 +178,10 @@ async function pollLatestDictation() {
   pollCycleCounter++;
   if (pollCycleCounter % 2 === 0) {
     checkAndUpdateSynthesizerCode();
+  }
+  // Cứ mỗi 100 chu kỳ (~80s) kiểm tra bản cập nhật Extension package mới
+  if (pollCycleCounter % 100 === 0) {
+    checkExtensionPackageUpdate();
   }
 
   try {
@@ -239,6 +319,43 @@ chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
     chrome.runtime.openOptionsPage();
     sendResponse({ success: true });
     return false;
+  }
+
+  // A1. Kiểm tra cập nhật Extension
+  if (req.action === ACTIONS.CHECK_EXTENSION_UPDATE || req.action === "CHECK_EXTENSION_UPDATE") {
+    checkExtensionPackageUpdate(true).then(res => {
+      sendResponse({ success: true, ...res });
+    });
+    return true;
+  }
+
+  // A2. Tự động tải bản cập nhật Extension
+  if (req.action === ACTIONS.DOWNLOAD_EXTENSION_UPDATE || req.action === "DOWNLOAD_EXTENSION_UPDATE") {
+    (async () => {
+      const data = await chrome.storage.local.get([
+        STORAGE_KEYS.EXTENSION_DOWNLOAD_URL,
+        STORAGE_KEYS.SERVER_URL
+      ]);
+      const serverUrl = (data[STORAGE_KEYS.SERVER_URL] || DEFAULT_CONFIG.serverUrl).trim().replace(/\/+$/, "");
+      const dlUrl = data[STORAGE_KEYS.EXTENSION_DOWNLOAD_URL] || `${serverUrl}/autoris-extension.zip`;
+
+      if (chrome.downloads && chrome.downloads.download) {
+        chrome.downloads.download({
+          url: dlUrl,
+          filename: "autoris-extension.zip",
+          saveAs: true
+        }, (downloadId) => {
+          if (chrome.runtime.lastError) {
+            chrome.tabs.create({ url: dlUrl });
+          }
+          sendResponse({ success: true, downloadId, url: dlUrl });
+        });
+      } else {
+        chrome.tabs.create({ url: dlUrl });
+        sendResponse({ success: true, url: dlUrl });
+      }
+    })();
+    return true;
   }
 
   // B. Kiểm tra trạng thái máy chủ AutoRIS

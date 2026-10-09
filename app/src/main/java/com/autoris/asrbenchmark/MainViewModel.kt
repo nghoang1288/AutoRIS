@@ -35,6 +35,8 @@ import com.autoris.asrbenchmark.normalizer.MedicalTextNormalizer
 import com.autoris.asrbenchmark.normalizer.NormalizedResult
 import com.autoris.asrbenchmark.storage.BenchmarkDatabase
 import com.autoris.asrbenchmark.storage.BenchmarkExporter
+import com.autoris.asrbenchmark.storage.AppUpdateManager
+import com.autoris.asrbenchmark.storage.AppUpdateInfo
 import com.autoris.asrbenchmark.safety.AcousticQuality
 import com.autoris.asrbenchmark.safety.AcousticQualityLevel
 import com.autoris.asrbenchmark.safety.EvidenceStatus
@@ -201,6 +203,57 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _isLiveAutoSendEnabled.value = newVal
         prefs.edit().putBoolean("live_auto_send", newVal).apply()
         _statusMessage.value = if (newVal) "⚡ Đã BẬT tự động gửi khi đọc" else "⏸️ Đã TẮT tự động gửi (gửi thủ công)"
+    }
+
+    // Tự động kiểm tra và cập nhật ứng dụng (In-app Auto Update)
+    private val _appUpdateInfo = MutableStateFlow(AppUpdateInfo())
+    val appUpdateInfo: StateFlow<AppUpdateInfo> = _appUpdateInfo.asStateFlow()
+
+    fun checkForAppUpdate(silent: Boolean = false) {
+        viewModelScope.launch {
+            if (!silent) {
+                _statusMessage.value = "Đang kiểm tra bản cập nhật..."
+            }
+            val result = AppUpdateManager.checkUpdate(getApplication(), _serverUrl.value)
+            result.onSuccess { info ->
+                _appUpdateInfo.value = info
+                if (info.hasUpdate) {
+                    _statusMessage.value = "⚡ Có bản cập nhật mới v${info.versionName}!"
+                } else if (!silent) {
+                    _statusMessage.value = "Ứng dụng đang ở phiên bản mới nhất (v${info.currentVersionName})"
+                }
+            }.onFailure { err ->
+                if (!silent) {
+                    _statusMessage.value = "Lỗi kiểm tra cập nhật: ${err.message}"
+                }
+            }
+        }
+    }
+
+    fun startAppUpdateDownload() {
+        val info = _appUpdateInfo.value
+        if (!info.hasUpdate || info.apkUrl.isBlank() || info.isDownloading) return
+
+        viewModelScope.launch {
+            _appUpdateInfo.value = info.copy(isDownloading = true, downloadProgress = 0f, downloadError = null)
+            _statusMessage.value = "Đang tải bản cập nhật v${info.versionName}..."
+
+            val res = AppUpdateManager.downloadAndInstall(
+                context = getApplication(),
+                apkDownloadUrl = info.apkUrl,
+                onProgress = { prog ->
+                    _appUpdateInfo.value = _appUpdateInfo.value.copy(downloadProgress = prog)
+                }
+            )
+
+            res.onSuccess {
+                _appUpdateInfo.value = _appUpdateInfo.value.copy(isDownloading = false, downloadProgress = 1f)
+                _statusMessage.value = "Đã tải xong! Mở trình cài đặt..."
+            }.onFailure { err ->
+                _appUpdateInfo.value = _appUpdateInfo.value.copy(isDownloading = false, downloadError = err.message)
+                _statusMessage.value = "Lỗi tải cập nhật: ${err.message}"
+            }
+        }
     }
 
     private var liveSendJob: Job? = null
@@ -551,6 +604,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         initEngine()
         startStatsPolling()
         loadHistory()
+        checkForAppUpdate(silent = true)
     }
 
     private fun startStatsPolling() {

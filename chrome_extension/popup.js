@@ -97,6 +97,83 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
+  // Quản lý kiểm tra và cập nhật Extension Package
+  const extVerLabel = document.getElementById("ext-version-label");
+  const extStatus = document.getElementById("ext-update-status");
+  const extDesc = document.getElementById("ext-update-desc");
+  const btnCheckUpdate = document.getElementById("btn-check-ext-update");
+  const btnDownloadUpdate = document.getElementById("btn-download-ext-update");
+
+  const currentVer = chrome.runtime.getManifest().version;
+  if (extVerLabel) extVerLabel.textContent = `AutoRIS Extension (v${currentVer})`;
+
+  async function updateExtUpdateUI() {
+    const data = await chrome.storage.local.get([
+      STORAGE_KEYS.EXTENSION_UPDATE_AVAILABLE,
+      STORAGE_KEYS.LATEST_EXTENSION_VERSION,
+      STORAGE_KEYS.EXTENSION_RELEASE_NOTES
+    ]);
+    const hasUpdate = !!data[STORAGE_KEYS.EXTENSION_UPDATE_AVAILABLE];
+    const latestVer = data[STORAGE_KEYS.LATEST_EXTENSION_VERSION] || currentVer;
+
+    if (hasUpdate && latestVer !== currentVer) {
+      if (extStatus) {
+        extStatus.textContent = `⚡ Có bản v${latestVer}`;
+        extStatus.style.color = "#f59e0b";
+      }
+      if (extDesc) {
+        extDesc.textContent = data[STORAGE_KEYS.EXTENSION_RELEASE_NOTES] || "Đã có bản phát hành mới trên máy chủ.";
+      }
+      if (btnDownloadUpdate) {
+        btnDownloadUpdate.style.display = "inline-block";
+        btnDownloadUpdate.textContent = `🚀 Tải bản v${latestVer} (ZIP)`;
+      }
+    } else {
+      if (extStatus) {
+        extStatus.textContent = "Mới nhất ✅";
+        extStatus.style.color = "#10b981";
+      }
+      if (extDesc) {
+        extDesc.textContent = "Phiên bản hiện tại đang tương thích hoàn hảo.";
+      }
+      if (btnDownloadUpdate) {
+        btnDownloadUpdate.style.display = "none";
+      }
+    }
+  }
+
+  if (btnCheckUpdate) {
+    btnCheckUpdate.addEventListener("click", () => {
+      btnCheckUpdate.disabled = true;
+      btnCheckUpdate.textContent = "⏳ Đang kiểm tra...";
+      chrome.runtime.sendMessage({ action: "CHECK_EXTENSION_UPDATE" }, (res) => {
+        btnCheckUpdate.disabled = false;
+        btnCheckUpdate.textContent = "🔄 Kiểm tra bản mới";
+        updateExtUpdateUI();
+        if (res && res.hasUpdate) {
+          alert(`⚡ Có bản cập nhật mới: v${res.latestVersion}!\nNhấn "Cập nhật ngay (ZIP)" để tải về.`);
+        } else if (res && res.checked) {
+          alert("✅ Bạn đang sử dụng phiên bản mới nhất!");
+        } else {
+          alert(`ℹ️ Trạng thái: ${res?.reason || "Đã kiểm tra"}`);
+        }
+      });
+    });
+  }
+
+  if (btnDownloadUpdate) {
+    btnDownloadUpdate.addEventListener("click", () => {
+      btnDownloadUpdate.disabled = true;
+      btnDownloadUpdate.textContent = "⏳ Đang tải file ZIP...";
+      chrome.runtime.sendMessage({ action: "DOWNLOAD_EXTENSION_UPDATE" }, (res) => {
+        btnDownloadUpdate.disabled = false;
+        btnDownloadUpdate.textContent = "🚀 Tải lại bản ZIP";
+        alert("📥 Đã bắt đầu tải file autoris-extension.zip về máy!\nSau khi tải xong, giải nén và nạp vào chrome://extensions để hoàn tất.");
+      });
+    });
+  }
+
   checkConnection();
   updateSynthesizerUI();
+  updateExtUpdateUI();
 });
