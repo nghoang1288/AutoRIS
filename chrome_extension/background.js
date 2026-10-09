@@ -147,7 +147,7 @@ function broadcastDictationToRISTabs(dictationItem) {
 }
 
 // 4. Phát sóng kết quả dịch PACS Lung-RADS sang các tab RIS
-function broadcastPACSToRISTabs(pacsReportText, timestamp) {
+function broadcastPACSToRISTabs(pacsReportText, timestamp, rawText = "") {
   chrome.tabs.query({}, (tabs) => {
     if (!tabs || tabs.length === 0) return;
 
@@ -167,6 +167,7 @@ function broadcastPACSToRISTabs(pacsReportText, timestamp) {
         chrome.tabs.sendMessage(tab.id, {
           action: ACTIONS.AUTO_APPLY_PACS,
           report: pacsReportText,
+          rawText: rawText,
           timestamp: timestamp
         }, () => {
           if (chrome.runtime.lastError) { /* ignore */ }
@@ -206,16 +207,18 @@ chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
 
   // D. Tổng hợp PACS Chest CT Lung-RADS (Từ nút PACS F9)
   if (req.action === ACTIONS.SYNTHESIZE || req.action === ACTIONS.SYNTHESIZE_LUNG || (req.action === "SYNTHESIZE_REPORT" && req.payload?.rawText)) {
+    const rawInputText = req.payload?.rawText || "";
     handlePACSSynthesizeReport(req.payload || {})
       .then((rawResult) => {
         const result = typeof sanitizeLungRADSReport === "function" ? sanitizeLungRADSReport(rawResult) : rawResult;
         const now = Date.now();
         chrome.storage.local.set({
           [STORAGE_KEYS.LAST_REPORT]: result,
-          [STORAGE_KEYS.LAST_REPORT_TIME]: now
+          [STORAGE_KEYS.LAST_REPORT_TIME]: now,
+          "lastRawInput": rawInputText
         });
         // Tự động phát sóng kết quả sang các tab RIS đang mở
-        broadcastPACSToRISTabs(result, now);
+        broadcastPACSToRISTabs(result, now, rawInputText);
         sendResponse({ success: true, data: result });
       })
       .catch((err) => {

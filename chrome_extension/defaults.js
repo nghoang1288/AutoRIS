@@ -197,7 +197,11 @@ Mô tả trong mỗi phổi theo thứ tự: thuỳ trên, thuỳ giữa (chỉ 
     + ĐÚNG CHUẨN: "Hình ảnh vài nốt kính mờ hai phổi (Lung-RADS 2)."
     + ĐÚNG CHUẨN: "Hình ảnh vài nốt vôi hoá hai phổi (Lung-RADS 1)."
     + SAI (CẤM): "Hình ảnh nốt đặc hai phổi (thuỳ dưới phổi phải, thuỳ dưới phổi trái) - Lung-RADS 2."
-  - Chỉ ghi tên thuỳ trong Kết luận khi tổn thương chỉ nằm khu trú ở DUY NHẤT một thuỳ của một bên phổi (Ví dụ: "Hình ảnh nốt đặc thuỳ trên phổi phải (Lung-RADS 2).").
+  - Khi có từ 2 nốt trở lên cùng loại ở nhiều thuỳ của CÙNG MỘT BÊN PHỔI:
+    + BẮT BUỘC dùng cụm: "vài nốt [đặc/kính mờ/vôi hoá] phổi [phải/trái] (Lung-RADS [X])."
+    + ĐÚNG CHUẨN: "Hình ảnh vài nốt đặc phổi phải (Lung-RADS 2)."
+    + ĐÚNG CHUẨN: "Nốt vôi hoá phổi phải (Lung-RADS 1)." (hoặc "Vài nốt vôi hoá phổi phải (Lung-RADS 1).")
+  - Chỉ ghi tên thuỳ trong Kết luận khi tổn thương chỉ nằm khu trú ở DUY NHẤT một thuỳ của một bên phổi (Ví dụ: "Hình ảnh nốt đặc thuỳ trên phổi phải (Lung-RADS 2).", "Nốt vôi hoá thuỳ trên phổi trái (Lung-RADS 1).").
 * **QUY TẮC CÁC CÂU KHÁC MỨC LUNG-RADS TRONG KẾT LUẬN (BẮT BUỘC TÁCH CÂU RIÊNG)**:
   - Mỗi mức Lung-RADS khác nhau (hoặc tổn thương kèm theo) là MỘT CÂU RIÊNG BIỆT kết thúc bằng dấu chấm: "(Lung-RADS [X]).".
   - Chữ cái đầu của câu tiếp theo BẮT BUỘC viết hoa (Ví dụ: ". Nốt bán đặc...", ". Nốt đặc...", ". Nốt vôi hoá...", ". Nút nhầy...").
@@ -253,13 +257,20 @@ function sanitizeLungRADSConclusion(conclusionText) {
   // 2. Loại bỏ các mở ngoặc liệt kê tên thuỳ sau "hai phổi"
   text = text.replace(/hai\s+phổi\s*\([^)]*(?:thuỳ|thùy)[^)]*\)/gi, "hai phổi");
 
-  // 3. Chuyển đổi "nốt ... hai phổi" thành "vài nốt ... hai phổi" nếu chưa có từ định lượng (vài/nhiều/các)
-  text = text.replace(/(^|[.\n]\s*)(Hình\s+ảnh\s+)?nốt\s+(đặc|kính\s+mờ|vôi\s+hoá|vôi\s+hóa|bán\s+đặc)\s+hai\s+phổi/gi, function(match, punct, prefix, type) {
+  // 3. Chuyển đổi "nốt/các nốt ... hai phổi" hoặc "các nốt ... phổi phải/trái" thành "vài nốt ..."
+  text = text.replace(/(^|[.\n]\s*)(Hình\s+ảnh\s+)?(?:nốt|các\s+nốt)\s+(đặc|kính\s+mờ|vôi\s+hoá|vôi\s+hóa|bán\s+đặc)\s+hai\s+phổi/gi, function(match, punct, prefix, type) {
     if (prefix) {
       return (punct || "") + prefix + "vài nốt " + type + " hai phổi";
     }
     const cap = (!punct || punct.includes("\n") || punct.includes(".")) ? "Vài nốt " : "vài nốt ";
     return (punct || "") + cap + type + " hai phổi";
+  });
+  text = text.replace(/(^|[.\n]\s*)(Hình\s+ảnh\s+)?(?:các\s+nốt)\s+(đặc|kính\s+mờ|vôi\s+hoá|vôi\s+hóa|bán\s+đặc)\s+phổi\s+(phải|trái)/gi, function(match, punct, prefix, type, side) {
+    if (prefix) {
+      return (punct || "") + prefix + "vài nốt " + type + " phổi " + side;
+    }
+    const cap = (!punct || punct.includes("\n") || punct.includes(".")) ? "Vài nốt " : "vài nốt ";
+    return (punct || "") + cap + type + " phổi " + side;
   });
 
   // 4. Chuẩn hoá định dạng Lung-RADS:
@@ -276,7 +287,10 @@ function sanitizeLungRADSConclusion(conclusionText) {
   const sameTierRegex = /\((Lung-RADS\s+[0-9][A-Za-z]?)\)[.,;\s]+(?:và\s+)?([^().]+?)\s*\(\1\)/i;
   while (sameTierRegex.test(text)) {
     text = text.replace(sameTierRegex, function(match, lr, secondPart) {
-      const cleanPart = secondPart.trim().replace(/^và\s+/i, "");
+      let cleanPart = secondPart.trim().replace(/^và\s+/i, "");
+      if (cleanPart) {
+        cleanPart = cleanPart.charAt(0).toLowerCase() + cleanPart.slice(1);
+      }
       return " __JOIN__ " + cleanPart + " (" + lr + ")";
     });
   }

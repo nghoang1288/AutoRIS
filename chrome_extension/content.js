@@ -417,6 +417,7 @@
   function applySynthesizedReportToRISEditor(editorEl, aiResult) {
     if (!editorEl || !aiResult) return false;
 
+    lastSynthesizedReport = aiResult;
     saveUndoSnapshot(null, null, editorEl);
 
     const isCE = editorEl.isContentEditable || editorEl.getAttribute("contenteditable") === "true";
@@ -922,8 +923,26 @@
     }
 
     const doctorFinal = extractCurrentDoctorReport();
-    const aiOutput = getLatestAIOutput();
-    const rawInput = getLatestRawInput();
+    let aiOutput = getLatestAIOutput();
+    let rawInput = getLatestRawInput();
+
+    // Fallback: Nếu aiOutput hoặc rawInput trống trong bộ nhớ trang RIS, đọc từ storage đã đồng bộ
+    if (!aiOutput || !rawInput) {
+      try {
+        const stored = await chrome.storage.local.get([
+          STORAGE_KEYS.LAST_REPORT,
+          "lastRawInput"
+        ]);
+        if (!aiOutput && stored[STORAGE_KEYS.LAST_REPORT]) {
+          aiOutput = (stored[STORAGE_KEYS.LAST_REPORT] || "").trim();
+        }
+        if (!rawInput && stored["lastRawInput"]) {
+          rawInput = (stored["lastRawInput"] || "").trim();
+        }
+      } catch (e) {
+        // bỏ qua lỗi đọc storage
+      }
+    }
 
     if (!doctorFinal && !aiOutput && !rawInput) {
       showToast("ℹ️ Chưa có nội dung báo cáo hoặc bản đọc nào để lưu!", true);
@@ -938,7 +957,8 @@
     }
 
     const isLungRADS = (lastSynthesizedReport && /Lung-RADS/i.test(lastSynthesizedReport)) ||
-                       (aiOutput && /Lung-RADS/i.test(aiOutput));
+                       (aiOutput && /Lung-RADS/i.test(aiOutput)) ||
+                       (doctorFinal && /Lung-RADS/i.test(doctorFinal));
 
     const payload = {
       source: isLungRADS ? "pacs_lung_rads" : "voice_dictation",
@@ -1521,6 +1541,10 @@
         const reportTime = msg.timestamp || Date.now();
         if (report && reportTime > lastAppliedReportTime) {
           lastAppliedReportTime = reportTime;
+          lastSynthesizedReport = report;
+          if (msg.rawText) {
+            lastInputText = msg.rawText;
+          }
           const editor = findRISEditor();
           if (editor) {
             applySynthesizedReportToRISEditor(editor, report);
