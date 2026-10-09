@@ -5,7 +5,14 @@ const fs = require("fs");
 const path = require("path");
 
 // Load ClinicalSynthesizer
-const synthCode = fs.readFileSync(path.join(__dirname, "..", "autoris-ris-extension", "clinical_synthesizer.js"), "utf-8");
+let synthPath = path.join(__dirname, "clinical_synthesizer.js");
+if (!fs.existsSync(synthPath)) {
+  synthPath = path.join(__dirname, "chrome_extension", "clinical_synthesizer.js");
+}
+if (!fs.existsSync(synthPath)) {
+  synthPath = path.join(__dirname, "..", "autoris-ris-extension", "clinical_synthesizer.js");
+}
+const synthCode = fs.readFileSync(synthPath, "utf-8");
 eval(synthCode);
 
 console.log("=== KIỂM THỬ BỘ THƯ KÝ Y KHOA TẦNG 1 (INSTANT LOCAL ENGINE) ===");
