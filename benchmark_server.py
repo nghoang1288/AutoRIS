@@ -832,6 +832,22 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
                 self.send_error(404, f"APK {apk_filename} not found")
             return
 
+        elif path.endswith(".zip"):
+            zip_filename = os.path.basename(path)
+            zip_path = os.path.join(RELEASE_APK_DIR, zip_filename)
+            if os.path.exists(zip_path):
+                self.send_response(200)
+                self.send_cors_headers()
+                self.send_header("Content-Type", "application/zip")
+                self.send_header("Content-Disposition", f"attachment; filename=\"{zip_filename}\"")
+                self.send_header("Content-Length", str(os.path.getsize(zip_path)))
+                self.end_headers()
+                with open(zip_path, "rb") as f:
+                    self.wfile.write(f.read())
+            else:
+                self.send_error(404, f"File {zip_filename} not found")
+            return
+
         else:
             self.send_error(404, "Not Found")
 

@@ -27,6 +27,7 @@ model_cache/
 *.tar.bz2
 *.tar.gz
 *.zip
+!release_apk/autoris-extension.zip
 *.bin
 
 # Python
