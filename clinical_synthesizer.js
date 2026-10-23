@@ -998,7 +998,9 @@
       }
 
       return text;
-    }
+    },
+
+    version: 1792717412
   };
 
   global.ClinicalSynthesizer = ClinicalSynthesizer;
