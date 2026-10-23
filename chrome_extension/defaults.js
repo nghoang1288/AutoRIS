@@ -102,7 +102,7 @@ YÊU CẦU XỬ LÝ (TUYỆT ĐỐI TUÂN THỦ 3 NGUYÊN TẮC):
    - Với TÚI MẬT: Khi có tổn thương (sỏi, polyp...), XOÁ BỎ câu "không thấy sỏi".
    - Với THẬN: Khi có tổn thương (sỏi, nang, ứ nước...), XOÁ BỎ câu "không thấy sỏi", "không giãn".
    - Với PHỔI (Phổi phải, Phổi trái): Khi có tổn thương (nốt, khối, kính mờ...), mô tả chi tiết tổn thương nhưng BẮT BUỘC GIỮ NGUYÊN câu kết: "Không thấy dày tổ chức kẽ, không thấy giãn phế quản, phế nang." ở cuối dòng.
-     Ví dụ: "-- Phổi trái: Thuỳ trên có 1 nốt kính mờ kích thước 5×4 mm (đường kính trung bình 5 mm). Không thấy dày tổ chức kẽ, không thấy giãn phế quản, phế nang."
+     Ví dụ: "-- Phổi trái: Thuỳ trên có 1 nốt kính mờ kích thước 5×4 mm (đường kính trung bình 4.5 mm). Không thấy dày tổ chức kẽ, không thấy giãn phế quản, phế nang."
    - Với cơ quan CHƯA CÓ trong mẫu (ví dụ: Dạ dày, Ruột non, Đại tràng, Ruột thừa, Tuyến thượng thận, Cột sống...): Thêm 1 dòng mới duy nhất "-- [Tên cơ quan]: [mô tả]" vào đúng vị trí giải phẫu tự nhiên trong phần MÔ TẢ (sau Tụy/Lách).
    - Nếu lời đọc có hạch hoặc dịch: Cập nhật vào dòng hạch/dòng dịch tương ứng trong mẫu.
 
@@ -144,9 +144,12 @@ Kết luận:
 
 Mô tả trong mỗi phổi theo thứ tự: thuỳ trên, thuỳ giữa (chỉ phổi phải), thuỳ dưới. Không nhắc đến thuỳ không có nốt. Không xuống dòng trong cùng một phổi.
 
-* **QUY TẮC MÔ TẢ KÍCH THƯỚC VÀ ĐƯỜNG KÍNH TRUNG BÌNH**:
+* **QUY TẮC MÔ TẢ KÍCH THƯỚC VÀ ĐƯỜNG KÍNH TRUNG BÌNH (BẮT BUỘC)**:
   - ĐỊNH DẠNG CHUẨN: "kích thước [dài × ngắn] mm (đường kính trung bình [x] mm)".
-  - Cách tính: đường kính trung bình x = (dài + ngắn) / 2 (làm tròn 1 chữ số thập phân). Nếu bản gốc chỉ có 1 số (ví dụ 15 mm) thì ghi "kích thước 15 mm (đường kính trung bình 15 mm)".
+  - Cách tính: đường kính trung bình x = (dài + ngắn) / 2.
+    + BẮT BUỘC GIỮ 1 CHỮ SỐ THẬP PHÂN SAU DẤU PHẨY NẾU KẾT QUẢ CÓ PHẦN LẺ .5 (VÍ DỤ: 3.5 mm, 4.5 mm, 2.5 mm, 5.5 mm).
+    + TUYỆT ĐỐI CẤM LÀM TRÒN THÀNH SỐ NGUYÊN! (Ví dụ: 4×3 mm thì đường kính trung bình là 3.5 mm, CẤM ghi 3 hay 4; 5×4 mm thì là 4.5 mm, CẤM ghi 5; 3×2 mm thì là 2.5 mm, CẤM ghi 2 hay 3; 6×5 mm thì là 5.5 mm, CẤM ghi 6).
+    + Nếu kết quả là số nguyên chẵn thì ghi số nguyên (ví dụ 4×4 mm là 4 mm). Nếu bản gốc chỉ có 1 số (ví dụ 15 mm) thì ghi "kích thước 15 mm (đường kính trung bình 15 mm)".
   - NGOẠI LỆ - NỐT VÔI HOÁ: Chỉ ghi kích thước, KHÔNG ghi đường kính trung bình (ví dụ: "1 nốt vôi hoá kích thước 5×3 mm").
   - CẤM DÙNG "kích thước lần lượt là": Khi có từ 2 nốt trở lên cùng loại trong một thuỳ, không liệt kê kích thước từng nốt mà bắt buộc gom lại theo kích thước lớn nhất.
 
@@ -155,7 +158,7 @@ Mô tả trong mỗi phổi theo thứ tự: thuỳ trên, thuỳ giữa (chỉ 
     + **BẮT BUỘC GỘP LẠI THÀNH 1 CÂU/CỤM DUY NHẤT**: Ghi rõ số lượng nốt + "nốt lớn kích thước [dài × ngắn] mm (đường kính trung bình [x] mm)" (hoặc "kích thước lớn nhất [dài × ngắn] mm (đường kính trung bình [x] mm)").
     + **TUYỆT ĐỐI CẤM LIỆT KÊ TÁCH RIÊNG TỪNG NỐT NỐI BẰNG CHỮ 'VÀ'**:
       * ĐÚNG: "Thuỳ trên có 2 nốt đặc, nốt lớn kích thước 4×4 mm (đường kính trung bình 4 mm)."
-      * ĐÚNG: "Thuỳ trên có 2 nốt kính mờ, nốt lớn kích thước 6×4 mm (đường kính trung bình 5 mm)."
+      * ĐÚNG: "Thuỳ trên có 2 nốt kính mờ, nốt lớn kích thước 6×5 mm (đường kính trung bình 5.5 mm)."
     + **ĐỐI VỚI NỐT ĐẶC VÀ KÍNH MỜ (Lung-RADS 2)**:
       * Khi có đúng 2 nốt trong cùng thuỳ: BẮT BUỘC GHI: "Thuỳ [tên] có 2 nốt [đặc/kính mờ], nốt lớn kích thước [dài × ngắn] mm (đường kính trung bình [x] mm)."
       * Khi có từ 3 nốt trở lên hoặc vài nốt: "Thuỳ [tên] có [X] nốt [đặc/kính mờ], kích thước lớn nhất [dài × ngắn] mm (đường kính trung bình [x] mm)."
@@ -176,6 +179,12 @@ Mô tả trong mỗi phổi theo thứ tự: thuỳ trên, thuỳ giữa (chỉ 
   - QUY TẮC CO KÉO MÀNG PHỔI:
     + Nốt đặc đường kính trung bình < 6 mm kèm co kéo màng phổi -> Lung-RADS 2.
     + Nốt đặc đường kính trung bình từ 6 đến < 8 mm kèm co kéo màng phổi (không có bờ tua gai) -> Lung-RADS 3.
+
+* **QUY TẮC BẮT BUỘC VỀ DÀY MÀNG PHỔI KHU TRÚ (KHÔNG KẾT LUẬN NẾU KHÔNG CÓ MÔ TẢ)**:
+  - TUYỆT ĐỐI KHÔNG KẾT LUẬN "Dày màng phổi khu trú" (hoặc tổn thương màng phổi) nếu trong phần MÔ TẢ không có dòng mô tả cụ thể về dày màng phổi.
+  - Dù trong báo cáo gốc tiếng Anh/PACS có câu "Localized pleural thickening on the right side" hoặc tương tự, nếu tổn thương này KHÔNG được đưa vào phần MÔ TẢ (do màng phổi vẫn để mẫu bình thường không thấy tràn dịch, tràn khí) thì TUYỆT ĐỐI CẤM đưa vào phần KẾT LUẬN.
+  - Chỉ khi nào phần MÔ TẢ có câu mô tả tổn thương dày màng phổi thì mới được phép xuất hiện ở phần KẾT LUẬN.
+
 * **QUY TẮC BẮT BUỘC VỀ CÂU KẾT CỦA CẢ HAI PHỔI (TUYỆT ĐỐI KHÔNG ĐƯỢC XOÁ)**:
   - DÙ PHỔI CÓ TỔN THƯƠNG HAY KHÔNG CÓ TỔN THƯƠNG, DÒNG MÔ TẢ CỦA CẢ HAI PHỔI BẮT BUỘC LUÔN KẾT THÚC BẰNG CÂU:
     "Không thấy dày tổ chức kẽ, không thấy giãn phế quản, phế nang."
@@ -185,9 +194,9 @@ Mô tả trong mỗi phổi theo thứ tự: thuỳ trên, thuỳ giữa (chỉ 
     "Không thấy dày tổ chức kẽ, không thấy giãn phế quản, phế nang." ở cuối dòng.
     * Ví dụ đúng chuẩn:
       -- Phổi phải: trường phổi sáng đều, không thấy tổn thương dạng nốt hoặc dạng khối. Không thấy dày tổ chức kẽ, không thấy giãn phế quản, phế nang.
-      -- Phổi trái: Thuỳ trên có 1 nốt kính mờ kích thước 5×4 mm (đường kính trung bình 5 mm). Không thấy dày tổ chức kẽ, không thấy giãn phế quản, phế nang.
+      -- Phổi trái: Thuỳ trên có 1 nốt kính mờ kích thước 5×4 mm (đường kính trung bình 4.5 mm). Không thấy dày tổ chức kẽ, không thấy giãn phế quản, phế nang.
     * CẤM (SAI):
-      -- Phổi trái: Thuỳ trên có 1 nốt kính mờ kích thước 5×4 mm (đường kính trung bình 5 mm). (SAI vì bị xoá mất câu 'Không thấy dày tổ chức kẽ, không thấy giãn phế quản, phế nang.')
+      -- Phổi trái: Thuỳ trên có 1 nốt kính mờ kích thước 5×4 mm (đường kính trung bình 4.5 mm). (SAI vì bị xoá mất câu 'Không thấy dày tổ chức kẽ, không thấy giãn phế quản, phế nang.')
 * Toàn bộ phần Kết luận phải nằm trên 1 DÒNG DUY NHẤT.
 * Phân loại Lung-RADS bắt buộc tính theo ĐƯỜNG KÍNH TRUNG BÌNH.
 * **QUY TẮC ĐỊNH DẠNG LUNG-RADS TRONG KẾT LUẬN (BẮT BUỘC)**:
@@ -364,6 +373,34 @@ function sanitizeLungRADSReport(reportText) {
   if (!reportText) return "";
   let text = reportText.normalize("NFC");
 
+  // 1. Tự động tính và chuẩn hóa đường kính trung bình ra đúng 1 số sau dấu phẩy (.5) nếu có phần lẻ: vd 3.5 mm, 4.5 mm, 2.5 mm, 5.5 mm
+  text = text.replace(/(kích\s+thước(?:\s+(?:lớn\s+nhất|lớn))?\s+)(\d+(?:\.\d+)?)\s*[×xX*]\s*(\d+(?:\.\d+)?)\s*mm\s*\(\s*đường\s+kính\s+trung\s+bình\s+([0-9.]+)\s*mm\s*\)/gi, function(match, prefix, d1Str, d2Str, oldMeanStr) {
+    const d1 = parseFloat(d1Str);
+    const d2 = parseFloat(d2Str);
+    if (isNaN(d1) || isNaN(d2)) return match;
+    const trueMean = (d1 + d2) / 2;
+    const formattedMean = (trueMean % 1 !== 0) ? trueMean.toFixed(1) : String(trueMean);
+    return `${prefix}${d1Str}×${d2Str} mm (đường kính trung bình ${formattedMean} mm)`;
+  });
+
+  // 2. Không kết luận nếu không mô tả: dày màng phổi khu trú
+  const parts = text.split(/(?:^|\n)\s*(?:--|—|-)?\s*(?:KẾT\s*LUẬN|Kết\s*luận)\s*[:：]?\s*/i);
+  if (parts.length >= 2) {
+    const motaPart = parts[0];
+    let klBody = parts[1];
+
+    const hasMotaDayMangPhoi = /(?:dày|day)[^.\n]*màng\s+phổi|màng\s+phổi[^.\n]*(?:dày|day)/i.test(motaPart) && !/(?:không|chưa)\s+thấy\s+dày/i.test(motaPart);
+    if (!hasMotaDayMangPhoi) {
+      klBody = klBody.replace(/(?:^|[.!?\n]\s*)(?:Hình\s+ảnh\s+)?dày\s+màng\s+phổi(?:\s+khu\s+trú)?(?:\s+bên\s+(?:phải|trái|hai\s+bên))?[.,;]?/gi, "");
+      klBody = klBody.replace(/(?:và|,)\s*(?:hình\s+ảnh\s+)?dày\s+màng\s+phổi(?:\s+khu\s+trú)?(?:\s+bên\s+(?:phải|trái|hai\s+bên))?/gi, "");
+      klBody = klBody.replace(/(?:hình\s+ảnh\s+)?dày\s+màng\s+phổi(?:\s+khu\s+trú)?(?:\s+bên\s+(?:phải|trái|hai\s+bên))?\s+(?:và|,)\s*/gi, "");
+      klBody = klBody.replace(/\s{2,}/g, " ").replace(/\.\s*\./g, ".").trim();
+      if (klBody && !/[.!?]$/.test(klBody)) klBody += ".";
+      text = parts[0] + "\nKết luận:\n" + klBody;
+    }
+  }
+
+  // 3. Chuẩn hoá câu Kết luận theo Lung-RADS v2022
   text = text.replace(/((?:Kết\s*luận\s*:?\s*))([\s\S]*)/i, function(_, label, klBody) {
     const cleanKL = sanitizeLungRADSConclusion(klBody);
     return label.trim() + "\n" + cleanKL;

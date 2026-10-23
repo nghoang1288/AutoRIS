@@ -39,7 +39,7 @@ os.makedirs(BACKUP_DIR, exist_ok=True)
 os.makedirs(REPORTS_DIR, exist_ok=True)
 
 # Cấu hình API Server AutoRIS
-API_BASE_URL = os.environ.get("AUTORIS_SERVER_URL", "http://127.0.0.1:8080")
+API_BASE_URL = os.environ.get("AUTORIS_SERVER_URL", "https://autoris.hoang.qzz.io")
 
 # Cấu hình Model AI: Gemini 3.8 Flash qua 9router
 ROUTER_URL = os.environ.get("LLM_ROUTER_URL", "https://9router.hoang.qzz.io/v1/chat/completions")
@@ -47,7 +47,7 @@ ROUTER_API_KEY = os.environ.get("ROUTER_API_KEY", "sk-e8ff53fc363b707a-aj81vz-ff
 AI_MODEL_NAME = os.environ.get("AUTORIS_LEARNER_MODEL", "gemini/gemini-3.8-flash")
 
 
-def call_gemini_flash(messages, temperature=0.1, timeout=30):
+def call_gemini_flash(messages, temperature=0.1, timeout=90):
     """
     Gọi Gemini 3.8 Flash qua 9router, xử lý cả định dạng JSON thường và SSE stream.
     """

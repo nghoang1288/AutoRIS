@@ -1466,7 +1466,7 @@
             apiKey: config[STORAGE_KEYS.AI_API_KEY] || DEFAULT_CONFIG.aiKey,
             googleKeysPool: config[STORAGE_KEYS.GOOGLE_KEYS_POOL] || DEFAULT_CONFIG.googleKeysPool,
             preferredModel: config[STORAGE_KEYS.AI_MODEL] || DEFAULT_CONFIG.aiModel,
-            systemPrompt: (config[STORAGE_KEYS.SYSTEM_PROMPT] && config[STORAGE_KEYS.SYSTEM_PROMPT].includes("Nốt bán đặc thuỳ trên phổi phải (Lung-RADS 4A)"))
+            systemPrompt: (config[STORAGE_KEYS.SYSTEM_PROMPT] && config[STORAGE_KEYS.SYSTEM_PROMPT].includes("QUY TẮC BẮT BUỘC VỀ DÀY MÀNG PHỔI KHU TRÚ"))
               ? config[STORAGE_KEYS.SYSTEM_PROMPT]
               : LUNG_RADS_SYSTEM_PROMPT,
             rawText: currentText

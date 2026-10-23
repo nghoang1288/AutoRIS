@@ -907,6 +907,51 @@
       }
 
       return this.localDeterministicFallback(currentMota, currentKetluan, cleanDictation);
+    },
+
+    /**
+     * Chuẩn hoá toàn bộ báo cáo Lung-RADS (Mô tả + Kết luận)
+     * - Tự động tính và chuẩn hóa đường kính trung bình ra 1 số sau dấu phẩy (.5)
+     * - Không kết luận nếu không mô tả: dày màng phổi khu trú
+     */
+    sanitizeLungRADSReport(reportText) {
+      if (!reportText) return "";
+      let text = reportText.normalize("NFC");
+
+      // 1. Tự động tính và chuẩn hóa đường kính trung bình ra đúng 1 số sau dấu phẩy (.5) nếu có phần lẻ: vd 3.5 mm, 4.5 mm, 2.5 mm, 5.5 mm
+      text = text.replace(/(kích\s+thước(?:\s+(?:lớn\s+nhất|lớn))?\s+)(\d+(?:\.\d+)?)\s*[×xX*]\s*(\d+(?:\.\d+)?)\s*mm\s*\(\s*đường\s+kính\s+trung\s+bình\s+([0-9.]+)\s*mm\s*\)/gi, function(match, prefix, d1Str, d2Str, oldMeanStr) {
+        const d1 = parseFloat(d1Str);
+        const d2 = parseFloat(d2Str);
+        if (isNaN(d1) || isNaN(d2)) return match;
+        const trueMean = (d1 + d2) / 2;
+        const formattedMean = (trueMean % 1 !== 0) ? trueMean.toFixed(1) : String(trueMean);
+        return `${prefix}${d1Str}×${d2Str} mm (đường kính trung bình ${formattedMean} mm)`;
+      });
+
+      // 2. Không kết luận nếu không mô tả: dày màng phổi khu trú
+      const parts = text.split(/(?:^|\n)\s*(?:--|—|-)?\s*(?:KẾT\s*LUẬN|Kết\s*luận)\s*[:：]?\s*/i);
+      if (parts.length >= 2) {
+        const motaPart = parts[0];
+        let klBody = parts[1];
+
+        const hasMotaDayMangPhoi = /(?:dày|day)[^.\n]*màng\s+phổi|màng\s+phổi[^.\n]*(?:dày|day)/i.test(motaPart) && !/(?:không|chưa)\s+thấy\s+dày/i.test(motaPart);
+        if (!hasMotaDayMangPhoi) {
+          klBody = klBody.replace(/(?:^|[.!?\n]\s*)(?:Hình\s+ảnh\s+)?dày\s+màng\s+phổi(?:\s+khu\s+trú)?(?:\s+bên\s+(?:phải|trái|hai\s+bên))?[.,;]?/gi, "");
+          klBody = klBody.replace(/(?:và|,)\s*(?:hình\s+ảnh\s+)?dày\s+màng\s+phổi(?:\s+khu\s+trú)?(?:\s+bên\s+(?:phải|trái|hai\s+bên))?/gi, "");
+          klBody = klBody.replace(/(?:hình\s+ảnh\s+)?dày\s+màng\s+phổi(?:\s+khu\s+trú)?(?:\s+bên\s+(?:phải|trái|hai\s+bên))?\s+(?:và|,)\s*/gi, "");
+          klBody = klBody.replace(/\s{2,}/g, " ").replace(/\.\s*\./g, ".").trim();
+          if (klBody && !/[.!?]$/.test(klBody)) klBody += ".";
+          text = parts[0] + "\nKết luận:\n" + klBody;
+        }
+      }
+
+      if (typeof sanitizeLungRADSConclusion === "function") {
+        text = text.replace(/((?:Kết\s*luận\s*:?\s*))([\s\S]*)/i, function(_, label, klBody) {
+          return label.trim() + "\n" + sanitizeLungRADSConclusion(klBody);
+        });
+      }
+
+      return text;
     }
   };
 

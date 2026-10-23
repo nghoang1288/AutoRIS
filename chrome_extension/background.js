@@ -12,7 +12,7 @@ chrome.runtime.onInstalled.addListener(() => {
     for (const [k, v] of Object.entries(DEFAULT_CONFIG)) {
       if (items[k] === undefined) toSet[k] = v;
     }
-    if (!items[STORAGE_KEYS.SYSTEM_PROMPT] || !items[STORAGE_KEYS.SYSTEM_PROMPT].includes("Nốt bán đặc thuỳ trên phổi phải (Lung-RADS 4A)")) {
+    if (!items[STORAGE_KEYS.SYSTEM_PROMPT] || !items[STORAGE_KEYS.SYSTEM_PROMPT].includes("QUY TẮC BẮT BUỘC VỀ DÀY MÀNG PHỔI KHU TRÚ")) {
       toSet[STORAGE_KEYS.SYSTEM_PROMPT] = LUNG_RADS_SYSTEM_PROMPT;
     }
     toSet[STORAGE_KEYS.INSTALLED_VERSION] = chrome.runtime.getManifest().version;
