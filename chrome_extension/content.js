@@ -1297,16 +1297,49 @@
 
     // Bác sĩ hoàn toàn chủ động chọn tab qua checkbox chkTarget hoặc nút Áp dụng (tránh cướp quyền khi chuyển tab xem bệnh án)
 
-    document.getElementById("autoris-btn-apply").addEventListener("click", () => {
+    async function handleRefillAction() {
       if (!chkTarget.checked) {
         userExplicitlyUnchecked = false;
         chrome.storage.local.set({ [STORAGE_KEYS.ACTIVE_TARGET_TAB]: TAB_INSTANCE_ID });
         updateTabActiveUI(true);
       }
+
+      const editor = findRISEditor();
+
+      // 1. Kiểm tra bản dịch PACS Lung-RADS gần nhất (F9)
+      const store = await chrome.storage.local.get([STORAGE_KEYS.LAST_REPORT]);
+      const pacsReport = lastSynthesizedReport || store[STORAGE_KEYS.LAST_REPORT];
+
+      if (pacsReport && editor) {
+        applySynthesizedReportToRISEditor(editor, pacsReport);
+        playChimeSound();
+        showToast("✅ Đã điền lại kết quả Lung-RADS vào RIS!");
+        return;
+      }
+
+      // 2. Kiểm tra câu đọc từ điện thoại (ASR)
       if (lastDictationText) {
         processAndApplyDictation(lastDictationText);
+        showToast("✅ Đã xử lý và điền lại câu đọc từ điện thoại!");
+        return;
+      }
+
+      if (!editor) {
+        showToast("⚠️ Chưa tìm thấy khung soạn thảo RIS. Vui lòng click chuột vào ô Mô tả trên RIS rồi bấm lại!", true);
       } else {
-        showToast("ℹ️ Chưa có câu đọc nào từ điện thoại!");
+        showToast("ℹ️ Chưa có nội dung bản dịch hoặc câu đọc nào để điền lại!");
+      }
+    }
+
+    document.getElementById("autoris-btn-apply").addEventListener("click", handleRefillAction);
+
+    // Phím tắt F8 hoặc Alt+D trên trang RIS: Điền lại ngay lập tức
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "F8" || (e.altKey && (e.key === "D" || e.key === "d" || e.code === "KeyD"))) {
+        if (isRISPage()) {
+          e.preventDefault();
+          handleRefillAction();
+        }
       }
     });
 
@@ -1425,13 +1458,23 @@
 
     if (currentText === lastInputText && lastSynthesizedReport) {
       await copyToClipboard(lastSynthesizedReport);
+      const now = Date.now();
       chrome.storage.local.set({
         [STORAGE_KEYS.LAST_REPORT]: lastSynthesizedReport,
-        [STORAGE_KEYS.LAST_REPORT_TIME]: Date.now()
+        [STORAGE_KEYS.LAST_REPORT_TIME]: now
+      });
+      // Phát sóng lại ngay lập tức sang các tab RIS để điền lại
+      chrome.runtime.sendMessage({
+        action: "BROADCAST_PACS",
+        payload: {
+          report: lastSynthesizedReport,
+          rawText: currentText,
+          timestamp: now
+        }
       });
       btn.innerHTML = `✅ Đã điền vào RIS & Copy!`;
       btn.style.backgroundColor = "#38a169";
-      showToast("📋 Đã đồng bộ sang RIS & copy vào clipboard (Ctrl+V)!");
+      showToast("📋 Đã gửi lại kết quả sang RIS & copy vào clipboard (Ctrl+V)!");
       return;
     }
 
@@ -1718,7 +1761,7 @@
         }
         const report = msg.report;
         const reportTime = msg.timestamp || Date.now();
-        if (report && reportTime > lastAppliedReportTime) {
+        if (report && reportTime >= lastAppliedReportTime) {
           lastAppliedReportTime = reportTime;
           lastSynthesizedReport = report;
           if (msg.rawText) {
@@ -1728,6 +1771,9 @@
           if (editor) {
             applySynthesizedReportToRISEditor(editor, report);
             playChimeSound();
+            showToast("✅ Đã tự động điền kết quả dịch Lung-RADS từ PACS!");
+          } else {
+            console.warn("[AutoRIS RIS] Chưa tìm thấy ô soạn thảo RIS để tự điền tự động. Bác sĩ có thể bấm '✍️ Điền lại' (F8) hoặc Ctrl+V!");
           }
           sendResponse({ received: true });
         }

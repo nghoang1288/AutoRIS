@@ -401,6 +401,18 @@ chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
     return true;
   }
 
+  // D1. Phát sóng lại báo cáo PACS sang các tab RIS theo yêu cầu
+  if (req.action === "BROADCAST_PACS") {
+    const report = req.payload?.report;
+    const rawText = req.payload?.rawText || "";
+    const now = req.payload?.timestamp || Date.now();
+    if (report) {
+      broadcastPACSToRISTabs(report, now, rawText);
+    }
+    sendResponse({ success: true });
+    return false;
+  }
+
   // E. Tổng hợp báo cáo lâm sàng qua AI (Đọc từ điện thoại -> Phân bổ mô tả & kết luận)
   if (req.action === "SYNTHESIZE_REPORT" && req.payload?.dictationText) {
     handleAISynthesis(req.payload || {})
