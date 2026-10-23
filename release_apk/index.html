@@ -77,28 +77,54 @@
         }
         .btn-extension {
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 10px;
+            gap: 4px;
             background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
             color: #ffffff;
             font-weight: 700;
             font-size: 15px;
             text-decoration: none;
-            padding: 15px 20px;
+            padding: 14px 20px;
             border-radius: 12px;
             box-shadow: 0 4px 16px rgba(2, 132, 199, 0.4);
             transition: all 0.2s ease;
+            position: relative;
         }
         .btn-extension:hover {
             background: linear-gradient(135deg, #0369a1 0%, #075985 100%);
             transform: translateY(-1px);
         }
-        .btn-apk {
+        .btn-extension .btn-main-title {
             display: flex;
             align-items: center;
+            gap: 8px;
+            font-size: 15px;
+        }
+        .btn-extension .btn-file-subtext {
+            font-size: 11.5px;
+            font-weight: 400;
+            color: #bae6fd;
+            font-family: monospace;
+        }
+        .version-tag {
+            background: #22c55e;
+            color: #052e16;
+            font-size: 10px;
+            font-weight: 800;
+            padding: 2px 7px;
+            border-radius: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-left: 6px;
+        }
+        .btn-apk {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
             justify-content: center;
-            gap: 10px;
+            gap: 4px;
             background: #1e293b;
             color: #38bdf8;
             font-weight: 600;
@@ -112,6 +138,18 @@
         .btn-apk:hover {
             background: rgba(2, 132, 199, 0.15);
             transform: translateY(-1px);
+        }
+        .btn-apk .btn-main-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+        .btn-apk .btn-file-subtext {
+            font-size: 11px;
+            font-weight: 400;
+            color: #94a3b8;
+            font-family: monospace;
         }
         .btn-dashboard {
             display: flex;
@@ -134,6 +172,30 @@
         }
         .btn-extension:active, .btn-apk:active, .btn-dashboard:active {
             transform: scale(0.98);
+        }
+        .changelog-box {
+            background: rgba(15, 23, 42, 0.8);
+            border-radius: 12px;
+            padding: 14px 16px;
+            text-align: left;
+            border: 1px solid #38bdf8;
+            margin-bottom: 20px;
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.1);
+        }
+        .changelog-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: #38bdf8;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .changelog-items {
+            font-size: 11.5px;
+            color: #cbd5e1;
+            padding-left: 18px;
+            line-height: 1.6;
         }
         .guide-box {
             background: #0f172a;
@@ -193,17 +255,36 @@
         </p>
 
         <div class="actions-group">
-            <a href="/autoris-extension.zip" class="btn-extension" download="autoris-extension.zip">
-                <span>🧩</span> TẢI CHROME EXTENSION (ZIP)
+            <a href="/autoris-extension-v1.2.1.zip" class="btn-extension" download="autoris-extension-v1.2.1.zip">
+                <div class="btn-main-title">
+                    <span>🧩</span> TẢI CHROME EXTENSION <span class="version-tag">v1.2.1 MỚI</span>
+                </div>
+                <div class="btn-file-subtext">File: autoris-extension-v1.2.1.zip • 58 KB • 23/10/2026</div>
             </a>
 
-            <a href="/ViASRBenchmark_S24Ultra.apk" class="btn-apk" download>
-                <span>📱</span> TẢI APP DI ĐỘNG (APK CHO ANDROID)
+            <a href="/ViASRBenchmark_S24Ultra.apk" class="btn-apk" download="ViASRBenchmark_S24Ultra.apk">
+                <div class="btn-main-title">
+                    <span>📱</span> TẢI APP DI ĐỘNG CHO ANDROID <span class="version-tag" style="background:#0284c7;color:#fff;">v1.0.6 (b7)</span>
+                </div>
+                <div class="btn-file-subtext">File: ViASRBenchmark_S24Ultra.apk • 97 MB • Tối ưu S24U/Ace5</div>
             </a>
 
             <a href="/dashboard" class="btn-dashboard">
                 <span>📊</span> Mở Live Dashboard Phân Tích & Benchmark
             </a>
+        </div>
+
+        <div class="changelog-box">
+            <div class="changelog-title">
+                <span>✨ ĐIỂM MỚI BẢN EXTENSION v1.2.1 (23/10/2026)</span>
+                <span style="font-size:10.5px;color:#94a3b8;font-weight:400;">Build 1792715496</span>
+            </div>
+            <ul class="changelog-items">
+                <li><b>Đường kính nốt phổi:</b> Khóa cứng luôn giữ 1 chữ số sau dấu phẩy (ví dụ: <code>3.5 mm</code>, <code>4.5 mm</code>, <code>5.5 mm</code>), tuyệt đối không làm tròn số nguyên.</li>
+                <li><b>Dày màng phổi khu trú:</b> Tự động kiểm tra và lọc sạch khỏi Kết luận nếu phần Mô tả không ghi nhận tổn thương.</li>
+                <li><b>Cập nhật OTA 1.6s:</b> Tự động nhận quy tắc lâm sàng mới từ VPS mà không cần reload extension.</li>
+                <li><b>Phím tắt F9:</b> Dịch kết quả Lung-RADS CT Ngực trên trang đọc PACS Bệnh viện ĐH Y Hà Nội.</li>
+            </ul>
         </div>
 
         <div class="guide-box">

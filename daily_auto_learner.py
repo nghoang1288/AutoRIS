@@ -41,51 +41,64 @@ os.makedirs(REPORTS_DIR, exist_ok=True)
 # Cấu hình API Server AutoRIS
 API_BASE_URL = os.environ.get("AUTORIS_SERVER_URL", "https://autoris.hoang.qzz.io")
 
-# Cấu hình Model AI: Gemini 3.8 Flash qua 9router
-ROUTER_URL = os.environ.get("LLM_ROUTER_URL", "https://9router.hoang.qzz.io/v1/chat/completions")
+# Cấu hình Model AI: Ưu tiên Gemini 3.8 Flash, tự động fallback sang Gemini 3.5 Flash nếu hết quota
+ROUTER_URL = os.environ.get("LLM_ROUTER_URL", "http://127.0.0.1:20128/v1/chat/completions")
 ROUTER_API_KEY = os.environ.get("ROUTER_API_KEY", "sk-e8ff53fc363b707a-aj81vz-ff55a6d6")
-AI_MODEL_NAME = os.environ.get("AUTORIS_LEARNER_MODEL", "gemini/gemini-3.8-flash")
+AI_MODELS = [
+    os.environ.get("AUTORIS_LEARNER_MODEL", "gemini/gemini-3.8-flash"),
+    "gemini/gemini-3.5-flash-lite",
+    "DI/google/gemini-3.5-flash",
+]
+AI_MODEL_NAME = AI_MODELS[0]
 
 
-def call_gemini_flash(messages, temperature=0.1, timeout=90):
+def call_gemini_flash(messages, temperature=0.1, timeout=20):
     """
-    Gọi Gemini 3.8 Flash qua 9router, xử lý cả định dạng JSON thường và SSE stream.
+    Gọi Gemini 3.8 Flash qua 9router, tự động fallback các model dự phòng nếu quota đầy/lỗi.
     """
-    payload = {
-        "model": AI_MODEL_NAME,
-        "messages": messages,
-        "temperature": temperature,
-        "stream": False
-    }
     headers = {
         "User-Agent": "AutoRIS-DailyLearner/2.0",
         "Content-Type": "application/json",
         "Authorization": f"Bearer {ROUTER_API_KEY}"
     }
 
-    try:
-        req = urllib.request.Request(ROUTER_URL, data=json.dumps(payload).encode("utf-8"), headers=headers)
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            raw = resp.read().decode("utf-8")
-            if raw.strip().startswith("data:"):
-                chunks = []
-                for line in raw.split("\n"):
-                    line = line.strip()
-                    if line.startswith("data: ") and not line.startswith("data: [DONE]"):
-                        try:
-                            c = json.loads(line[6:])
-                            delta = c["choices"][0]["delta"].get("content", "")
-                            if delta:
-                                chunks.append(delta)
-                        except Exception:
-                            pass
-                return "".join(chunks).strip()
-            else:
-                data = json.loads(raw)
-                return data["choices"][0]["message"]["content"].strip()
-    except Exception as e:
-        print(f"[Daily Learner Error] Lỗi khi gọi Gemini 3.8 Flash: {e}")
-        return ""
+    for model_name in AI_MODELS:
+        payload = {
+            "model": model_name,
+            "messages": messages,
+            "temperature": temperature,
+            "stream": False
+        }
+        try:
+            req = urllib.request.Request(ROUTER_URL, data=json.dumps(payload).encode("utf-8"), headers=headers)
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                raw = resp.read().decode("utf-8")
+                if raw.strip().startswith("data:"):
+                    chunks = []
+                    for line in raw.split("\n"):
+                        line = line.strip()
+                        if line.startswith("data: ") and not line.startswith("data: [DONE]"):
+                            try:
+                                c = json.loads(line[6:])
+                                delta = c["choices"][0]["delta"].get("content", "")
+                                if delta:
+                                    chunks.append(delta)
+                            except Exception:
+                                pass
+                    res = "".join(chunks).strip()
+                    if res:
+                        return res
+                else:
+                    data = json.loads(raw)
+                    res = data["choices"][0]["message"]["content"].strip()
+                    if res:
+                        return res
+        except Exception as e:
+            print(f"[Daily Learner Warning] Model {model_name} gặp sự cố ({e}), đang thử model kế tiếp...")
+            continue
+
+    print("[Daily Learner Error] Toàn bộ các model AI đều không phản hồi.")
+    return ""
 
 
 def fetch_pending_feedback():

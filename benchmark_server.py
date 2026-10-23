@@ -686,17 +686,32 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
             apk_size = os.path.getsize(apk_path) if os.path.exists(apk_path) else 0
             apk_mtime = int(os.path.getmtime(apk_path)) if os.path.exists(apk_path) else 0
 
-            ext_zip = os.path.join(RELEASE_APK_DIR, "autoris-extension.zip")
+            # Ưu tiên lấy file zip có version cụ thể v1.2.1
+            ext_zip = os.path.join(RELEASE_APK_DIR, "autoris-extension-v1.2.1.zip")
+            zip_name = "autoris-extension-v1.2.1.zip"
+            if not os.path.exists(ext_zip):
+                ext_zip = os.path.join(RELEASE_APK_DIR, "autoris-extension.zip")
+                zip_name = "autoris-extension.zip"
             ext_size = os.path.getsize(ext_zip) if os.path.exists(ext_zip) else 0
             ext_mtime = int(os.path.getmtime(ext_zip)) if os.path.exists(ext_zip) else 0
 
+            # Đọc version trực tiếp từ manifest.json hoặc từ trong file zip
+            ext_ver = "1.2.1"
             manifest_path = os.path.join(BASE_DIR, "chrome_extension", "manifest.json")
-            ext_ver = "1.2.0"
             if os.path.exists(manifest_path):
                 try:
                     with open(manifest_path, "r", encoding="utf-8") as mf:
                         mdata = json.load(mf)
-                        ext_ver = mdata.get("version", "1.2.0")
+                        ext_ver = mdata.get("version", "1.2.1")
+                except Exception:
+                    pass
+            elif os.path.exists(ext_zip):
+                try:
+                    import zipfile
+                    with zipfile.ZipFile(ext_zip, "r") as zf:
+                        if "manifest.json" in zf.namelist():
+                            mdata = json.loads(zf.read("manifest.json").decode("utf-8"))
+                            ext_ver = mdata.get("version", "1.2.1")
                 except Exception:
                     pass
 
@@ -717,12 +732,12 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
                 },
                 "extension": {
                     "version": ext_ver,
-                    "zip_filename": "autoris-extension.zip",
-                    "zip_url": "/autoris-extension.zip",
+                    "zip_filename": zip_name,
+                    "zip_url": f"/{zip_name}",
                     "file_size": ext_size,
                     "updated_at": ext_mtime,
                     "synthesizer_version": synth_ver,
-                    "release_notes": "Tự động cập nhật luật OTA, đồng bộ dữ liệu PACS và phím tắt F9",
+                    "release_notes": "v1.2.1: Khóa cứng đường kính 3.5mm/4.5mm, cấm dày màng phổi thừa, OTA 1.6s",
                     "force_update": False
                 }
             }
@@ -873,6 +888,9 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
             if os.path.exists(index_file):
                 self.send_response(200)
                 self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+                self.send_header("Pragma", "no-cache")
+                self.send_header("Expires", "0")
                 self.end_headers()
                 with open(index_file, "rb") as f:
                     self.wfile.write(f.read())
@@ -885,9 +903,13 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
             apk_path = os.path.join(RELEASE_APK_DIR, apk_filename)
             if os.path.exists(apk_path):
                 self.send_response(200)
+                self.send_cors_headers()
                 self.send_header("Content-Type", "application/vnd.android.package-archive")
                 self.send_header("Content-Disposition", f"attachment; filename=\"{apk_filename}\"")
                 self.send_header("Content-Length", str(os.path.getsize(apk_path)))
+                self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+                self.send_header("Pragma", "no-cache")
+                self.send_header("Expires", "0")
                 self.end_headers()
                 with open(apk_path, "rb") as f:
                     self.wfile.write(f.read())
@@ -898,12 +920,21 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
         elif path.endswith(".zip"):
             zip_filename = os.path.basename(path)
             zip_path = os.path.join(RELEASE_APK_DIR, zip_filename)
+            # Nếu yêu cầu autoris-extension.zip mà có bản cụ thể v1.2.1, ưu tiên phục vụ bản mới nhất
+            if not os.path.exists(zip_path) and zip_filename == "autoris-extension.zip":
+                v_path = os.path.join(RELEASE_APK_DIR, "autoris-extension-v1.2.1.zip")
+                if os.path.exists(v_path):
+                    zip_path = v_path
+
             if os.path.exists(zip_path):
                 self.send_response(200)
                 self.send_cors_headers()
                 self.send_header("Content-Type", "application/zip")
                 self.send_header("Content-Disposition", f"attachment; filename=\"{zip_filename}\"")
                 self.send_header("Content-Length", str(os.path.getsize(zip_path)))
+                self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+                self.send_header("Pragma", "no-cache")
+                self.send_header("Expires", "0")
                 self.end_headers()
                 with open(zip_path, "rb") as f:
                     self.wfile.write(f.read())

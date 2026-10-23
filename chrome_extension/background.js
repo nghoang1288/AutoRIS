@@ -337,12 +337,13 @@ chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
         STORAGE_KEYS.SERVER_URL
       ]);
       const serverUrl = (data[STORAGE_KEYS.SERVER_URL] || DEFAULT_CONFIG.serverUrl).trim().replace(/\/+$/, "");
-      const dlUrl = data[STORAGE_KEYS.EXTENSION_DOWNLOAD_URL] || `${serverUrl}/autoris-extension.zip`;
+      const dlUrl = data[STORAGE_KEYS.EXTENSION_DOWNLOAD_URL] || `${serverUrl}/autoris-extension-v1.2.1.zip`;
+      const urlFileName = dlUrl.split("/").pop().split("?")[0] || "autoris-extension-v1.2.1.zip";
 
       if (chrome.downloads && chrome.downloads.download) {
         chrome.downloads.download({
           url: dlUrl,
-          filename: "autoris-extension.zip",
+          filename: urlFileName,
           saveAs: true
         }, (downloadId) => {
           if (chrome.runtime.lastError) {
