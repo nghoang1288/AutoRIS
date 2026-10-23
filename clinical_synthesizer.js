@@ -928,12 +928,57 @@
         return `${prefix}${d1Str}×${d2Str} mm (đường kính trung bình ${formattedMean} mm)`;
       });
 
-      // 2. Không kết luận nếu không mô tả: dày màng phổi khu trú
+      // 2. Sắp xếp thứ tự nốt trong Mô tả: Nốt có mức Lung-RADS cao hơn / nguy cơ cao hơn BẮT BUỘC mô tả trước
+      // Nếu có câu nốt lớn "Thuỳ [X] còn có 1 nốt..." nằm sau câu nốt nhỏ "Thuỳ [X] có [N] nốt..."
+      const lobeNames = ["trên", "giữa", "dưới"];
+      lobeNames.forEach(lobe => {
+        const bigRegex = new RegExp("(Th[uù][yỳ]\\s+" + lobe + "\\s+còn\\s+có[\\s\\S]+?\\.\\s*(?=(?:Th[uù][yỳ]|Không|Động|Trung|$)))", "i");
+        const mBig = text.match(bigRegex);
+        if (mBig) {
+          const bigSentence = mBig[1].trim();
+          const earlyRegex = new RegExp("(Th[uù][yỳ]\\s+" + lobe + "\\s+có[\\s\\S]+?\\.\\s*(?=(?:Th[uù][yỳ]|Không|Động|Trung|$)))", "i");
+          const mEarly = text.match(earlyRegex);
+          if (mEarly && text.indexOf(mEarly[1]) < text.indexOf(bigSentence)) {
+            const earlySentence = mEarly[1].trim();
+            text = text.replace(bigSentence, "").replace(/\s{2,}/g, " ");
+            const newBig = bigSentence.replace(/còn\s+có/i, "có");
+            const newEarly = "Ngoài ra " + earlySentence.replace(/^Th[uù][yỳ]/i, "thuỳ");
+            text = text.replace(earlySentence, newBig + " " + newEarly);
+          }
+        }
+      });
+
+      // 3. Đảm bảo tính nhất quán giữa MÔ TẢ và KẾT LUẬN (Cái gì mô tả mới được ghi kết luận)
       const parts = text.split(/(?:^|\n)\s*(?:--|—|-)?\s*(?:KẾT\s*LUẬN|Kết\s*luận)\s*[:：]?\s*/i);
       if (parts.length >= 2) {
-        const motaPart = parts[0];
+        let motaPart = parts[0];
         let klBody = parts[1];
 
+        // A. NÚT NHẦY PHẾ QUẢN (Bronchial mucus plug):
+        // Nếu Kết luận có câu nút nhầy mà Mô tả chưa có -> Bắt buộc chèn vào Mô tả của phổi tương ứng
+        const mucusMatch = klBody.match(/(Nút\s+nhầy\s+phế\s+quản[^.\n]+)/i);
+        if (mucusMatch) {
+          const mucusSentence = mucusMatch[1].trim().replace(/\.?$/, ".");
+          if (!/(?:nút\s+nhầy|nut\s+nhay)/i.test(motaPart)) {
+            const targetSide = /phổi\s+phải/i.test(mucusSentence) ? "phải" : "trái";
+            const suffix = "Không thấy dày tổ chức kẽ, không thấy giãn phế quản, phế nang.";
+            const lines = motaPart.split("\n");
+            for (let i = 0; i < lines.length; i++) {
+              if (lines[i].toLowerCase().includes("phổi " + targetSide)) {
+                if (lines[i].includes(suffix)) {
+                  lines[i] = lines[i].replace(suffix, mucusSentence + " " + suffix);
+                } else {
+                  lines[i] += " " + mucusSentence;
+                }
+                break;
+              }
+            }
+            motaPart = lines.join("\n");
+          }
+        }
+
+        // B. DÀY MÀNG PHỔI KHU TRÚ:
+        // Nếu Kết luận có mà Mô tả KHÔNG CÓ -> Bắt buộc xóa khỏi Kết luận
         const hasMotaDayMangPhoi = /(?:dày|day)[^.\n]*màng\s+phổi|màng\s+phổi[^.\n]*(?:dày|day)/i.test(motaPart) && !/(?:không|chưa)\s+thấy\s+dày/i.test(motaPart);
         if (!hasMotaDayMangPhoi) {
           klBody = klBody.replace(/(?:^|[.!?\n]\s*)(?:Hình\s+ảnh\s+)?dày\s+màng\s+phổi(?:\s+khu\s+trú)?(?:\s+bên\s+(?:phải|trái|hai\s+bên))?[.,;]?/gi, "");
@@ -941,8 +986,9 @@
           klBody = klBody.replace(/(?:hình\s+ảnh\s+)?dày\s+màng\s+phổi(?:\s+khu\s+trú)?(?:\s+bên\s+(?:phải|trái|hai\s+bên))?\s+(?:và|,)\s*/gi, "");
           klBody = klBody.replace(/\s{2,}/g, " ").replace(/\.\s*\./g, ".").trim();
           if (klBody && !/[.!?]$/.test(klBody)) klBody += ".";
-          text = parts[0] + "\nKết luận:\n" + klBody;
         }
+
+        text = motaPart.trim() + "\nKết luận:\n" + klBody.trim();
       }
 
       if (typeof sanitizeLungRADSConclusion === "function") {

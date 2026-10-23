@@ -166,11 +166,30 @@ Mô tả trong mỗi phổi theo thứ tự: thuỳ trên, thuỳ giữa (chỉ 
       * 1 nốt: "Thuỳ [tên] có 1 nốt vôi hoá kích thước [dài × ngắn] mm."
       * Từ 2 nốt trở lên: Bắt buộc gom lại: "Thuỳ [tên] có [X] nốt vôi hoá, kích thước lớn nhất [dài × ngắn] mm."
 
+* **QUY TẮC BẮT BUỘC VỀ THỨ TỰ MÔ TẢ (LUNG-RADS CAO HƠN MÔ TẢ ĐẦU TIÊN)**:
+  - Trong mỗi thùy hoặc mỗi bên phổi, nốt có mức Lung-RADS CAO HƠN (nguy cơ cao hơn: 4X > 4B > 4A > 3 > 2 > 1) BẮT BUỘC PHẢI ĐƯỢC MÔ TẢ ĐẦU TIÊN!
+  - Sau khi mô tả nốt nguy cơ cao, các nốt nguy cơ thấp hơn (Lung-RADS 2, 1) trong cùng thùy mới được mô tả tiếp theo, mở đầu bằng cụm: "Ngoài ra thuỳ [tên] có..." hoặc "Thuỳ [tên] còn có...".
+  - TUYỆT ĐỐI CẤM: Mô tả các nốt nhỏ Lung-RADS 2 trước rồi mới nhắc đến nốt lớn/nguy cơ cao Lung-RADS 3, 4 ở cuối thùy!
+  - VÍ DỤ ĐÚNG CHUẨN:
+    "Thuỳ trên có 1 nốt đặc kích thước 7×5 mm (đường kính trung bình 6 mm), co kéo màng phổi. Ngoài ra thuỳ trên có 3 nốt đặc, nốt lớn kích thước 3×2 mm (đường kính trung bình 2.5 mm). Thuỳ giữa có 1 nốt vôi hoá kích thước 3×3 mm. Thuỳ dưới có 8 nốt đặc, nốt lớn kích thước 6×4 mm (đường kính trung bình 5 mm)."
+  - VÍ DỤ SAI (CẤM):
+    "Thuỳ trên có 3 nốt đặc, nốt lớn kích thước 3×2 mm... Thuỳ giữa có 1 nốt vôi hoá... Thuỳ dưới có 8 nốt đặc... Thuỳ trên còn có 1 nốt đặc kích thước 7×5 mm, co kéo màng phổi." (SAI vì nốt 7x5 mm Lung-RADS 3 lại bị ném xuống sau các nốt nhỏ).
+
+* **QUY TẮC NHẤT QUÁN TUYỆT ĐỐI: CHỈ KẾT LUẬN NHỮNG GÌ ĐÃ ĐƯỢC MÔ TẢ (ĐẶC BIỆT LÀ NÚT NHẦY PHẾ QUẢN)**:
+  - Mọi tổn thương có trong KẾT LUẬN bắt buộc PHẢI ĐƯỢC MÔ TẢ CHI TIẾT TRONG PHẦN MÔ TẢ TRƯỚC!
+  - **ĐẶC BIỆT - NÚT NHẦY PHẾ QUẢN (Bronchial mucus plug)**:
+    - Khi bản đọc gốc có nút nhầy phế quản (ví dụ "Bronchial mucus plug is found in Right lower lobe"):
+      + Ở phần MÔ TẢ của phổi tương ứng (ở đây là Phổi phải), BẮT BUỘC PHẢI GHI CÂU MÔ TẢ: "Nút nhầy phế quản thùy dưới phổi phải." (đặt ngay trước câu kết "Không thấy dày tổ chức kẽ, không thấy giãn phế quản, phế nang.").
+      + Ở phần KẾT LUẬN: Ghi "Nút nhầy phế quản thùy dưới phổi phải." ở cuối câu kết luận.
+      + TUYỆT ĐỐI CẤM: Có câu "Nút nhầy phế quản..." ở Kết luận nhưng trong phần Mô tả lại hoàn toàn không nhắc đến!
+  - **ĐỐI VỚI CÁC TỔN THƯƠNG NGOÀI PHỔI (Dày màng phổi khu trú...)**:
+    - Nếu phần MÔ TẢ không mô tả bất thường (vẫn để mẫu bình thường không thấy tràn dịch, tràn khí) thì TUYỆT ĐỐI CẤM ghi vào Kết luận! Chỉ khi nào phần Mô tả có ghi nhận dày màng phổi thì mới được đưa vào Kết luận.
+
 * **QUY TẮC TÁCH CÂU TRONG MÔ TẢ THEO MỨC LUNG-RADS VÀ NÊU RÕ VỊ TRÍ THUỲ**:
   - Mọi câu mô tả tách riêng bắt buộc phải có tên thuỳ hoặc vị trí cụ thể.
   - Các nốt khác mức Lung-RADS (3 vs 2 vs 1) hoặc khác loại tổn thương trong cùng một thuỳ tách thành các câu riêng biệt, mỗi câu nêu rõ tên thuỳ:
-    + Nốt Lung-RADS 3: Tách câu riêng (Ví dụ: "Thuỳ trên còn có 1 nốt đặc kích thước 7×5 mm (đường kính trung bình 6 mm), co kéo màng phổi.").
-    + Nốt Lung-RADS 2: Gom gọn các nốt cùng loại trong cùng thuỳ thành câu riêng.
+    + Nốt Lung-RADS 3/4: Mô tả trước tiên (Ví dụ: "Thuỳ trên có 1 nốt đặc kích thước 7×5 mm (đường kính trung bình 6 mm), co kéo màng phổi.").
+    + Nốt Lung-RADS 2: Mô tả tiếp theo: "Ngoài ra thuỳ trên có 3 nốt đặc, nốt lớn kích thước 3×2 mm (đường kính trung bình 2.5 mm)."
     + Nốt Lung-RADS 1 (vôi hoá): Tách thành câu riêng và ghi rõ thuỳ.
 
 * **QUY TẮC NỐT NGUY CƠ CAO (LUNG-RADS 4A, 4B, 4X) VÀ ĐẶC ĐIỂM HÌNH THÁI**:
@@ -383,12 +402,57 @@ function sanitizeLungRADSReport(reportText) {
     return `${prefix}${d1Str}×${d2Str} mm (đường kính trung bình ${formattedMean} mm)`;
   });
 
-  // 2. Không kết luận nếu không mô tả: dày màng phổi khu trú
+  // 2. Sắp xếp thứ tự nốt trong Mô tả: Nốt có mức Lung-RADS cao hơn / nguy cơ cao hơn BẮT BUỘC mô tả trước
+  // Nếu có câu nốt lớn "Thuỳ [X] còn có 1 nốt..." nằm sau câu nốt nhỏ "Thuỳ [X] có [N] nốt..."
+  const lobeNames = ["trên", "giữa", "dưới"];
+  lobeNames.forEach(lobe => {
+    const bigRegex = new RegExp("(Th[uù][yỳ]\\s+" + lobe + "\\s+còn\\s+có[\\s\\S]+?\\.\\s*(?=(?:Th[uù][yỳ]|Không|Động|Trung|$)))", "i");
+    const mBig = text.match(bigRegex);
+    if (mBig) {
+      const bigSentence = mBig[1].trim();
+      const earlyRegex = new RegExp("(Th[uù][yỳ]\\s+" + lobe + "\\s+có[\\s\\S]+?\\.\\s*(?=(?:Th[uù][yỳ]|Không|Động|Trung|$)))", "i");
+      const mEarly = text.match(earlyRegex);
+      if (mEarly && text.indexOf(mEarly[1]) < text.indexOf(bigSentence)) {
+        const earlySentence = mEarly[1].trim();
+        text = text.replace(bigSentence, "").replace(/\s{2,}/g, " ");
+        const newBig = bigSentence.replace(/còn\s+có/i, "có");
+        const newEarly = "Ngoài ra " + earlySentence.replace(/^Th[uù][yỳ]/i, "thuỳ");
+        text = text.replace(earlySentence, newBig + " " + newEarly);
+      }
+    }
+  });
+
+  // 3. Đảm bảo tính nhất quán giữa MÔ TẢ và KẾT LUẬN (Cái gì mô tả mới được ghi kết luận)
   const parts = text.split(/(?:^|\n)\s*(?:--|—|-)?\s*(?:KẾT\s*LUẬN|Kết\s*luận)\s*[:：]?\s*/i);
   if (parts.length >= 2) {
-    const motaPart = parts[0];
+    let motaPart = parts[0];
     let klBody = parts[1];
 
+    // A. NÚT NHẦY PHẾ QUẢN (Bronchial mucus plug):
+    // Nếu Kết luận có câu nút nhầy mà Mô tả chưa có -> Bắt buộc chèn vào Mô tả của phổi tương ứng
+    const mucusMatch = klBody.match(/(Nút\s+nhầy\s+phế\s+quản[^.\n]+)/i);
+    if (mucusMatch) {
+      const mucusSentence = mucusMatch[1].trim().replace(/\.?$/, ".");
+      if (!/(?:nút\s+nhầy|nut\s+nhay)/i.test(motaPart)) {
+        const targetSide = /phổi\s+phải/i.test(mucusSentence) ? "phải" : "trái";
+        const suffix = "Không thấy dày tổ chức kẽ, không thấy giãn phế quản, phế nang.";
+        const lines = motaPart.split("\n");
+        for (let i = 0; i < lines.length; i++) {
+          if (lines[i].toLowerCase().includes("phổi " + targetSide)) {
+            if (lines[i].includes(suffix)) {
+              lines[i] = lines[i].replace(suffix, mucusSentence + " " + suffix);
+            } else {
+              lines[i] += " " + mucusSentence;
+            }
+            break;
+          }
+        }
+        motaPart = lines.join("\n");
+      }
+    }
+
+    // B. DÀY MÀNG PHỔI KHU TRÚ:
+    // Nếu Kết luận có mà Mô tả KHÔNG CÓ -> Bắt buộc xóa khỏi Kết luận
     const hasMotaDayMangPhoi = /(?:dày|day)[^.\n]*màng\s+phổi|màng\s+phổi[^.\n]*(?:dày|day)/i.test(motaPart) && !/(?:không|chưa)\s+thấy\s+dày/i.test(motaPart);
     if (!hasMotaDayMangPhoi) {
       klBody = klBody.replace(/(?:^|[.!?\n]\s*)(?:Hình\s+ảnh\s+)?dày\s+màng\s+phổi(?:\s+khu\s+trú)?(?:\s+bên\s+(?:phải|trái|hai\s+bên))?[.,;]?/gi, "");
@@ -396,11 +460,12 @@ function sanitizeLungRADSReport(reportText) {
       klBody = klBody.replace(/(?:hình\s+ảnh\s+)?dày\s+màng\s+phổi(?:\s+khu\s+trú)?(?:\s+bên\s+(?:phải|trái|hai\s+bên))?\s+(?:và|,)\s*/gi, "");
       klBody = klBody.replace(/\s{2,}/g, " ").replace(/\.\s*\./g, ".").trim();
       if (klBody && !/[.!?]$/.test(klBody)) klBody += ".";
-      text = parts[0] + "\nKết luận:\n" + klBody;
     }
+
+    text = motaPart.trim() + "\nKết luận:\n" + klBody.trim();
   }
 
-  // 3. Chuẩn hoá câu Kết luận theo Lung-RADS v2022
+  // 4. Chuẩn hoá câu Kết luận theo Lung-RADS v2022
   text = text.replace(/((?:Kết\s*luận\s*:?\s*))([\s\S]*)/i, function(_, label, klBody) {
     const cleanKL = sanitizeLungRADSConclusion(klBody);
     return label.trim() + "\n" + cleanKL;
