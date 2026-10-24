@@ -513,6 +513,27 @@ def find_clinical_safety_guard_file():
 
 LLM_SERVER_URL = os.environ.get("LLM_SERVER_URL", "http://qwen-secretary:8080/v1/chat/completions")
 
+def extract_json_from_llm(content_str: str) -> dict:
+    """Trích xuất đối tượng JSON an toàn từ phản hồi LLM kể cả khi có văn bản giải thích hoặc markdown bao quanh"""
+    if not content_str:
+        raise ValueError("Phản hồi từ mô hình AI rỗng")
+    clean = content_str.strip()
+    if clean.startswith("```json"):
+        clean = clean[7:]
+    elif clean.startswith("```"):
+        clean = clean[3:]
+    if clean.endswith("```"):
+        clean = clean[:-3]
+    clean = clean.strip()
+    try:
+        return json.loads(clean)
+    except Exception:
+        # Fallback: trích xuất object JSON ngoài cùng bằng Regex
+        m = re.search(r'\{[\s\S]*\}', clean)
+        if m:
+            return json.loads(m.group(0))
+        raise
+
 def call_qwen_secretary(current_mota: str, current_ketluan: str, command: str) -> dict:
     prompt = f"""[MÔ TẢ HIỆN TẠI]
 {current_mota or '(Trống)'}
@@ -556,18 +577,11 @@ def call_qwen_secretary(current_mota: str, current_ketluan: str, command: str) -
                 headers={"Content-Type": "application/json"},
                 method="POST"
             )
-            with urllib.request.urlopen(req, timeout=20) as res:
+            with urllib.request.urlopen(req, timeout=12) as res:
                 if res.status == 200:
                     res_body = json.loads(res.read().decode("utf-8"))
                     content_str = res_body["choices"][0]["message"]["content"]
-                    clean_str = content_str.strip()
-                    if clean_str.startswith("```json"):
-                        clean_str = clean_str[7:]
-                    if clean_str.startswith("```"):
-                        clean_str = clean_str[3:]
-                    if clean_str.endswith("```"):
-                        clean_str = clean_str[:-3]
-                    parsed_result = json.loads(clean_str.strip())
+                    parsed_result = extract_json_from_llm(content_str)
                     return {
                         "status": "success",
                         "mota": parsed_result.get("mota", current_mota),
@@ -587,14 +601,7 @@ def call_qwen_secretary(current_mota: str, current_ketluan: str, command: str) -
             temperature=0.1
         )
         if fallback_res.get("status") == "success" and fallback_res.get("data"):
-            clean_str = fallback_res["data"].strip()
-            if clean_str.startswith("```json"):
-                clean_str = clean_str[7:]
-            if clean_str.startswith("```"):
-                clean_str = clean_str[3:]
-            if clean_str.endswith("```"):
-                clean_str = clean_str[:-3]
-            parsed_result = json.loads(clean_str.strip())
+            parsed_result = extract_json_from_llm(fallback_res["data"])
             return {
                 "status": "success",
                 "mota": parsed_result.get("mota", current_mota),
@@ -652,16 +659,12 @@ def call_ai_synthesize_proxy(raw_text, system_prompt, preferred_model="DI/google
             shots_text += f"\n--- VÍ DỤ {idx} ({shot['id']}) ---\nĐẦU VÀO PACS:\n{shot['raw']}\n\nKẾT QUẢ ĐÃ ĐƯỢC BÁC SĨ CHUẨN HÓA:\n{shot['doctor']}\n"
         prompt_with_shots += shots_text
 
-    # Danh sách các mô hình Direct Inference siêu tốc trên 9router
-    models = [
-        "DI/google/gemini-3.7-flash",
-        "DI/google/gemini-3.5-flash",
-        "DI/google/gemini-2.5-flash",
-        "gemini/gemini-3.8-flash",
-        "DI/Qwen/Qwen3.8-Flash"
-    ]
-    if preferred_model and preferred_model not in models:
-        models.insert(0, preferred_model)
+    # Tối ưu hóa danh sách mô hình Direct Inference siêu tốc trên 9router (chỉ thử tối đa 2-3 model để tránh treo request)
+    candidate_models = [preferred_model, "DI/google/gemini-3.7-flash", "DI/google/gemini-3.5-flash"]
+    models = []
+    for m in candidate_models:
+        if m and m not in models:
+            models.append(m)
 
     router_urls = [
         os.environ.get("LLM_ROUTER_URL", "http://9router:20128/v1/chat/completions"),
@@ -689,7 +692,7 @@ def call_ai_synthesize_proxy(raw_text, system_prompt, preferred_model="DI/google
         for r_url in router_urls:
             try:
                 req = urllib.request.Request(r_url, data=json.dumps(payload).encode("utf-8"), headers=headers)
-                with urllib.request.urlopen(req, timeout=12) as resp:
+                with urllib.request.urlopen(req, timeout=8) as resp:
                     raw = resp.read().decode("utf-8")
                     try:
                         data = json.loads(raw)
@@ -924,19 +927,20 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
             apk_mtime = int(os.path.getmtime(apk_path)) if os.path.exists(apk_path) else 0
 
             # Đọc version trực tiếp từ manifest.json trước
-            ext_ver = "1.3.0"
+            ext_ver = "1.3.1"
             manifest_path = os.path.join(BASE_DIR, "chrome_extension", "manifest.json")
             if os.path.exists(manifest_path):
                 try:
                     with open(manifest_path, "r", encoding="utf-8") as mf:
                         mdata = json.load(mf)
-                        ext_ver = mdata.get("version", "1.3.0")
+                        ext_ver = mdata.get("version", "1.3.1")
                 except Exception:
                     pass
 
             # Tìm file zip tương ứng với version hoặc file zip mới nhất
             ext_candidates = [
                 f"autoris-extension-v{ext_ver}.zip",
+                "autoris-extension-v1.3.1.zip",
                 "autoris-extension-v1.3.0.zip",
                 "autoris-extension-v1.2.2.zip",
                 "autoris-extension-v1.2.1.zip",
@@ -990,7 +994,7 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
                     "file_size": ext_size,
                     "updated_at": ext_mtime,
                     "synthesizer_version": synth_ver,
-                    "release_notes": "v1.3.0: Thư ký Y khoa giọng nói (sửa/xóa/chuyển), Quad-Layer Disambiguator, Gác cổng An toàn Lâm sàng (chặn nhầm mm/cm, đảo bên, mất từ không)",
+                    "release_notes": "v1.3.1: Hotfix audit an toàn lâm sàng, pseudo-negation 'không loại trừ', DOM XSS sanitization, ASR FIFO Mutex Queue",
                     "force_update": False
                 }
             }
@@ -1176,6 +1180,7 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
             # Nếu file không tồn tại, tìm các file zip dự phòng mới nhất
             if not os.path.exists(zip_path):
                 candidates = [
+                    "autoris-extension-v1.3.1.zip",
                     "autoris-extension-v1.3.0.zip",
                     "autoris-extension-v1.2.2.zip",
                     "autoris-extension-v1.2.1.zip",

@@ -1,6 +1,6 @@
 /**
  * Test Suite for AutoRIS Clinical Safety & Anomaly Guard Engine
- * Kiểm thử Bộ Gác cổng An toàn Lâm sàng (25 Test Cases)
+ * Kiểm thử Bộ Gác cổng An toàn Lâm sàng (36 Test Cases)
  */
 const fs = require("fs");
 const path = require("path");
@@ -9,7 +9,7 @@ const guardPath = path.join(__dirname, "clinical_safety_guard.js");
 const guardCode = fs.readFileSync(guardPath, "utf-8");
 eval(guardCode);
 
-console.log("=== KIỂM THỬ BỘ GÁC CỔNG AN TOÀN LÂM SÀNG (25 TESTS) ===");
+console.log("=== KIỂM THỬ BỘ GÁC CỔNG AN TOÀN LÂM SÀNG (36 TESTS) ===");
 
 let passed = 0;
 let total = 0;
@@ -262,12 +262,104 @@ assert(!r25.anomalies.some(a => a.type === "ANATOMICAL_PLAUSIBILITY"),
   "Sỏi niệu quản 6mm hợp lý lâm sàng -> Không báo lỗi");
 
 // -------------------------------------------------------------
+// NHÓM 5: BẪY LÂM SÀNG NÂNG CAO (EDGE-CASES V1.3.1 AUDIT)
+// -------------------------------------------------------------
+console.log("\n--- NHÓM 5: BẪY & EDGE-CASES LÂM SÀNG NÂNG CAO (V1.3.1) ---");
+
+// Test 26: Số đo 3 chiều (3D)
+const m3D = ClinicalSafetyGuard.extractMeasurements("Khối u kích thước 12x10x8mm");
+assert(m3D.length === 1 && m3D[0].val1 === 12 && m3D[0].val2 === 10 && m3D[0].val3 === 8 && m3D[0].maxVal === 12,
+  "Trích xuất số đo 3 chiều (12x10x8mm) đầy đủ 3 trục và maxVal=12");
+
+// Test 27: Đơn vị dân gian (phân, ly, milimet)
+const mColloquial = ClinicalSafetyGuard.extractMeasurements("Nốt 5 ly, sỏi 3 phân, nang 12 milimet");
+assert(mColloquial.length === 3 && mColloquial[0].unit === "mm" && mColloquial[1].unit === "cm" && mColloquial[2].unit === "mm",
+  "Trích xuất và chuẩn hóa đơn vị dân gian (5 ly -> mm, 3 phân -> cm, 12 milimet -> mm)");
+
+// Test 28: Dải đo và số thập phân kiểu Việt Nam (dấu phẩy)
+const mRangeVN = ClinicalSafetyGuard.extractMeasurements("Nốt kính mờ kích thước 3,5 - 5,2 mm");
+assert(mRangeVN.length === 1 && mRangeVN[0].val1 === 3.5 && mRangeVN[0].val2 === 5.2 && mRangeVN[0].maxVal === 5.2,
+  "Trích xuất dải đo với số thập phân kiểu Việt Nam (3,5 - 5,2 mm)");
+
+// Test 29: Nhảy vọt đơn vị trên số đo 3 chiều (12x10x8mm -> 12x10x8cm)
+const r29 = ClinicalSafetyGuard.verifyClinicalSafety(
+  "Khối u kích thước 12x10x8mm",
+  "Khối u kích thước 12x10x8cm",
+  "Khối u lớn."
+);
+assert(!r29.safe && r29.anomalies.some(a => a.type === "UNIT_SCALE_JUMP"),
+  "Bắt lỗi nhảy đơn vị x10 trên số đo 3 chiều (12x10x8mm -> 12x10x8cm)");
+
+// Test 30: 'Không loại trừ' là nghi ngờ bệnh lý, KHÔNG PHẢI phủ định!
+const r30 = ClinicalSafetyGuard.verifyClinicalSafety(
+  "Không loại trừ khối u phổi phải",
+  "- Phổi phải: Theo dõi khối u phổi thùy trên.",
+  "Theo dõi khối u phổi phải."
+);
+assert(!r30.anomalies.some(a => a.type === "POLARITY_INVERSION"),
+  "'Không loại trừ khối u' được xử lý là nghi ngờ bệnh lý -> Không kích hoạt cảnh báo giả đảo cực!");
+
+// Test 31: 'Chưa loại trừ / Không thể loại trừ'
+const r31 = ClinicalSafetyGuard.verifyClinicalSafety(
+  "Chưa thể loại trừ tràn dịch màng phổi khu trú",
+  "- Màng phổi: Nghi ngờ tràn dịch màng phổi khu trú lượng ít.",
+  "Theo dõi tràn dịch màng phổi."
+);
+assert(!r31.anomalies.some(a => a.type === "POLARITY_INVERSION"),
+  "'Chưa thể loại trừ tràn dịch' không bị bắt nhầm thành mất từ phủ định");
+
+// Test 32: Từ khẳng định xen giữa (Intervening positive word)
+const r32 = ClinicalSafetyGuard.verifyClinicalSafety(
+  "Không có sỏi có tràn dịch màng phổi",
+  "- Thận: Không có sỏi. - Màng phổi: Có tràn dịch màng phổi.",
+  "Tràn dịch màng phổi."
+);
+assert(!r32.anomalies.some(a => a.type === "POLARITY_INVERSION"),
+  "Từ khẳng định xen giữa: 'Không có sỏi CÓ tràn dịch' không làm tràn dịch bị phủ định oan");
+
+// Test 33: Thực thể bệnh học xen giữa (Intervening entity)
+const r33 = ClinicalSafetyGuard.verifyClinicalSafety(
+  "Thận phải không sỏi ứ nước nhẹ",
+  "- Thận phải: Không thấy sỏi, có ứ nước nhẹ độ 1.",
+  "Thận phải ứ nước độ 1."
+);
+assert(!r33.anomalies.some(a => a.type === "POLARITY_INVERSION"),
+  "Thực thể xen giữa: 'không sỏi ứ nước' thì phủ định thuộc về sỏi, không lan sang ứ nước");
+
+// Test 34: Đọc 'hai phổi' và văn bản chi tiết hóa thành phổi phải + phổi trái -> Hợp lệ
+const r34 = ClinicalSafetyGuard.verifyClinicalSafety(
+  "Hai phổi có vài nốt mờ",
+  "- Nhu mô phổi phải: Có nốt mờ 4mm. - Nhu mô phổi trái: Có nốt mờ 3mm.",
+  "Vài nốt mờ rải rác hai phổi."
+);
+assert(!r34.anomalies.some(a => a.type === "LATERALITY_INVERSION"),
+  "Đọc 'Hai phổi' và văn bản phân bổ cả phổi phải và phổi trái -> An toàn, không báo lỗi đảo bên");
+
+// Test 35: Đọc 1 bên nhưng văn bản ghi 2 bên (Unilateral -> Bilateral Hallucination)
+const r35 = ClinicalSafetyGuard.verifyClinicalSafety(
+  "Thận phải có sỏi 6mm",
+  "- Thận hai bên: Có sỏi thận hai bên.",
+  "Sỏi thận hai bên."
+);
+assert(!r35.safe && r35.anomalies.some(a => a.type === "LATERALITY_INVERSION"),
+  "Bắt lỗi: Đọc Thận phải nhưng văn bản đề xuất ghi nhận Sỏi thận hai bên");
+
+// Test 36: Mâu thuẫn chéo giữa Mô tả (1 bên) và Kết luận (2 bên)
+const r36 = ClinicalSafetyGuard.verifyClinicalSafety(
+  "Thận phải có sỏi 6mm",
+  "- Thận phải: Có sỏi 6mm. Thận trái bình thường.",
+  "Hình ảnh sỏi thận hai bên."
+);
+assert(r36.anomalies.some(a => a.type === "CROSS_SECTION_MISMATCH"),
+  "Bắt lỗi mâu thuẫn chéo: Mô tả ghi 'Thận phải' nhưng Kết luận ghi 'Sỏi thận hai bên'");
+
+// -------------------------------------------------------------
 // TỔNG KẾT
 // -------------------------------------------------------------
 console.log(`\n======================================================`);
 console.log(`KẾT QUẢ KIỂM THỬ: ${passed}/${total} test cases passed.`);
 if (passed === total) {
-  console.log("🎉 TOÀN BỘ 25/25 BÀI TEST GÁC CỔNG AN TOÀN ĐÃ VƯỢT QUA 100%!");
+  console.log(`🎉 TOÀN BỘ ${total}/${total} BÀI TEST GÁC CỔNG AN TOÀN ĐÃ VƯỢT QUA 100%!`);
 } else {
   console.error("⚠️ CÓ TEST CHƯA VƯỢT QUA!");
   process.exit(1);

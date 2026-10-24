@@ -1144,10 +1144,10 @@
       if (!reportText) return "";
       let text = reportText.normalize("NFC");
 
-      // 1. Tự động tính và chuẩn hóa đường kính trung bình ra đúng 1 số sau dấu phẩy (.5) nếu có phần lẻ: vd 3.5 mm, 4.5 mm, 2.5 mm, 5.5 mm
-      text = text.replace(/(kích\s+thước(?:\s+(?:lớn\s+nhất|lớn))?\s+)(\d+(?:\.\d+)?)\s*[×xX*]\s*(\d+(?:\.\d+)?)\s*mm\s*\(\s*đường\s+kính\s+trung\s+bình\s+([0-9.]+)\s*mm\s*\)/gi, function(match, prefix, d1Str, d2Str, oldMeanStr) {
-        const d1 = parseFloat(d1Str);
-        const d2 = parseFloat(d2Str);
+      // 1. Tự động tính và chuẩn hóa đường kính trung bình ra đúng 1 số sau dấu phẩy (.5) nếu có phần lẻ: vd 3.5 mm, 4.5 mm, 2.5 mm, 5.5 mm (hỗ trợ cả dấu phẩy 3,5 mm)
+      text = text.replace(/(kích\s+thước(?:\s+(?:lớn\s+nhất|lớn))?\s+)(\d+(?:[.,]\d+)?)\s*[×xX*]\s*(\d+(?:[.,]\d+)?)\s*mm\s*\(\s*đường\s+kính\s+trung\s+bình\s+([0-9.,]+)\s*mm\s*\)/gi, function(match, prefix, d1Str, d2Str, oldMeanStr) {
+        const d1 = parseFloat(d1Str.replace(",", "."));
+        const d2 = parseFloat(d2Str.replace(",", "."));
         if (isNaN(d1) || isNaN(d2)) return match;
         const trueMean = (d1 + d2) / 2;
         const formattedMean = (trueMean % 1 !== 0) ? trueMean.toFixed(1) : String(trueMean);

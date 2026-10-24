@@ -34,28 +34,62 @@
 
     /**
      * Trích xuất các số đo kèm đơn vị từ văn bản
-     * Trả về mảng các object { val: number, unit: "mm"|"cm", raw: string }
+     * Hỗ trợ số đo 3 chiều (12x10x8mm), 2 chiều (12x10mm), dải đo (3-5mm, 3 đến 5 mm),
+     * số đo thập phân tiếng Việt (12,5mm, 3.5mm), và các đơn vị dân gian (phân, ly, milimet).
+     * Trả về mảng các object { val1, val2, val3, maxVal, unit: "mm"|"cm", rawMatch, is3D }
      */
     extractMeasurements(text) {
       if (!text) return [];
       const measurements = [];
-      const regex = /(\d+(?:[.,]\d+)?)\s*(?:x|×|\*|\s+đến\s+|\s*-\s*)?\s*(\d+(?:[.,]\d+)?)?\s*(mm|cm|milimét|xen-ti-mét|centimet)\b/gi;
+
+      // 1. Regex cho kích thước 3 chiều (3D): ví dụ 12x10x8 mm hoặc 12 x 10 x 8 mm hoặc 12×10×8mm
+      const regex3D = /(\d+(?:[.,]\d+)?)\s*(?:x|×|\*)\s*(\d+(?:[.,]\d+)?)\s*(?:x|×|\*)\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|milimét|milimet|xen-ti-mét|centimet|xentimet|ly|phân)\b/gi;
       let match;
-      while ((match = regex.exec(text)) !== null) {
+      while ((match = regex3D.exec(text)) !== null) {
         const val1 = parseFloat(match[1].replace(",", "."));
-        const val2 = match[2] ? parseFloat(match[2].replace(",", ".")) : null;
-        let unit = match[3].toLowerCase();
-        if (unit === "milimét") unit = "mm";
-        if (unit === "xen-ti-mét" || unit === "centimet") unit = "cm";
+        const val2 = parseFloat(match[2].replace(",", "."));
+        const val3 = parseFloat(match[3].replace(",", "."));
+        let rawUnit = match[4].toLowerCase();
+        let unit = "mm";
+        if (rawUnit === "cm" || rawUnit === "xen-ti-mét" || rawUnit === "centimet" || rawUnit === "xentimet" || rawUnit === "phân") unit = "cm";
+        if (rawUnit === "ly") unit = "mm";
 
         measurements.push({
           rawMatch: match[0],
           val1: val1,
           val2: val2,
-          maxVal: val2 ? Math.max(val1, val2) : val1,
-          unit: unit
+          val3: val3,
+          maxVal: Math.max(val1, val2, val3),
+          unit: unit,
+          is3D: true
         });
       }
+
+      // 2. Regex cho 1 chiều hoặc 2 chiều hoặc dải (range): ví dụ 12x10mm, 3-5mm, 3 đến 5 mm, 12mm, 3 phân, 5 ly
+      const regex2D = /(\d+(?:[.,]\d+)?)\s*(?:(?:x|×|\*|\s+đến\s+|\s*-\s*)\s*(\d+(?:[.,]\d+)?))?\s*(mm|cm|milimét|milimet|xen-ti-mét|centimet|xentimet|ly|phân)\b/gi;
+      while ((match = regex2D.exec(text)) !== null) {
+        // Tránh trùng lặp nếu đã được trích xuất trong regex3D
+        const alreadyMatched = measurements.some(m => m.rawMatch.includes(match[0]) || match[0].includes(m.rawMatch));
+        if (alreadyMatched) continue;
+
+        const val1 = parseFloat(match[1].replace(",", "."));
+        const val2 = match[2] ? parseFloat(match[2].replace(",", ".")) : null;
+        let rawUnit = match[3].toLowerCase();
+        let unit = "mm";
+        if (rawUnit === "cm" || rawUnit === "xen-ti-mét" || rawUnit === "centimet" || rawUnit === "xentimet" || rawUnit === "phân") unit = "cm";
+        if (rawUnit === "ly") unit = "mm";
+
+        measurements.push({
+          rawMatch: match[0],
+          val1: val1,
+          val2: val2,
+          val3: null,
+          maxVal: val2 ? Math.max(val1, val2) : val1,
+          unit: unit,
+          is3D: false
+        });
+      }
+
       return measurements;
     },
 
@@ -67,16 +101,17 @@
       const rawMeasurements = this.extractMeasurements(rawASR);
       const proposedMeasurements = this.extractMeasurements(proposedText);
 
-      // A. Nhảy vọt đơn vị từ mm sang cm (ví dụ 12mm -> 12cm)
+      // A. Nhảy vọt đơn vị từ mm sang cm (ví dụ 12mm -> 12cm, 12x10x8mm -> 12x10x8cm)
       for (const rawM of rawMeasurements) {
         if (rawM.unit === "mm") {
           for (const propM of proposedMeasurements) {
             if (propM.unit === "cm") {
-              // Cùng giá trị số hoặc xấp xỉ nhưng khác đơn vị mm -> cm
-              const isSameNumber = Math.abs(rawM.val1 - propM.val1) < 0.1 || (rawM.val2 && Math.abs(rawM.val2 - propM.val1) < 0.1);
-              const rawHasNoCm = !/\b(?:cm|xen-ti-mét|centimet)\b/i.test(rawASR);
+              const rawValues = [rawM.val1, rawM.val2, rawM.val3].filter(v => v !== null && v !== undefined);
+              const propValues = [propM.val1, propM.val2, propM.val3].filter(v => v !== null && v !== undefined);
+              const hasMatchingNumber = rawValues.some(rv => propValues.some(pv => Math.abs(rv - pv) < 0.1));
+              const rawHasNoCm = !/\b(?:cm|xen-ti-mét|centimet|xentimet|phân)\b/i.test(rawASR);
 
-              if (isSameNumber && rawHasNoCm) {
+              if (hasMatchingNumber && rawHasNoCm) {
                 anomalies.push({
                   type: "UNIT_SCALE_JUMP",
                   severity: "CRITICAL",
@@ -129,9 +164,21 @@
      * Trích xuất các bên giải phẫu gắn liền với TỔN THƯƠNG BỆNH LÝ của một cơ quan
      */
     getLesionSides(text, organ) {
-      if (!text) return [];
+      if (!text) {
+        const emptyArr = [];
+        emptyArr.isBilateral = false;
+        return emptyArr;
+      }
       const sides = [];
-      const lesions = "sỏi|nang|nốt|khối|u|tràn\\s*dịch|tràn\\s*khí|gãy\\s*xương|đám\\s*mờ|thâm\\s*nhiễm|vôi\\s*hóa|tổn\\s*thương|giãn|ứ\\s*nước";
+      let isBilateral = false;
+      const lesions = "sỏi|nang|nốt|khối|u|tràn\\s*dịch|tràn\\s*khí|gãy\\s*xương|đám\\s*mờ|thâm\\s*nhiễm|vôi\\s*hóa|vôi\\s*hoá|tổn\\s*thương|giãn|ứ\\s*nước";
+
+      // Pattern 0: Cụm từ 2 bên (Bilateral)
+      const bilateralRegex = new RegExp(`(?:(?:hai|2|cả\\s+hai)\\s+${organ}|${organ}[^.,;\\n]{0,25}?(?:hai|2|cả\\s+hai)\\s*bên|${organ}[^.,;\\n]{0,25}?(?:rải\\s*rác\\s*hai\\s*bên)|(?:rải\\s*rác\\s*hai\\s*bên)[^.,;\\n]{0,25}?${organ})`, "gi");
+      if (bilateralRegex.test(text)) {
+        isBilateral = true;
+        sides.push("phải", "trái", "hai bên");
+      }
 
       // Pattern 1: [Tổn thương] + [Cơ quan] + [Bên] (không nhảy qua ranh giới mệnh đề , ; . \n)
       const regex1 = new RegExp(`(?:${lesions})[^,;.!\\n]{0,35}?\\b${organ}\\s*(phải|trái)\\b`, "gi");
@@ -147,7 +194,12 @@
       while ((m = regex2.exec(text)) !== null) sides.push(m[1].toLowerCase());
       while ((m = regex3.exec(text)) !== null) sides.push(m[1].toLowerCase());
 
-      return Array.from(new Set(sides));
+      const uniqueSides = Array.from(new Set(sides));
+      if (uniqueSides.includes("phải") && uniqueSides.includes("trái")) {
+        isBilateral = true;
+      }
+      uniqueSides.isBilateral = isBilateral;
+      return uniqueSides;
     },
 
     /**
@@ -164,6 +216,7 @@
         const rawSides = this.getLesionSides(rawLower, organ);
         const propSides = this.getLesionSides(propLower, organ);
 
+        // 1. Đảo bên đối lập (Phải <-> Trái)
         if (rawSides.includes("phải") && !rawSides.includes("trái") && propSides.includes("trái") && !propSides.includes("phải")) {
           anomalies.push({
             type: "LATERALITY_INVERSION",
@@ -178,6 +231,19 @@
             message: `Phát hiện đảo chiều giải phẫu nguy hiểm: Câu đọc gốc nói '${organ} TRÁI' có tổn thương nhưng văn bản ghi '${organ} PHẢI'.`,
             details: { organ, rawSide: "trái", proposedSide: "phải" }
           });
+        }
+
+        // 2. Mâu thuẫn 1 bên thành 2 bên (Unilateral -> Bilateral Hallucination)
+        if (rawSides.length > 0 && propSides.length > 0) {
+          if (!rawSides.isBilateral && propSides.isBilateral) {
+            const side = rawSides.includes("phải") ? "phải" : "trái";
+            anomalies.push({
+              type: "LATERALITY_INVERSION",
+              severity: "CRITICAL",
+              message: `Phát hiện biến đổi từ 1 bên thành 2 bên: Câu đọc gốc chỉ nói '${organ} ${side.toUpperCase()}' nhưng văn bản ghi nhận '${organ} HAI BÊN'.`,
+              details: { organ, rawSide: side, proposedSide: "hai bên" }
+            });
+          }
         }
       }
 
@@ -204,11 +270,88 @@
               message: `Mâu thuẫn giữa Mô tả và Kết luận: Mô tả ghi '${organ} trái' nhưng Kết luận lại ghi '${organ} phải'.`,
               details: { organ, motaSide: "trái", klSide: "phải" }
             });
+          } else if (!motaSides.isBilateral && motaSides.length > 0 && klSides.isBilateral) {
+            const side = motaSides.includes("phải") ? "phải" : "trái";
+            anomalies.push({
+              type: "CROSS_SECTION_MISMATCH",
+              severity: "CRITICAL",
+              message: `Mâu thuẫn giữa Mô tả và Kết luận: Mô tả ghi '${organ} ${side}' nhưng Kết luận lại ghi '${organ} hai bên'.`,
+              details: { organ, motaSide: side, klSide: "hai bên" }
+            });
           }
         }
       }
 
       return anomalies;
+    },
+
+    /**
+     * Xác định xem một thực thể tổn thương có bị phủ định trong văn bản hay không
+     * Bóc tách các cụm nghi ngờ bệnh học ("không loại trừ", "chưa loại trừ") và chặn hiện tượng lan truyền phủ định
+     */
+    isEntityNegated(text, entity, allEntities = []) {
+      if (!text || !entity) return false;
+      const lower = text.toLowerCase();
+
+      const entityIndices = [];
+      let idx = 0;
+      while ((idx = lower.indexOf(entity, idx)) !== -1) {
+        entityIndices.push(idx);
+        idx += entity.length;
+      }
+      if (entityIndices.length === 0) return false;
+
+      // Cụm từ nghi ngờ bệnh lý lâm sàng (pseudo-negation) -> KHÔNG PHẢI PHỦ ĐỊNH
+      const pseudoNegRegex = /(?:chưa\s+thể\s+loại\s+trừ|không\s+thể\s+loại\s+trừ|chưa\s+loại\s+trừ|không\s+loại\s+trừ|không\s+thể\s+loại\s+bỏ|chưa\s+thể\s+loại\s+bỏ|ít\s+nghĩ\s+đến\s+nhưng\s+chưa\s+loại\s+trừ)/i;
+      // Đặt các cụm từ dài lên trước để tránh match 'không' trước 'không thấy'
+      const standardNegRegex = /(?:không\s+thấy|chưa\s+thấy|không\s+có|chưa\s+có|không\s+ghi\s+nhận|chưa\s+ghi\s+nhận|chưa\s+phát\s+hiện|không\s+phát\s+hiện|không\s+rõ|không|chưa|chẳng)/i;
+      const positiveAffirmationRegex = /(?:\bcó\b|\bxuất\s+hiện\b|\bhình\s+ảnh\b)/i;
+
+      for (const pos of entityIndices) {
+        const start = Math.max(0, pos - 45);
+        const precedingText = lower.slice(start, pos);
+
+        // Cắt theo dấu ngắt câu hoặc mệnh đề nếu có
+        const lastDelim = Math.max(
+          precedingText.lastIndexOf("."),
+          precedingText.lastIndexOf(";"),
+          precedingText.lastIndexOf("\n"),
+          precedingText.lastIndexOf(",")
+        );
+        const windowText = lastDelim !== -1 ? precedingText.slice(lastDelim + 1) : precedingText;
+
+        // 1. Kiểm tra cụm nghi ngờ bệnh lý (pseudo-negation)
+        if (pseudoNegRegex.test(windowText)) {
+          continue; // Nghi ngờ bệnh lý, không phải phủ định
+        }
+
+        // 2. Kiểm tra từ phủ định chuẩn
+        const negMatch = windowText.match(standardNegRegex);
+        if (negMatch) {
+          const textAfterNeg = windowText.slice(negMatch.index + negMatch[0].length);
+
+          // 2a. Nếu giữa từ phủ định và tổn thương có từ khẳng định dương tính (ví dụ: "không sỏi CÓ tràn dịch")
+          if (positiveAffirmationRegex.test(textAfterNeg)) {
+            continue; // Phủ định thuộc về cơ quan/tổn thương trước
+          }
+
+          // 2b. Nếu giữa từ phủ định và tổn thương có một thực thể bệnh học khác (ví dụ: "không sỏi thận ứ nước")
+          let hasInterveningEntity = false;
+          for (const otherEntity of allEntities) {
+            if (otherEntity !== entity && otherEntity.length > 2 && textAfterNeg.includes(otherEntity)) {
+              hasInterveningEntity = true;
+              break;
+            }
+          }
+          if (hasInterveningEntity) {
+            continue; // Phủ định đã được thực thể khác hấp thụ
+          }
+
+          return true; // Xác nhận có phủ định tổn thương này
+        }
+      }
+
+      return false;
     },
 
     /**
@@ -226,11 +369,8 @@
 
         if (!inRaw && !inProp) continue;
 
-        // Kiểm tra xem entity có đi kèm phủ định trong rawASR không
-        // Regex: (không|chưa|không thấy...) đi trước entity trong vòng 20 ký tự
-        const negPrefixRegex = new RegExp(`(?:không|chưa|không\\s+thấy|không\\s+có|chưa\\s+thấy|không\\s+ghi\\s+nhận|chưa\\s+phát\\s+hiện)[^.,;\\n]{0,25}\\b${entity}\\b`, "i");
-        const rawIsNegated = negPrefixRegex.test(rawLower);
-        const propIsNegated = negPrefixRegex.test(propLower);
+        const rawIsNegated = this.isEntityNegated(rawLower, entity, this.PATHOLOGY_ENTITIES);
+        const propIsNegated = this.isEntityNegated(propLower, entity, this.PATHOLOGY_ENTITIES);
 
         // Trường hợp A: Raw ASR có phủ định (bình thường), nhưng văn bản đề xuất MẤT PHỦ ĐỊNH (khẳng định bệnh lý)
         if (inRaw && rawIsNegated && inProp && !propIsNegated) {

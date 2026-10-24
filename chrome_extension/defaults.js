@@ -311,14 +311,14 @@ function sanitizeLungRADSConclusion(conclusionText) {
   text = text.replace(/hai\s+phổi\s*\([^)]*(?:thuỳ|thùy)[^)]*\)/gi, "hai phổi");
 
   // 3. Chuyển đổi "nốt/các nốt ... hai phổi" hoặc "các nốt ... phổi phải/trái" thành "vài nốt ..."
-  text = text.replace(/(^|[.\n]\s*)(Hình\s+ảnh\s+)?(?:nốt|các\s+nốt)\s+(đặc|kính\s+mờ|vôi\s+hoá|vôi\s+hóa|bán\s+đặc)\s+hai\s+phổi/gi, function(match, punct, prefix, type) {
+  text = text.replace(/(^|[.\n]\s*)(Hình\s+ảnh\s+)?(?:nốt|các\s+nốt)\s+(đặc|kính\s+mờ|vôi\s+hoá|vôi\s+hóa|bán\s+đặc|bán-đặc)\s+hai\s+phổi/gi, function(match, punct, prefix, type) {
     if (prefix) {
       return (punct || "") + prefix + "vài nốt " + type + " hai phổi";
     }
     const cap = (!punct || punct.includes("\n") || punct.includes(".")) ? "Vài nốt " : "vài nốt ";
     return (punct || "") + cap + type + " hai phổi";
   });
-  text = text.replace(/(^|[.\n]\s*)(Hình\s+ảnh\s+)?(?:các\s+nốt)\s+(đặc|kính\s+mờ|vôi\s+hoá|vôi\s+hóa|bán\s+đặc)\s+phổi\s+(phải|trái)/gi, function(match, punct, prefix, type, side) {
+  text = text.replace(/(^|[.\n]\s*)(Hình\s+ảnh\s+)?(?:các\s+nốt)\s+(đặc|kính\s+mờ|vôi\s+hoá|vôi\s+hóa|bán\s+đặc|bán-đặc)\s+phổi\s+(phải|trái)/gi, function(match, punct, prefix, type, side) {
     if (prefix) {
       return (punct || "") + prefix + "vài nốt " + type + " phổi " + side;
     }
@@ -403,10 +403,10 @@ function sanitizeLungRADSReport(reportText) {
   if (!reportText) return "";
   let text = reportText.normalize("NFC");
 
-  // 1. Tự động tính và chuẩn hóa đường kính trung bình ra đúng 1 số sau dấu phẩy (.5) nếu có phần lẻ: vd 3.5 mm, 4.5 mm, 2.5 mm, 5.5 mm
-  text = text.replace(/(kích\s+thước(?:\s+(?:lớn\s+nhất|lớn))?\s+)(\d+(?:\.\d+)?)\s*[×xX*]\s*(\d+(?:\.\d+)?)\s*mm\s*\(\s*đường\s+kính\s+trung\s+bình\s+([0-9.]+)\s*mm\s*\)/gi, function(match, prefix, d1Str, d2Str, oldMeanStr) {
-    const d1 = parseFloat(d1Str);
-    const d2 = parseFloat(d2Str);
+  // 1. Tự động tính và chuẩn hóa đường kính trung bình ra đúng 1 số sau dấu phẩy (.5) nếu có phần lẻ: vd 3.5 mm, 4.5 mm, 2.5 mm, 5.5 mm (hỗ trợ cả dấu phẩy 3,5 mm)
+  text = text.replace(/(kích\s+thước(?:\s+(?:lớn\s+nhất|lớn))?\s+)(\d+(?:[.,]\d+)?)\s*[×xX*]\s*(\d+(?:[.,]\d+)?)\s*mm\s*\(\s*đường\s+kính\s+trung\s+bình\s+([0-9.,]+)\s*mm\s*\)/gi, function(match, prefix, d1Str, d2Str, oldMeanStr) {
+    const d1 = parseFloat(d1Str.replace(",", "."));
+    const d2 = parseFloat(d2Str.replace(",", "."));
     if (isNaN(d1) || isNaN(d2)) return match;
     const trueMean = (d1 + d2) / 2;
     const formattedMean = (trueMean % 1 !== 0) ? trueMean.toFixed(1) : String(trueMean);

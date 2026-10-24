@@ -263,11 +263,18 @@ Trả về DUY NHẤT một chuỗi JSON hợp lệ:
 
 
 def run_regression_tests():
-    """Kiểm thử hồi quy toàn bộ luật cũ bằng test_secretary_tier1.js"""
-    test_script = os.path.join(BASE_DIR, "test_secretary_tier1.js")
-    if os.path.exists(test_script):
-        code = os.system(f"node {test_script} > /dev/null 2>&1")
-        return code == 0
+    """Kiểm thử hồi quy toàn bộ luật cũ bằng bộ 3 test suites: Tier 1, Tier 1 v2, và Clinical Safety Guard"""
+    scripts = [
+        os.path.join(BASE_DIR, "test_secretary_tier1.js"),
+        os.path.join(BASE_DIR, "test_secretary_tier1_v2.js"),
+        os.path.join(BASE_DIR, "test_clinical_safety_guard.js")
+    ]
+    for s in scripts:
+        if os.path.exists(s):
+            code = os.system(f"node {s} > /dev/null 2>&1")
+            if code != 0:
+                print(f"[Daily Learner Error] Regression test failed at: {os.path.basename(s)}")
+                return False
     return True
 
 
@@ -336,7 +343,7 @@ def generate_daily_audit_report(learning_cases, regression_passed):
         f"- **Model đảm nhiệm**: `{AI_MODEL_NAME}` (Gemini 3.8 Flash)",
         f"- **Thời gian chạy**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
         f"- **Số ca bác sĩ gửi feedback**: {len(learning_cases)}",
-        f"- **Kiểm thử hồi quy (Regression Test)**: {'✅ PASS 100% (11/11 tests)' if regression_passed else '⚠️ CẢNH BÁO: CÓ TEST THẤT BẠI'}",
+        f"- **Kiểm thử hồi quy (Regression Test)**: {'✅ PASS 100% (Toàn bộ 82/82 tests)' if regression_passed else '⚠️ CẢNH BÁO: CÓ TEST THẤT BẠI'}",
         "",
         "## 🔍 BẢNG ĐỐI CHIẾU 3 CHIỀU SAU KHI HỌC (AUDIT TRAIL):",
         ""

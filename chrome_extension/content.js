@@ -786,6 +786,18 @@
   // =========================================================================
   // 4. TIẾN TRÌNH XỬ LÝ LỜI ĐỌC ĐIỆN THOẠI TRÊN TRANG RIS
   // =========================================================================
+  // Hàng đợi tuần tự (FIFO Mutex Lock) chống race condition khi nhận luồng đọc dồn dập
+  let dictationProcessingQueue = Promise.resolve();
+
+  function enqueueDictation(dictationText) {
+    const runTask = () => processAndApplyDictation(dictationText);
+    const chained = dictationProcessingQueue.then(runTask, runTask);
+    dictationProcessingQueue = chained.catch((err) => {
+      console.error("[AutoRIS Content] Lỗi trong hàng đợi xử lý lời đọc:", err);
+    });
+    return chained;
+  }
+
   async function processAndApplyDictation(dictationText) {
     if (!isExtensionValid()) {
       console.warn("[AutoRIS] Tiện ích đã cập nhật/tải lại. Vui lòng bấm F5 lại trang RIS!");
@@ -1015,7 +1027,7 @@
       if (body) body.prepend(warnBox);
     }
 
-    const anomalyMessages = safetyCheck.anomalies.map(a => `• <b>${a.type}</b>: ${a.message}`).join("<br/>");
+    const anomalyMessages = safetyCheck.anomalies.map(a => `• <b>${escapeHTML(a.type)}</b>: ${escapeHTML(a.message)}`).join("<br/>");
 
     warnBox.innerHTML = `
       <div class="autoris-warning-header">
@@ -1025,7 +1037,7 @@
       <div class="autoris-warning-body">
         <div class="autoris-warning-msg">${anomalyMessages}</div>
         <div class="autoris-warning-diff">
-          <div><b>Câu đọc gốc:</b> <code>${rawText}</code></div>
+          <div><b>Câu đọc gốc:</b> <code>${escapeHTML(rawText)}</code></div>
         </div>
       </div>
       <div class="autoris-warning-actions">
@@ -1173,23 +1185,30 @@
     }
 
     if (lastState.unifiedEl) {
-      if (lastState.unifiedEl.isContentEditable) {
-        lastState.unifiedEl.innerHTML = lastState.unifiedVal;
-      } else {
-        lastState.unifiedEl.value = lastState.unifiedVal;
+      const activeEl = document.body.contains(lastState.unifiedEl) ? lastState.unifiedEl : findRISEditor();
+      if (activeEl) {
+        if (activeEl.isContentEditable) {
+          activeEl.innerHTML = lastState.unifiedVal;
+        } else {
+          activeEl.value = lastState.unifiedVal;
+        }
+        triggerInputEvents(activeEl);
+        highlightElement(activeEl);
       }
-      triggerInputEvents(lastState.unifiedEl);
-      highlightElement(lastState.unifiedEl);
     } else {
-      if (lastState.motaEl) {
-        if (lastState.motaEl.isContentEditable) lastState.motaEl.innerHTML = lastState.motaVal;
-        else lastState.motaEl.value = lastState.motaVal;
-        triggerInputEvents(lastState.motaEl);
+      const curSep = findSeparateFields();
+      const activeMota = (lastState.motaEl && document.body.contains(lastState.motaEl)) ? lastState.motaEl : curSep?.motaEl;
+      const activeKL = (lastState.ketluanEl && document.body.contains(lastState.ketluanEl)) ? lastState.ketluanEl : curSep?.ketluanEl;
+
+      if (activeMota) {
+        if (activeMota.isContentEditable) activeMota.innerHTML = lastState.motaVal;
+        else activeMota.value = lastState.motaVal;
+        triggerInputEvents(activeMota);
       }
-      if (lastState.ketluanEl) {
-        if (lastState.ketluanEl.isContentEditable) lastState.ketluanEl.innerHTML = lastState.ketluanVal;
-        else lastState.ketluanEl.value = lastState.ketluanVal;
-        triggerInputEvents(lastState.ketluanEl);
+      if (activeKL) {
+        if (activeKL.isContentEditable) activeKL.innerHTML = lastState.ketluanVal;
+        else activeKL.value = lastState.ketluanVal;
+        triggerInputEvents(activeKL);
       }
     }
 
@@ -1472,7 +1491,7 @@
 
       // 2. Kiểm tra câu đọc từ điện thoại (ASR)
       if (lastDictationText) {
-        processAndApplyDictation(lastDictationText);
+        enqueueDictation(lastDictationText);
         showToast("✅ Đã xử lý và điền lại câu đọc từ điện thoại!");
         return;
       }
@@ -1904,8 +1923,13 @@
         }
         console.log("[AutoRIS RIS] Nhận ca đọc từ điện thoại:", textToApply);
         if (textToApply) {
-          const applied = processAndApplyDictation(textToApply);
-          sendResponse({ success: applied });
+          enqueueDictation(textToApply).then((applied) => {
+            sendResponse({ success: Boolean(applied) });
+          }).catch((err) => {
+            console.error("[AutoRIS RIS] Dictation failed:", err);
+            sendResponse({ success: false, error: err.message });
+          });
+          return true; // Giữ kết nối mở để phản hồi bất đồng bộ
         }
       }
 
