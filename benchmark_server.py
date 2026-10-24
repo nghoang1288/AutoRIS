@@ -499,6 +499,18 @@ def find_clinical_synthesizer_file():
             return cand
     return None
 
+def find_clinical_safety_guard_file():
+    candidates = [
+        os.path.join(BASE_DIR, "clinical_safety_guard.js"),
+        os.path.join(BASE_DIR, "data", "clinical_safety_guard.js"),
+        os.path.join(STORAGE_DIR, "clinical_safety_guard.js"),
+        os.path.join(BASE_DIR, "chrome_extension", "clinical_safety_guard.js"),
+    ]
+    for cand in candidates:
+        if os.path.exists(cand) and os.path.isfile(cand):
+            return cand
+    return None
+
 LLM_SERVER_URL = os.environ.get("LLM_SERVER_URL", "http://qwen-secretary:8080/v1/chat/completions")
 
 def call_qwen_secretary(current_mota: str, current_ketluan: str, command: str) -> dict:
@@ -565,6 +577,32 @@ def call_qwen_secretary(current_mota: str, current_ketluan: str, command: str) -
         except Exception as e:
             last_err = e
             continue
+
+    # Fallback qua 9router / LLM Proxy nếu local Qwen bận
+    try:
+        fallback_res = call_ai_synthesize_proxy(
+            raw_text=prompt,
+            system_prompt=system_instruction,
+            preferred_model="DI/google/gemini-3.7-flash",
+            temperature=0.1
+        )
+        if fallback_res.get("status") == "success" and fallback_res.get("data"):
+            clean_str = fallback_res["data"].strip()
+            if clean_str.startswith("```json"):
+                clean_str = clean_str[7:]
+            if clean_str.startswith("```"):
+                clean_str = clean_str[3:]
+            if clean_str.endswith("```"):
+                clean_str = clean_str[:-3]
+            parsed_result = json.loads(clean_str.strip())
+            return {
+                "status": "success",
+                "mota": parsed_result.get("mota", current_mota),
+                "ketluan": parsed_result.get("ketluan", current_ketluan),
+                "summary": parsed_result.get("action_summary", "Thư ký AI đã cập nhật kết quả")
+            }
+    except Exception as fe:
+        print(f"[AutoRIS Server] Fallback secretary failed: {fe}")
 
     return {
         "status": "error",
@@ -839,6 +877,45 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps(resp).encode("utf-8"))
             return
 
+        elif path == "/api/clinical_safety_guard.js":
+            guard_file = find_clinical_safety_guard_file()
+            if guard_file:
+                try:
+                    with open(guard_file, "rb") as f:
+                        code_bytes = f.read()
+                    mtime = int(os.path.getmtime(guard_file))
+                    self.send_response(200)
+                    self.send_cors_headers()
+                    self.send_header("Content-Type", "application/javascript; charset=utf-8")
+                    self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+                    self.send_header("X-Guard-Version", str(mtime))
+                    self.send_header("Content-Length", str(len(code_bytes)))
+                    self.end_headers()
+                    self.wfile.write(code_bytes)
+                    return
+                except Exception as e:
+                    self.send_error(500, f"Error reading safety guard file: {e}")
+                    return
+            else:
+                self.send_error(404, "clinical_safety_guard.js not found on server")
+                return
+
+        elif path == "/api/clinical_safety_guard/version":
+            guard_file = find_clinical_safety_guard_file()
+            if guard_file:
+                mtime = int(os.path.getmtime(guard_file))
+                size = os.path.getsize(guard_file)
+                resp = {"status": "ok", "version": mtime, "size": size}
+            else:
+                resp = {"status": "not_found", "version": 0, "size": 0}
+            self.send_response(200)
+            self.send_cors_headers()
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+            self.end_headers()
+            self.wfile.write(json.dumps(resp).encode("utf-8"))
+            return
+
         elif path in ("/api/version", "/api/app/version", "/api/extension/version"):
             apk_path = os.path.join(RELEASE_APK_DIR, "ViASRBenchmark_S24Ultra.apk")
             if not os.path.exists(apk_path):
@@ -847,19 +924,20 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
             apk_mtime = int(os.path.getmtime(apk_path)) if os.path.exists(apk_path) else 0
 
             # Đọc version trực tiếp từ manifest.json trước
-            ext_ver = "1.2.2"
+            ext_ver = "1.3.0"
             manifest_path = os.path.join(BASE_DIR, "chrome_extension", "manifest.json")
             if os.path.exists(manifest_path):
                 try:
                     with open(manifest_path, "r", encoding="utf-8") as mf:
                         mdata = json.load(mf)
-                        ext_ver = mdata.get("version", "1.2.2")
+                        ext_ver = mdata.get("version", "1.3.0")
                 except Exception:
                     pass
 
             # Tìm file zip tương ứng với version hoặc file zip mới nhất
             ext_candidates = [
                 f"autoris-extension-v{ext_ver}.zip",
+                "autoris-extension-v1.3.0.zip",
                 "autoris-extension-v1.2.2.zip",
                 "autoris-extension-v1.2.1.zip",
                 "autoris-extension.zip"
@@ -912,7 +990,7 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
                     "file_size": ext_size,
                     "updated_at": ext_mtime,
                     "synthesizer_version": synth_ver,
-                    "release_notes": "v1.2.2: Lung-RADS nốt bán đặc v2022, nút nhầy 2 phổi, khép kín vòng lặp tự học qua Server Proxy",
+                    "release_notes": "v1.3.0: Thư ký Y khoa giọng nói (sửa/xóa/chuyển), Quad-Layer Disambiguator, Gác cổng An toàn Lâm sàng (chặn nhầm mm/cm, đảo bên, mất từ không)",
                     "force_update": False
                 }
             }
@@ -1098,6 +1176,7 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
             # Nếu file không tồn tại, tìm các file zip dự phòng mới nhất
             if not os.path.exists(zip_path):
                 candidates = [
+                    "autoris-extension-v1.3.0.zip",
                     "autoris-extension-v1.2.2.zip",
                     "autoris-extension-v1.2.1.zip",
                     "autoris-extension.zip"
@@ -1309,7 +1388,7 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps(resp, ensure_ascii=False).encode("utf-8"))
             return
 
-        elif path == "/api/secretary/edit":
+        elif path in ("/api/secretary/edit", "/api/secretary/assist"):
             content_length = int(self.headers.get("Content-Length", 0))
             if content_length == 0:
                 self.send_error(400, "Empty payload")
@@ -1324,9 +1403,9 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
                 self.send_error(400, f"Invalid JSON: {e}")
                 return
 
-            current_mota = data.get("current_mota", "")
-            current_ketluan = data.get("current_ketluan", "")
-            command = data.get("command", "")
+            current_mota = data.get("current_mota", data.get("currentMota", ""))
+            current_ketluan = data.get("current_ketluan", data.get("currentKetluan", ""))
+            command = data.get("command", data.get("commandText", ""))
             if not command:
                 self.send_error(400, "Missing command field")
                 return

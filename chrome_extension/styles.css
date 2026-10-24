@@ -263,3 +263,126 @@
   border-color: #38bdf8;
   color: #38bdf8;
 }
+
+/* =========================================================================
+   11. COMMAND PILL & AMBER CLINICAL SAFETY WARNING CARD
+   ========================================================================= */
+.autoris-cmd-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: linear-gradient(135deg, #7c3aed, #6d28d9);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 12px;
+  border: 1px solid #a78bfa;
+  box-shadow: 0 2px 6px rgba(124, 58, 237, 0.4);
+  letter-spacing: 0.3px;
+  animation: autorisPulse 2s infinite;
+}
+
+@keyframes autorisPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+
+.autoris-amber-warning-card {
+  background: #381a04;
+  border: 1.5px solid #f59e0b;
+  border-radius: 8px;
+  padding: 9px 11px;
+  margin-bottom: 8px;
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.25);
+  animation: autorisWarnShake 0.4s ease;
+}
+
+@keyframes autorisWarnShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+.autoris-warning-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #fcd34d;
+  margin-bottom: 6px;
+  border-bottom: 1px solid rgba(245, 158, 11, 0.3);
+  padding-bottom: 4px;
+}
+
+.autoris-warning-body {
+  font-size: 11px;
+  color: #fef3c7;
+  line-height: 1.45;
+  margin-bottom: 8px;
+}
+
+.autoris-warning-msg {
+  margin-bottom: 5px;
+}
+
+.autoris-warning-diff {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px dashed rgba(245, 158, 11, 0.4);
+  border-radius: 5px;
+  padding: 4px 6px;
+  font-size: 10.5px;
+  color: #fde68a;
+  word-break: break-word;
+}
+
+.autoris-warning-diff code {
+  background: #78350f;
+  color: #ffffff;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-family: monospace;
+}
+
+.autoris-warning-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.autoris-btn-warn-confirm {
+  flex: 1;
+  background: #15803d;
+  color: #ffffff;
+  border: 1px solid #22c55e;
+  border-radius: 5px;
+  padding: 4px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.autoris-btn-warn-confirm:hover {
+  background: #16a34a;
+}
+
+.autoris-btn-warn-raw {
+  flex: 1;
+  background: #b45309;
+  color: #ffffff;
+  border: 1px solid #f59e0b;
+  border-radius: 5px;
+  padding: 4px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.autoris-btn-warn-raw:hover {
+  background: #d97706;
+}
+

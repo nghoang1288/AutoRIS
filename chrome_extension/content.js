@@ -885,6 +885,50 @@
 
     lastSynthesizedData = synthesizedResult;
 
+    // KIỂM ĐỊNH AN TOÀN LÂM SÀNG TRƯỚC KHI ĐIỀN (CLINICAL SAFETY GUARD)
+    const safetyCheck = (typeof ClinicalSafetyGuard !== "undefined")
+      ? ClinicalSafetyGuard.verifyClinicalSafety(cleanDictation, synthesizedResult.mota, synthesizedResult.ketluan, currentMota, currentKetluan)
+      : { safe: true };
+
+    if (!safetyCheck.safe && (safetyCheck.riskLevel === "CRITICAL" || safetyCheck.riskLevel === "HIGH")) {
+      console.warn("[AutoRIS Safety] Phát hiện bất thường lâm sàng:", safetyCheck.summary);
+      if (storedConfig[STORAGE_KEYS.PLAY_CHIME] !== false) {
+        playWarningChimeSound();
+      }
+      showAmberWarningBanner(cleanDictation, synthesizedResult, safetyCheck, currentMota, currentKetluan, editor, sep);
+      updateFloatingPreview(cleanDictation, synthesizedResult, `⚠️ ${safetyCheck.anomalies[0].message}`);
+      showToast(`⚠️ Cảnh báo lâm sàng: ${safetyCheck.anomalies[0].message}`, true);
+      return false; // DỪNG LẠI - TUYỆT ĐỐI KHÔNG TỰ Ý SỬA DỮ LIỆU!
+    }
+
+    // Hiển thị Command Pill nếu là lệnh Thư ký
+    if (synthesizedResult.isSecretary) {
+      showCommandPill(synthesizedResult.summary);
+    }
+
+    let applied = executeDirectApply(synthesizedResult, editor, sep);
+
+    if (storedConfig[STORAGE_KEYS.AUTO_COPY] !== false) {
+      copyToClipboard(`${synthesizedResult.mota || ""}\n\nKẾT LUẬN:\n${synthesizedResult.ketluan || ""}`);
+    }
+
+    const timeStr = new Date().toLocaleTimeString();
+    if (applied) {
+      if (storedConfig[STORAGE_KEYS.PLAY_CHIME] !== false) {
+        playChimeSound();
+      }
+      updateFloatingPreview(cleanDictation, synthesizedResult);
+      showToast(`✅ AutoRIS (${timeStr}): ${synthesizedResult.summary || "Đã phân bổ mô tả & kết luận vào RIS!"}`);
+    } else {
+      updateFloatingPreview(cleanDictation, synthesizedResult, `⚠️ Không tìm thấy ô nhập RIS (Đã tự động copy Ctrl+V)`);
+      showToast(`⚠️ AutoRIS: Không tìm thấy ô nhập RIS hoặc mẫu không khớp! (Đã copy sẵn Ctrl+V)`, true);
+    }
+    return applied;
+  }
+
+  // Helper thực thi ghi kết quả vào Editor hoặc các ô riêng biệt
+  function executeDirectApply(synthesizedResult, editor, sep) {
+    if (!synthesizedResult) return false;
     let applied = false;
     if (editor) {
       saveUndoSnapshot(null, null, editor);
@@ -909,23 +953,129 @@
         undoStack[undoStack.length - 1].appliedKL = sep.ketluanEl ? sep.ketluanEl.value : null;
       }
     }
-
-    if (storedConfig[STORAGE_KEYS.AUTO_COPY] !== false) {
-      copyToClipboard(`${synthesizedResult.mota || ""}\n\nKẾT LUẬN:\n${synthesizedResult.ketluan || ""}`);
-    }
-
-    const timeStr = new Date().toLocaleTimeString();
-    if (applied) {
-      if (storedConfig[STORAGE_KEYS.PLAY_CHIME] !== false) {
-        playChimeSound();
-      }
-      updateFloatingPreview(cleanDictation, synthesizedResult);
-      showToast(`✅ AutoRIS (${timeStr}): ${synthesizedResult.summary || "Đã phân bổ mô tả & kết luận vào RIS!"}`);
-    } else {
-      updateFloatingPreview(cleanDictation, synthesizedResult, `⚠️ Không tìm thấy ô nhập RIS (Đã tự động copy Ctrl+V)`);
-      showToast(`⚠️ AutoRIS: Không tìm thấy ô nhập RIS hoặc mẫu không khớp! (Đã copy sẵn Ctrl+V)`, true);
-    }
     return applied;
+  }
+
+  // Hiển thị Command Pill trên Floating Bar khi bác sĩ ra lệnh
+  let cmdPillTimer = null;
+  function showCommandPill(summary) {
+    const pill = document.getElementById("autoris-cmd-pill");
+    if (!pill) return;
+    pill.textContent = `⚡ ${summary || "LỆNH THƯ KÝ"}`;
+    pill.style.display = "inline-flex";
+    if (cmdPillTimer) clearTimeout(cmdPillTimer);
+    cmdPillTimer = setTimeout(() => {
+      pill.style.display = "none";
+    }, 3500);
+  }
+
+  // Âm thanh cảnh báo an toàn lâm sàng (Amber Chime: 520Hz -> 660Hz)
+  function playWarningChimeSound() {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+
+      // Tone 1: 520Hz ấm
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.type = "triangle";
+      osc1.frequency.setValueAtTime(520, ctx.currentTime);
+      gain1.gain.setValueAtTime(0.18, ctx.currentTime);
+      gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.12);
+      osc1.connect(gain1);
+      gain1.connect(ctx.destination);
+      osc1.start();
+      osc1.stop(ctx.currentTime + 0.12);
+
+      // Tone 2: 660Hz dịu
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.type = "sine";
+      osc2.frequency.setValueAtTime(660, ctx.currentTime + 0.1);
+      gain2.gain.setValueAtTime(0.2, ctx.currentTime + 0.1);
+      gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.28);
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.start(ctx.currentTime + 0.1);
+      osc2.stop(ctx.currentTime + 0.28);
+    } catch (e) {
+      // Browser autoplay policy có thể chặn audio nếu chưa tương tác
+    }
+  }
+
+  // Hiển thị Amber Warning Banner khi phát hiện sai số / bất thường y khoa
+  function showAmberWarningBanner(rawText, synthesizedResult, safetyCheck, currentMota, currentKetluan, editor, sep) {
+    let warnBox = document.getElementById("autoris-amber-warning");
+    if (!warnBox) {
+      warnBox = document.createElement("div");
+      warnBox.id = "autoris-amber-warning";
+      warnBox.className = "autoris-amber-warning-card";
+      const body = document.getElementById("autoris-bar-body");
+      if (body) body.prepend(warnBox);
+    }
+
+    const anomalyMessages = safetyCheck.anomalies.map(a => `• <b>${a.type}</b>: ${a.message}`).join("<br/>");
+
+    warnBox.innerHTML = `
+      <div class="autoris-warning-header">
+        <span>⚠️ CẢNH BÁO AN TOÀN LÂM SÀNG: PHÁT HIỆN BẤT THƯỜNG</span>
+        <button id="autoris-btn-warn-close" class="autoris-icon-btn" style="color:#fcd34d; background:none; border:none; cursor:pointer;">✕</button>
+      </div>
+      <div class="autoris-warning-body">
+        <div class="autoris-warning-msg">${anomalyMessages}</div>
+        <div class="autoris-warning-diff">
+          <div><b>Câu đọc gốc:</b> <code>${rawText}</code></div>
+        </div>
+      </div>
+      <div class="autoris-warning-actions">
+        <button id="autoris-btn-warn-confirm" class="autoris-btn-warn-confirm" title="Chấp nhận nội dung đề xuất của AI">
+          ✓ Xác nhận đúng
+        </button>
+        <button id="autoris-btn-warn-raw" class="autoris-btn-warn-raw" title="Không dùng AI, chèn nguyên văn câu đọc">
+          ↺ Giữ câu đọc gốc
+        </button>
+        <button id="autoris-btn-warn-undo" class="autoris-btn-secondary" style="font-size:11px; padding:4px 6px;" title="Hủy bỏ, giữ nguyên trạng thái trước">
+          ↶ Hủy bỏ
+        </button>
+      </div>
+    `;
+    warnBox.style.display = "block";
+
+    // Bind sự kiện
+    const btnClose = document.getElementById("autoris-btn-warn-close");
+    if (btnClose) btnClose.onclick = () => { warnBox.style.display = "none"; };
+
+    const btnConfirm = document.getElementById("autoris-btn-warn-confirm");
+    if (btnConfirm) {
+      btnConfirm.onclick = () => {
+        warnBox.style.display = "none";
+        executeDirectApply(synthesizedResult, editor, sep);
+        showToast("✅ Đã áp dụng nội dung theo xác nhận của bác sĩ");
+      };
+    }
+
+    const btnRaw = document.getElementById("autoris-btn-warn-raw");
+    if (btnRaw) {
+      btnRaw.onclick = () => {
+        warnBox.style.display = "none";
+        const fallbackResult = {
+          mota: currentMota ? currentMota.trim() + "\n- " + rawText : "- " + rawText,
+          ketluan: currentKetluan,
+          summary: "Giữ nguyên câu đọc gốc"
+        };
+        executeDirectApply(fallbackResult, editor, sep);
+        showToast("↺ Đã chèn nguyên văn câu đọc gốc vào mô tả");
+      };
+    }
+
+    const btnUndo = document.getElementById("autoris-btn-warn-undo");
+    if (btnUndo) {
+      btnUndo.onclick = () => {
+        warnBox.style.display = "none";
+        showToast("↶ Đã hủy bỏ thao tác");
+      };
+    }
   }
 
   // =========================================================================
@@ -1193,6 +1343,7 @@
         <div class="autoris-status-pill">
           <span class="autoris-dot" id="autoris-dot-status"></span>
           <span class="autoris-title">AutoRIS</span>
+          <span id="autoris-cmd-pill" class="autoris-cmd-pill" style="display:none;">⚡ LỆNH</span>
         </div>
         <div style="display:flex; align-items:center; gap:6px;">
           <label class="autoris-tab-select-toggle is-active" id="autoris-tab-toggle-wrap" title="Tick chọn để cho phép nhận và điền kết quả vào tab này. Chỉ tab được tick mới điền để tránh nhầm ca bệnh khi mở nhiều tab RIS cùng lúc!">
@@ -1203,6 +1354,7 @@
         </div>
       </div>
       <div class="autoris-bar-body" id="autoris-bar-body">
+        <div id="autoris-amber-warning" class="autoris-amber-warning-card" style="display:none;"></div>
         <div class="autoris-preview-box" id="autoris-preview-text">
           <span style="color:#64748b;">🟢 Sẵn sàng nhận giọng nói từ điện thoại (AutoRIS ZipFormer)...</span>
         </div>

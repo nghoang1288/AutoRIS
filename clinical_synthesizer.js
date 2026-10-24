@@ -80,8 +80,8 @@
       let result = text.normalize("NFC").trim();
       // Loại bỏ tiếng click / rác mở đầu câu
       result = result.replace(/^(?:[.,\s]*(?:đó|này|thì|à|ừ|ờ|dạ|vâng|rồi|xong)[.,\s]+)+/i, "");
-      // Loại bỏ tiếng nhiễu quạt / hơi thở lặp lại ở cuối câu
-      const trailingFillers = /(?:[.,\s]+(?:đây\s+này|đó\s+thôi|thế\s+thôi|vậy\s+thôi|thế\s+nhé|vậy\s+nhé|thế\s+nha|vậy\s+nha|bây\s+giờ|dừng\s+lại|được\s+rồi|đây|này|đó|thôi|tôi|em|hết|xong|dừng|có|là|rồi|thì|ạ|nhé|nha|nhỉ|thế|vậy|đấy|ừ|à|ờ)[.,\s]*)+$/i;
+      // Loại bỏ tiếng nhiễu quạt / hơi thở lặp lại ở cuối câu (bảo tồn cụm "vừa rồi")
+      const trailingFillers = /(?:[.,\s]+(?:đây\s+này|đó\s+thôi|thế\s+thôi|vậy\s+thôi|thế\s+nhé|vậy\s+nhé|thế\s+nha|vậy\s+nha|bây\s+giờ|dừng\s+lại|được\s+rồi|đây|này|đó|thôi|tôi|em|hết|xong|dừng|có|là|(?<!vừa\s+)rồi|thì|ạ|nhé|nha|nhỉ|thế|vậy|đấy|ừ|à|ờ)[.,\s]*)+$/i;
       while (trailingFillers.test(result)) {
         result = result.replace(trailingFillers, "");
       }
@@ -719,35 +719,113 @@
     },
 
     /**
+     * TỪ ĐIỂN KHÁNG LỆNH LÂM SÀNG (Clinical Immunity Whitelist)
+     * Ngăn chặn tuyệt đối việc hiểu nhầm thuật ngữ y khoa thành câu lệnh điều khiển.
+     */
+    isClinicalImmuneText(text) {
+      if (!text) return false;
+      const lower = text.toLowerCase();
+      const immunityPatterns = [
+        // Chuyển
+        /chuyển\s+vị\s+đại\s+động\s+mạch/i,
+        /chuyển\s+vị\s+phủ\s+tạng/i,
+        /chuyển\s+dạng\s+ác\s+tính/i,
+        /chuyển\s+giai\s+đoạn/i,
+        /chuyển\s+dạ/i,
+        /chuyển\s+máu/i,
+        /chuyển\s+chỗ/i,
+        /situs\s+inversus/i,
+        // Xóa
+        /xóa\s+mờ\s+(?:góc\s+sườn\s+hoành|bờ\s+tim|vòm\s+hoành|rãnh\s+cuộn\s+não)/i,
+        /xóa\s+(?:cấu\s+trúc|ranh\s+giới|xoang\s+thận|khoang\s+dưới\s+nhện)/i,
+        /dấu\s+hiệu\s+xóa\s+bờ/i,
+        /silhouette\s+sign/i,
+        // Thay
+        /thay\s+van\s+(?:hai\s+lá|ba\s+lá|động\s+mạch\s+chủ|động\s+mạch\s+phổi)/i,
+        /thay\s+khớp\s+(?:háng|gối|vai)/i,
+        /thay\s+đổi\s+(?:tín\s+hiệu|tỷ\s+trọng|đậm\s+độ|thoái\s+hóa|viêm|sợi\s+bọc|hình\s+dạng)/i,
+        // Thêm
+        /thêm\s+(?:một|vài|nhiều)?\s*(?:nốt|ổ|khối|tổn\s+thương|sỏi|hạch)/i,
+        // Bỏ
+        /(?:phẫu\s*thuật|đã|tiền\s*sử)\s+(?:cắt\s+bỏ|bỏ)/i,
+        /bỏ\s+sót/i
+      ];
+      return immunityPatterns.some(p => p.test(lower));
+    },
+
+    /**
      * BỘ THƯ KÝ Y KHOA - TẦNG 1: LOCAL DETERMINISTIC ENGINE (<5ms)
+     * Áp dụng thuật toán 4 lớp Quad-Layer Disambiguator
      */
     isSecretaryCommand(dictationText) {
-      const clean = this.cleanFillerWords(dictationText).toLowerCase();
-      if (!clean) return false;
+      if (!dictationText) return false;
+      let clean = this.cleanFillerWords(dictationText).trim();
+      let lower = clean.toLowerCase();
+      if (!lower) return false;
 
-      // 1. Lệnh xóa dòng / xóa cơ quan / xóa kết luận / xóa hết
-      if (/^(?:xóa|xoá|bỏ)\s+(?:dòng|phần|mục|đoạn|kết\s*luận|mô\s*tả|toàn\s*bộ|hết|tất\s*cả|sạch)\b/i.test(clean)) return true;
-      if (/^(?:xóa|xoá|bỏ)\s+(?:phổi|thận|gan|tụy|lách|bàng quang|tiền liệt|tử cung|buồng trứng|ruột thừa|hạch|dịch|màng phổi|dạ dày|túi mật)\b/i.test(clean)) return true;
+      // Lớp 1: Explicit Prefix Gate (e.g. "Thư ký: ...", "Lệnh: ...", "AutoRIS: ...")
+      const prefixMatch = lower.match(/^(?:thư\s*ký|autoris|lệnh|lệnh\s*thư\s*ký)[:\s,]+(.*)$/i);
+      if (prefixMatch) {
+        lower = prefixMatch[1].trim();
+        clean = clean.slice(clean.length - lower.length).trim();
+      }
 
-      // 2. Lệnh hoàn tác
-      if (/^(?:hoàn\s*tác|quay\s*lại|undo)$/i.test(clean)) return true;
+      // Lớp 2: Clinical Immunity Whitelist (Nếu là thuật ngữ y khoa đặc thù -> KHÔNG PHẢI LỆNH)
+      if (this.isClinicalImmuneText(lower)) {
+        return false;
+      }
 
-      // 3. Lệnh thay thế: thay/đổi/sửa [từ A] bằng/thành [từ B]
-      if (/^(?:thay|đổi|sửa)\s+(?:từ|chữ|cụm\s*từ)?\s*.+?\s+(?:bằng|thành)\s+.+$/i.test(clean)) return true;
+      // Lớp 3: Syntactic Pattern Matcher
 
-      // 4. Lệnh mẫu bình thường
-      if (/^mẫu\s+(?:ngực|phổi|bụng|sọ\s*não|não|tiêu\s*hóa|tiết\s*niệu)\s*bình\s*thường/i.test(clean)) return true;
-      if (/^(?:tất\s*cả|toàn\s*bộ)\s*bình\s*thường/i.test(clean)) return true;
+      // 3.1. Lệnh ngắt dòng & định dạng
+      if (/^(?:xuống\s*dòng|sang\s*dòng\s*mới|ngắt\s*dòng|gạch\s*đầu\s*dòng|dấu\s*chấm|dấu\s*phẩy|chấm|phẩy)$/i.test(lower)) {
+        return true;
+      }
 
-      // 5. Lệnh chèn thêm
-      if (/^(?:thêm|chèn)\s+vào\s+(?:phần|mục|dòng)?\s*.+?:?\s*.+$/i.test(clean)) return true;
+      // 3.2. Lệnh điều hướng trường: "Mô tả: ...", "Kết luận: ..."
+      if (/^(?:mô\s*tả|phần\s*mô\s*tả)\s*:\s*.+$/i.test(lower)) return true;
+      if (/^(?:kết\s*luận|phần\s*kết\s*luận)\s*:\s*.+$/i.test(lower)) return true;
 
+      // 3.3. Lệnh hoàn tác
+      if (/^(?:hoàn\s*tác|quay\s*lại|undo)$/i.test(lower)) return true;
+
+      // 3.4. Lệnh chuyển đoạn/câu sang kết luận
+      if (/^(?:chuyển|đưa)\s+(?:câu|đoạn|dòng)?\s*(?:vừa\s*(?:rồi|đọc)|cuối|gần\s*nhất)?\s*(?:sang|xuống|vào)\s+kết\s*luận/i.test(lower)) return true;
+
+      // 3.5. Lệnh sửa câu vừa rồi: "sửa câu vừa rồi thành...", "sửa đoạn vừa đọc thành..."
+      if (/^(?:sửa|đổi)\s+(?:câu|đoạn|dòng)\s+(?:vừa\s*(?:rồi|đọc)|cuối|gần\s*nhất)\s*(?:thành|bằng|là)?\s*.+$/i.test(lower)) return true;
+
+      // 3.6. Lệnh thay thế: thay/đổi/sửa [từ A] bằng/thành [từ B]
+      if (/^(?:thay|đổi|sửa)\s+(?:từ|chữ|cụm\s*từ)?\s*.+?\s+(?:bằng|thành)\s+.+$/i.test(lower)) return true;
+
+      // 3.7. Lệnh xóa câu vừa rồi / xóa dòng cuối
+      if (/^(?:xóa|xoá|bỏ)\s+(?:câu|đoạn|dòng|từ|chữ)\s+(?:vừa\s*(?:rồi|đọc)?|cuối|gần\s*nhất)$/i.test(lower)) return true;
+
+      // 3.8. Lệnh xóa dòng / xóa cơ quan / xóa kết luận / xóa hết
+      if (/^(?:xóa|xoá|bỏ)\s+(?:dòng|phần|mục|đoạn|kết\s*luận|mô\s*tả|toàn\s*bộ|hết|tất\s*cả|sạch)\b/i.test(lower)) return true;
+      if (/^(?:xóa|xoá|bỏ)\s+(?:phổi\s*phải|phổi\s*trái|hai\s*phổi|thận\s*phải|thận\s*trái|hai\s*thận|gan|tụy|lách|bàng\s*quang|tiền\s*liệt|tử\s*cung|buồng\s*trứng|ruột\s*thừa|hạch|dịch|màng\s*phổi|dạ\s*dày|túi\s*mật)\b/i.test(lower)) return true;
+
+      // 3.9. Lệnh mẫu bình thường
+      if (/^mẫu\s+(?:ngực|phổi|bụng|sọ\s*não|não|tiêu\s*hóa|tiết\s*niệu)\s*bình\s*thường/i.test(lower)) return true;
+      if (/^(?:tất\s*cả|toàn\s*bộ)\s*bình\s*thường$/i.test(lower)) return true;
+
+      // 3.10. Lệnh chèn thêm
+      if (/^(?:thêm|chèn)\s+vào\s+(?:phần|mục|dòng)?\s*.+?:?\s*.+$/i.test(lower)) return true;
+
+      // Lớp 4: Mặc định an toàn là Clinical Content
       return false;
     },
 
     executeSecretaryCommand(currentMota = "", currentKetluan = "", commandText = "") {
-      const clean = this.cleanFillerWords(commandText);
-      const lower = clean.toLowerCase();
+      let clean = this.cleanFillerWords(commandText).trim();
+      let lower = clean.toLowerCase();
+
+      // Bóc tách Explicit Prefix nếu có
+      const prefixMatch = lower.match(/^(?:thư\s*ký|autoris|lệnh|lệnh\s*thư\s*ký)[:\s,]+(.*)$/i);
+      if (prefixMatch) {
+        lower = prefixMatch[1].trim();
+        clean = clean.slice(clean.length - lower.length).trim();
+      }
 
       // Case 1: Lệnh Hoàn tác (Undo)
       if (/^(?:hoàn\s*tác|quay\s*lại|undo)$/i.test(lower)) {
@@ -760,7 +838,155 @@
         };
       }
 
-      // Case 2: Lệnh Xóa toàn bộ / Xóa hết
+      // Case 2: Lệnh ngắt dòng & định dạng
+      if (/^(?:xuống\s*dòng|sang\s*dòng\s*mới|ngắt\s*dòng)$/i.test(lower)) {
+        const updatedMota = currentMota ? (currentMota.endsWith("\n") ? currentMota + "\n" : currentMota + "\n\n") : "\n";
+        return {
+          handled: true,
+          action: "new_line",
+          mota: updatedMota,
+          ketluan: currentKetluan,
+          summary: "Xuống dòng mới"
+        };
+      }
+      if (/^gạch\s*đầu\s*dòng$/i.test(lower)) {
+        const prefix = currentMota && !currentMota.endsWith("\n") ? "\n- " : "- ";
+        return {
+          handled: true,
+          action: "bullet",
+          mota: (currentMota || "") + prefix,
+          ketluan: currentKetluan,
+          summary: "Thêm gạch đầu dòng"
+        };
+      }
+      if (/^(?:dấu\s*chấm|chấm)$/i.test(lower)) {
+        return {
+          handled: true,
+          action: "punctuation",
+          mota: currentMota ? currentMota.trimEnd() + ". " : ". ",
+          ketluan: currentKetluan,
+          summary: "Thêm dấu chấm"
+        };
+      }
+      if (/^(?:dấu\s*phẩy|phẩy)$/i.test(lower)) {
+        return {
+          handled: true,
+          action: "punctuation",
+          mota: currentMota ? currentMota.trimEnd() + ", " : ", ",
+          ketluan: currentKetluan,
+          summary: "Thêm dấu phẩy"
+        };
+      }
+
+      // Case 3: Lệnh Điều hướng trường: "Mô tả: ...", "Kết luận: ..."
+      const navMotaMatch = clean.match(/^(?:mô\s*tả|phần\s*mô\s*tả)\s*:\s*([\s\S]+)$/i);
+      if (navMotaMatch) {
+        let addedContent = navMotaMatch[1].trim();
+        if (addedContent && !/[.!?]$/.test(addedContent)) addedContent += ".";
+        let updatedMota = currentMota ? currentMota.trim() + "\n" + addedContent : addedContent;
+        return {
+          handled: true,
+          action: "navigate_mota",
+          mota: updatedMota,
+          ketluan: currentKetluan,
+          summary: "Thêm nội dung vào Mô tả"
+        };
+      }
+
+      const navKetluanMatch = clean.match(/^(?:kết\s*luận|phần\s*kết\s*luận)\s*:\s*([\s\S]+)$/i);
+      if (navKetluanMatch) {
+        const addedContent = navKetluanMatch[1].trim();
+        let updatedKetluan = currentKetluan ? currentKetluan.trim() + " " + addedContent : addedContent;
+        if (!updatedKetluan.endsWith(".")) updatedKetluan += ".";
+        return {
+          handled: true,
+          action: "navigate_ketluan",
+          mota: currentMota,
+          ketluan: updatedKetluan,
+          summary: "Cập nhật vào Kết luận"
+        };
+      }
+
+      // Case 4: Lệnh Chuyển đoạn/câu sang kết luận
+      if (/^(?:chuyển|đưa)\s+(?:câu|đoạn|dòng)?\s*(?:vừa\s*(?:rồi|đọc)|cuối|gần\s*nhất)?\s*(?:sang|xuống|vào)\s+kết\s*luận/i.test(lower)) {
+        if (!currentMota) {
+          return { handled: true, action: "move_to_conclusion", mota: currentMota, ketluan: currentKetluan, summary: "Mô tả rỗng, không có đoạn cuối để chuyển" };
+        }
+        const lines = currentMota.split("\n").filter(l => l.trim().length > 0);
+        if (lines.length > 0) {
+          const lastLine = lines.pop().trim();
+          let newKetluanClause = lastLine.replace(/^[-*•]\s*/, "").replace(/^.*:\s*/, "").trim();
+          if (newKetluanClause) {
+            newKetluanClause = newKetluanClause.charAt(0).toUpperCase() + newKetluanClause.slice(1);
+            if (!newKetluanClause.endsWith(".")) newKetluanClause += ".";
+          }
+          const updatedMota = lines.join("\n");
+          let updatedKetluan = currentKetluan ? currentKetluan.trim() + " " + newKetluanClause : newKetluanClause;
+          return {
+            handled: true,
+            action: "move_to_conclusion",
+            mota: updatedMota,
+            ketluan: updatedKetluan,
+            summary: "Đã chuyển đoạn cuối mô tả sang Kết luận"
+          };
+        }
+      }
+
+      // Case 5: Lệnh Sửa câu vừa rồi thành...
+      const editLastSentenceMatch = clean.match(/^(?:sửa|đổi)\s+(?:câu|đoạn|dòng)\s+(?:vừa\s*(?:rồi|đọc)|cuối|gần\s*nhất)\s*(?:thành|bằng|là)?\s*([\s\S]+)$/i);
+      if (editLastSentenceMatch) {
+        const replacement = editLastSentenceMatch[1].trim();
+        let updatedMota = currentMota;
+        if (updatedMota) {
+          const lines = updatedMota.split("\n");
+          for (let i = lines.length - 1; i >= 0; i--) {
+            if (lines[i].trim()) {
+              // Nếu dòng có tiền tố cơ quan (e.g. "- Gan: ..."), bảo tồn tiền tố
+              const prefixOrgan = lines[i].match(/^([-*•]?\s*[^:]+:\s*)/);
+              if (prefixOrgan) {
+                lines[i] = prefixOrgan[1] + replacement;
+              } else {
+                lines[i] = replacement;
+              }
+              break;
+            }
+          }
+          updatedMota = lines.join("\n");
+        } else {
+          updatedMota = replacement;
+        }
+        return {
+          handled: true,
+          action: "edit_last_sentence",
+          mota: updatedMota,
+          ketluan: currentKetluan,
+          summary: "Đã sửa câu vừa rồi"
+        };
+      }
+
+      // Case 6: Lệnh Xóa câu vừa rồi / Xóa dòng cuối
+      if (/^(?:xóa|xoá|bỏ)\s+(?:câu|đoạn|dòng|từ|chữ)\s+(?:vừa\s*(?:rồi|đọc)|cuối|gần\s*nhất)$/i.test(lower)) {
+        let updatedMota = currentMota;
+        if (updatedMota) {
+          const lines = updatedMota.split("\n");
+          while (lines.length > 0 && !lines[lines.length - 1].trim()) {
+            lines.pop();
+          }
+          if (lines.length > 0) {
+            lines.pop();
+          }
+          updatedMota = lines.join("\n").trim();
+        }
+        return {
+          handled: true,
+          action: "delete_last_line",
+          mota: updatedMota,
+          ketluan: currentKetluan,
+          summary: "Đã xóa dòng cuối vừa đọc"
+        };
+      }
+
+      // Case 7: Lệnh Xóa toàn bộ / Xóa hết
       if (/^(?:xóa|xoá|bỏ)\s+(?:toàn\s*bộ|hết|tất\s*cả|sạch)$/i.test(lower)) {
         return {
           handled: true,
@@ -771,7 +997,7 @@
         };
       }
 
-      // Case 3: Lệnh Xóa kết luận
+      // Case 8: Lệnh Xóa kết luận
       if (/^(?:xóa|xoá|bỏ)\s+(?:phần\s*)?kết\s*luận$/i.test(lower)) {
         return {
           handled: true,
@@ -782,7 +1008,7 @@
         };
       }
 
-      // Case 4: Lệnh Xóa dòng cơ quan / Xóa tổn thương cơ quan
+      // Case 9: Lệnh Xóa dòng cơ quan / Xóa tổn thương cơ quan
       const deleteOrganMatch = lower.match(/^(?:xóa|xoá|bỏ)\s+(?:dòng|phần|mục)?\s*(phổi\s*phải|phổi\s*trái|hai\s*phổi|thận\s*phải|thận\s*trái|hai\s*thận|gan|tụy|lách|bàng\s*quang|tiền\s*liệt|tử\s*cung|buồng\s*trứng|ruột\s*thừa|hạch|dịch|màng\s*phổi|dạ\s*dày|túi\s*mật)/i);
       if (deleteOrganMatch) {
         const targetOrganStr = deleteOrganMatch[1].trim();
@@ -846,7 +1072,7 @@
         };
       }
 
-      // Case 5: Lệnh Thay thế từ khóa (Replace)
+      // Case 10: Lệnh Thay thế từ khóa (Replace)
       const replaceMatch = clean.match(/^(?:thay|đổi|sửa)\s+(?:từ|chữ|cụm\s*từ)?\s*["'“]?(.+?)["'”]?\s+(?:bằng|thành)\s+["'“]?(.+?)["'”]?$/i);
       if (replaceMatch) {
         const oldTerm = replaceMatch[1].trim();
@@ -867,7 +1093,7 @@
         }
       }
 
-      // Case 6: Lệnh Mẫu bình thường
+      // Case 11: Lệnh Mẫu bình thường
       if (/^mẫu\s+(?:ngực|phổi|lồng\s*ngực)\s*bình\s*thường/i.test(lower)) {
         return {
           handled: true,

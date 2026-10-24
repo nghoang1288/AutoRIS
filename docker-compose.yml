@@ -12,6 +12,7 @@ services:
       - ./data/feedback_cases:/app/feedback_cases
       - ./data/golden_few_shot_dataset.jsonl:/app/golden_few_shot_dataset.jsonl
       - ./clinical_synthesizer.js:/app/clinical_synthesizer.js
+      - ./clinical_safety_guard.js:/app/clinical_safety_guard.js
       - ./benchmark_server.py:/app/benchmark_server.py
     networks:
       - default
