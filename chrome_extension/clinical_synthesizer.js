@@ -726,29 +726,58 @@
       if (!text) return false;
       const lower = text.toLowerCase();
       const immunityPatterns = [
-        // Chuyển
+        // Chuyển (CT / MRI / Bệnh học)
+        /chuyển\s+dạng\s+xuất\s+huyết/i,
+        /chuyển\s+dạng\s+ác\s+tính/i,
         /chuyển\s+vị\s+đại\s+động\s+mạch/i,
         /chuyển\s+vị\s+phủ\s+tạng/i,
-        /chuyển\s+dạng\s+ác\s+tính/i,
+        /vùng\s+chuyển\s+tiếp/i,
         /chuyển\s+giai\s+đoạn/i,
         /chuyển\s+dạ/i,
         /chuyển\s+máu/i,
         /chuyển\s+chỗ/i,
         /situs\s+inversus/i,
-        // Xóa
-        /xóa\s+mờ\s+(?:góc\s+sườn\s+hoành|bờ\s+tim|vòm\s+hoành|rãnh\s+cuộn\s+não)/i,
-        /xóa\s+(?:cấu\s+trúc|ranh\s+giới|xoang\s+thận|khoang\s+dưới\s+nhện)/i,
+
+        // Xóa (CT / MRI / DSA / X-quang)
+        /xung\s+xóa\s+mỡ/i,
+        /xóa\s+mỡ/i,
+        /xóa\s+nền/i,
+        /chụp\s+mạch\s+xóa\s+nền/i,
+        /xóa\s+(?:mờ\s+)?(?:góc\s+sườn\s+hoành|bờ\s+tim|vòm\s+hoành|rãnh\s+cuộn\s+não|nhân\s+đậu|rãnh\s+sylvius)/i,
+        /xóa\s+(?:cấu\s+trúc|ranh\s+giới|xoang\s+thận|khoang\s+dưới\s+nhện|bể\s+não|bể\s+đáy)/i,
         /dấu\s+hiệu\s+xóa\s+bờ/i,
         /silhouette\s+sign/i,
-        // Thay
+
+        // Cắt (CT / Phẫu thuật / Lát cắt)
+        /cắt\s+lớp\s+vi\s+tính/i,
+        /cắt\s+lớp/i,
+        /lát\s+cắt\s+(?:mỏng|ngang|đứng\s+dọc|đứng\s+ngang|axial|sagittal|coronal)/i,
+        /(?:phẫu\s*thuật|đã|tiền\s*sử)\s+(?:cắt\s+bỏ|bỏ|cắt)/i,
+
+        // Thay (Chấn thương chỉnh hình / Cột sống / Tim mạch)
+        /thay\s+đĩa\s+đệm/i,
+        /thay\s+khớp\s+(?:háng|gối|vai|nhân\s+tạo)/i,
+        /thay\s+chỏm\s+xương\s+đùi/i,
         /thay\s+van\s+(?:hai\s+lá|ba\s+lá|động\s+mạch\s+chủ|động\s+mạch\s+phổi)/i,
-        /thay\s+khớp\s+(?:háng|gối|vai)/i,
-        /thay\s+đổi\s+(?:tín\s+hiệu|tỷ\s+trọng|đậm\s+độ|thoái\s+hóa|viêm|sợi\s+bọc|hình\s+dạng)/i,
+        /thay\s+đổi\s+(?:tín\s+hiệu|tỷ\s+trọng|đậm\s+độ|thoái\s+hóa|viêm|sợi\s+bọc|hình\s+dạng|modic)/i,
+
+        // Thoát / Chèn (Thần kinh / Cột sống)
+        /thoát\s+vị\s+(?:đĩa\s+đệm|não|qua\s+lều|hoành|bẹn|thành\s+bụng)/i,
+        /chèn\s+ép\s+(?:bao\s+màng\s+cứng|rễ\s+thần\s+kinh|tủy\s+sống|não\s+thất|đường\s+giữa)/i,
+
+        // Thải / Bỏ (Động học ngấm thuốc CT/MRI)
+        /thải\s+thuốc/i,
+        /wash-?out/i,
+        /không\s+ngấm\s+thuốc/i,
+        /ngấm\s+thuốc\s+dạng\s+viền/i,
+        /bỏ\s+sót/i,
+
         // Thêm
         /thêm\s+(?:một|vài|nhiều)?\s*(?:nốt|ổ|khối|tổn\s+thương|sỏi|hạch)/i,
-        // Bỏ
-        /(?:phẫu\s*thuật|đã|tiền\s*sử)\s+(?:cắt\s+bỏ|bỏ)/i,
-        /bỏ\s+sót/i
+
+        // Tái tạo
+        /tái\s+tạo\s+(?:đa\s+bình\s+diện|mpr|mip|3d|vrt)/i,
+        /dây\s+chằng\s+đã\s+tái\s+tạo/i
       ];
       return immunityPatterns.some(p => p.test(lower));
     },
@@ -1093,7 +1122,61 @@
         }
       }
 
-      // Case 11: Lệnh Mẫu bình thường
+      // Case 11: Lệnh Mẫu bình thường (Đa phương tiện: Siêu âm, CT, MRI, X-quang)
+      if (/^mẫu\s+(?:ct\s*sọ\s*não|sọ\s*não\s*ct|ct\s*não)\s*bình\s*thường/i.test(lower)) {
+        return {
+          handled: true,
+          action: "apply_template",
+          mota: `- Nhu mô não: Không thấy ổ giảm hoặc tăng tỷ trọng bất thường trước và sau tiêm thuốc cản quang.\n- Cấu trúc đường giữa: Cân đối, không đè đẩy hay di lệch.\n- Não thất: Hệ thống não thất hai bên, não thất III và IV kích thước và hình thái bình thường.\n- Khoang dưới nhện: Các rãnh cuộn não và bể não hai bên thông thoáng, không thấy tụ máu.\n- Xương sọ: Không thấy đường nứt hay gãy vỡ xương vòm sọ và nền sọ.`,
+          ketluan: `Hình ảnh cắt lớp vi tính sọ não hiện tại chưa thấy bất thường.`,
+          summary: `Đã áp dụng mẫu CT sọ não bình thường`
+        };
+      }
+      if (/^mẫu\s+(?:mri\s*sọ\s*não|cht\s*sọ\s*não|sọ\s*não\s*mri)\s*bình\s*thường/i.test(lower)) {
+        return {
+          handled: true,
+          action: "apply_template",
+          mota: `- Nhu mô đại não và tiểu não: Tín hiệu đồng nhất trên các chuỗi xung T1W, T2W, FLAIR. Không thấy tổn thương hạn chế khuếch tán trên DWI/ADC.\n- Đường giữa: Cân đối, không di lệch.\n- Hệ thống não thất và khoang dưới nhện: Kích thước và hình dạng bình thường, không giãn, không ứ trệ dịch.\n- Vùng tuyến yên và góc cầu tiểu não: Hai bên bình thường, không thấy khối choán chỗ.\n- Các xoang tĩnh mạch màng cứng: Bình thường, tín hiệu dòng chảy thông thoáng.`,
+          ketluan: `Hình ảnh cộng hưởng từ sọ não hiện tại chưa thấy bất thường.`,
+          summary: `Đã áp dụng mẫu MRI sọ não bình thường`
+        };
+      }
+      if (/^mẫu\s+(?:mri\s*cột\s*sống\s*thắt\s*lưng|cột\s*sống\s*thắt\s*lưng|mri\s*cột\s*sống)\s*bình\s*thường/i.test(lower)) {
+        return {
+          handled: true,
+          action: "apply_template",
+          mota: `- Đường cong sinh lý cột sống thắt lưng: Trong giới hạn bình thường.\n- Thân đốt sống: Chiều cao và tín hiệu tủy xương các thân đốt sống từ L1 đến S1 bình thường, không xẹp trượt.\n- Đĩa đệm: Chiều cao và tín hiệu các đĩa đệm bình thường, không thấy phồng hay thoát vị đĩa đệm.\n- Ống sống và lỗ tiếp hợp: Đường kính trước sau ống sống bình thường, các lỗ tiếp hợp hai bên thông thoáng, không chèn ép bao màng cứng hay rễ thần kinh.\n- Tủy cùng và chùm đuôi ngựa: Bình thường.`,
+          ketluan: `Hình ảnh cộng hưởng từ cột sống thắt lưng hiện tại chưa thấy bất thường.`,
+          summary: `Đã áp dụng mẫu MRI cột sống thắt lưng bình thường`
+        };
+      }
+      if (/^mẫu\s+(?:mri\s*khớp\s*gối|khớp\s*gối\s*mri|mri\s*gối)\s*bình\s*thường/i.test(lower)) {
+        return {
+          handled: true,
+          action: "apply_template",
+          mota: `- Dây chằng chéo trước và sau: Tín hiệu liên tục, hướng đi bình thường, không thấy đứt rách.\n- Dây chằng bên trong và bên ngoài: Bình thường, không phù nề quanh dây chằng.\n- Sụn chêm trong và ngoài: Hình thái và tín hiệu bình thường, không thấy đường rách chạm mặt khớp.\n- Sụn khớp và xương dưới sụn: Bề mặt sụn đều, không thấy khuyết sụn hay phù tủy xương.\n- Ổ khớp và túi cùng hoạt dịch: Không thấy tràn dịch bất thường.`,
+          ketluan: `Hình ảnh cộng hưởng từ khớp gối hiện tại chưa thấy bất thường.`,
+          summary: `Đã áp dụng mẫu MRI khớp gối bình thường`
+        };
+      }
+      if (/^mẫu\s+(?:ct\s*bụng|clvt\s*bụng|ct\s*ổ\s*bụng)\s*bình\s*thường/i.test(lower)) {
+        return {
+          handled: true,
+          action: "apply_template",
+          mota: `- Gan: Kích thước bình thường, tỷ trọng đồng nhất, ngấm thuốc cản quang đều qua các thì, không thấy khối khu trú.\n- Đường mật và túi mật: Không giãn, túi mật thành mỏng, không thấy sỏi tăng tỷ trọng.\n- Tụy và lách: Hình thái, kích thước và ngấm thuốc bình thường, ống tụy không giãn.\n- Hai tuyến thượng thận: Cân đối hai bên, không thấy khối u.\n- Hai thận: Vị trí bình thường, bài tiết thuốc cản quang tốt, không sỏi, không ứ nước.\n- Ống tiêu hóa: Không thấy dày thành bất thường hay tắc ruột.\n- Khoang phúc mạc và sau phúc mạc: Không thấy dịch tự do, không thấy hạch to bệnh lý.`,
+          ketluan: `Hình ảnh cắt lớp vi tính ổ bụng - tiểu khung hiện tại chưa thấy bất thường.`,
+          summary: `Đã áp dụng mẫu CT bụng bình thường`
+        };
+      }
+      if (/^mẫu\s+(?:x\s*[-]?\s*quang(?:\s*tim\s*phổi|\s*ngực|\s*phổi)?|tim\s*phổi|xquang)\s*bình\s*thường/i.test(lower)) {
+        return {
+          handled: true,
+          action: "apply_template",
+          mota: `- Phế trường hai bên: Sáng đều, không thấy tổn thương dạng đám mờ hay nốt mờ khu trú.\n- Rốn phổi hai bên: Đậm độ và kích thước bình thường.\n- Bóng tim: Kích thước bình thường, chỉ số tim - lồng ngực < 0.5.\n- Vòm hoành hai bên đều, các góc sườn hoành sáng nhọn.\n- Khung xương lồng ngực: Cân đối, không gãy vỡ xương sườn.`,
+          ketluan: `Hình ảnh X-quang tim phổi hiện tại chưa thấy bất thường.`,
+          summary: `Đã áp dụng mẫu X-quang tim phổi bình thường`
+        };
+      }
       if (/^mẫu\s+(?:ngực|phổi|lồng\s*ngực)\s*bình\s*thường/i.test(lower)) {
         return {
           handled: true,
@@ -1236,8 +1319,66 @@
       return text;
     },
 
-    version: 1792720000
+    version: 1792820000
   };
 
+  const ModalityDetector = {
+    MODALITIES: {
+      CT: "CT",
+      MRI: "MRI",
+      US: "US",
+      XR: "XR"
+    },
+
+    REGIONS: {
+      BRAIN: "BRAIN",
+      SPINE: "SPINE",
+      MSK: "MSK",
+      CHEST: "CHEST",
+      ABDOMEN: "ABDOMEN",
+      VASCULAR: "VASCULAR"
+    },
+
+    detect(serviceTitle = "", currentEditorText = "", dictationText = "") {
+      const combined = `${serviceTitle || ""} ${(currentEditorText || "").slice(0, 1000)} ${dictationText || ""}`.toLowerCase();
+      
+      let modality = this.MODALITIES.US;
+      let region = this.REGIONS.ABDOMEN;
+
+      // 1. Nhận diện Modality
+      if (/(?:cộng\s*hưởng\s*từ|chụp\s*cht|mri\b|chuỗi\s*xung|t1w|t2w|flair|dwi|adc|stir|gadolinium|đối\s*quang\s*từ)/i.test(combined)) {
+        modality = this.MODALITIES.MRI;
+      } else if (/(?:cắt\s*lớp\s*vi\s*tính|chụp\s*clvt|ct\s*scanner|\bct\b|hounsfield|\bhu\b|cửa\s*sổ\s*xương|cửa\s*sổ\s*nhu\s*mô|tiêm\s*thuốc\s*cản\s*quang)/i.test(combined)) {
+        modality = this.MODALITIES.CT;
+      } else if (/(?:x\s*[-]?\s*quang|radiography|\bxray\b|tim\s*phổi\s*thẳng|phim\s*nghiêng|tia\s*x)/i.test(combined)) {
+        modality = this.MODALITIES.XR;
+      } else if (/(?:siêu\s*âm|ultrasound|doppler|đầu\s*dò|echography)/i.test(combined)) {
+        modality = this.MODALITIES.US;
+      }
+
+      // 2. Nhận diện Phân vùng (Region)
+      if (/(?:sọ\s*não|não|tiểu\s*não|bán\s*cầu|nhân\s*đậu|đồi\s*thị|chảy\s*máu\s*não|xuất\s*huyết\s*não|nhồi\s*máu\s*não|máu\s*tụ|não\s*thất|rãnh\s*cuộn\s*não)/i.test(combined)) {
+        region = this.REGIONS.BRAIN;
+      } else if (/(?:cột\s*sống|đĩa\s*đệm|thắt\s*lưng|cổ|đốt\s*sống|l1-s1|c1-c7|t1-t12|rễ\s*thần\s*kinh|ống\s*sống|bao\s*màng\s*cứng)/i.test(combined)) {
+        region = this.REGIONS.SPINE;
+      } else if (/(?:khớp\s*gối|khớp\s*háng|khớp\s*vai|sụn\s*chêm|dây\s*chằng|cổ\s*chân|xương\s*đùi|gối|háng|vai)/i.test(combined)) {
+        region = this.REGIONS.MSK;
+      } else if (/(?:lồng\s*ngực|phổi|màng\s*phổi|trung\s*thất|lung-rads|nốt\s*phổi|rốn\s*phổi)/i.test(combined)) {
+        region = this.REGIONS.CHEST;
+      } else if (/(?:động\s*mạch\s*chủ|đm\s*phổi|cta|mra|mạch\s*máu|tĩnh\s*mạch\s*cửa|phình\s*đmc)/i.test(combined)) {
+        region = this.REGIONS.VASCULAR;
+      } else {
+        region = this.REGIONS.ABDOMEN;
+      }
+
+      return { modality, region };
+    }
+  };
+
+  ClinicalSynthesizer.ModalityDetector = ModalityDetector;
+  global.ModalityDetector = ModalityDetector;
   global.ClinicalSynthesizer = ClinicalSynthesizer;
+  if (typeof module !== "undefined" && module.exports) {
+    module.exports = { ClinicalSynthesizer, ModalityDetector };
+  }
 })(typeof window !== "undefined" ? window : globalThis);

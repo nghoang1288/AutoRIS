@@ -544,8 +544,28 @@ def call_qwen_secretary(current_mota: str, current_ketluan: str, command: str) -
 [YÊU CẦU CHỈNH SỬA CỦA BÁC SĨ]
 {command}"""
 
+    # Tự động nhận diện Modality để điều chỉnh văn phong y khoa chuyên sâu
+    context_lower = f"{current_mota} {current_ketluan} {command}".lower()
+    modality_guideline = ""
+    if any(k in context_lower for k in ["cộng hưởng từ", "mri", "chuỗi xung", "t1w", "t2w", "flair", "dwi", "đối quang từ"]):
+        modality_guideline = (
+            "- Bối cảnh CỘNG HƯỞNG TỪ (MRI): Dùng đúng thuật ngữ tín hiệu (tăng/giảm/đồng tín hiệu trên T1W/T2W/FLAIR, "
+            "hạn chế khuếch tán DWI/ADC). TUYỆT ĐỐI CẤM dùng từ 'giảm âm' hay 'tỷ trọng'.\n"
+        )
+    elif any(k in context_lower for k in ["cắt lớp vi tính", "clvt", "ct scanner", "ct", "hounsfield", "tỷ trọng", "cửa sổ xương"]):
+        modality_guideline = (
+            "- Bối cảnh CẮT LỚP VI TÍNH (CT): Dùng đúng thuật ngữ tỷ trọng (tăng/giảm/đồng tỷ trọng, tỷ trọng máu 50-80 HU). "
+            "TUYỆT ĐỐI CẤM dùng từ 'giảm âm' hay 'tín hiệu'.\n"
+        )
+    elif any(k in context_lower for k in ["siêu âm", "ultrasound", "doppler"]):
+        modality_guideline = (
+            "- Bối cảnh SIÊU ÂM (US): Dùng đúng thuật ngữ âm học (tăng âm, giảm âm, trống âm, bóng lưng sau). "
+            "TUYỆT ĐỐI CẤM dùng từ 'tỷ trọng' hay 'hạn chế khuếch tán'.\n"
+        )
+
     system_instruction = (
-        "Bạn là Thư ký Y khoa chuyên nghiệp, hỗ trợ chỉnh sửa kết quả chẩn đoán hình ảnh.\n"
+        "Bạn là Thư ký Y khoa chuyên nghiệp, hỗ trợ chỉnh sửa kết quả chẩn đoán hình ảnh Đa Phương tiện (Siêu âm, CT, MRI, X-quang).\n"
+        f"{modality_guideline}"
         "Áp dụng chính xác yêu cầu chỉnh sửa của bác sĩ vào phần mô tả và kết luận.\n"
         "Chỉ trả về DUY NHẤT một chuỗi JSON hợp lệ không có markdown:\n"
         "{\n"
@@ -927,19 +947,20 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
             apk_mtime = int(os.path.getmtime(apk_path)) if os.path.exists(apk_path) else 0
 
             # Đọc version trực tiếp từ manifest.json trước
-            ext_ver = "1.3.1"
+            ext_ver = "2.0.0"
             manifest_path = os.path.join(BASE_DIR, "chrome_extension", "manifest.json")
             if os.path.exists(manifest_path):
                 try:
                     with open(manifest_path, "r", encoding="utf-8") as mf:
                         mdata = json.load(mf)
-                        ext_ver = mdata.get("version", "1.3.1")
+                        ext_ver = mdata.get("version", "2.0.0")
                 except Exception:
                     pass
 
             # Tìm file zip tương ứng với version hoặc file zip mới nhất
             ext_candidates = [
                 f"autoris-extension-v{ext_ver}.zip",
+                "autoris-extension-v2.0.0.zip",
                 "autoris-extension-v1.3.1.zip",
                 "autoris-extension-v1.3.0.zip",
                 "autoris-extension-v1.2.2.zip",
@@ -994,7 +1015,7 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
                     "file_size": ext_size,
                     "updated_at": ext_mtime,
                     "synthesizer_version": synth_ver,
-                    "release_notes": "v1.3.1: Hotfix audit an toàn lâm sàng, pseudo-negation 'không loại trừ', DOM XSS sanitization, ASR FIFO Mutex Queue",
+                    "release_notes": "v2.0.0: Nâng cấp Đa Phương tiện Toàn diện (Siêu âm, CT, MRI, X-quang), Tri-Source Modality Detector & Bộ Gác cổng An toàn Lâm sàng 2.0 (Cross-Modality Confusion & Red-Flags)",
                     "force_update": False
                 }
             }
@@ -1180,6 +1201,7 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
             # Nếu file không tồn tại, tìm các file zip dự phòng mới nhất
             if not os.path.exists(zip_path):
                 candidates = [
+                    "autoris-extension-v2.0.0.zip",
                     "autoris-extension-v1.3.1.zip",
                     "autoris-extension-v1.3.0.zip",
                     "autoris-extension-v1.2.2.zip",

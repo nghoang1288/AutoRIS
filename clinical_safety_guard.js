@@ -8,14 +8,30 @@
   "use strict";
 
   const ClinicalSafetyGuard = {
-    version: "1.0.0",
+    version: "2.0.0",
 
-    // Danh sách cơ quan có tính đối xứng giải phẫu 2 bên
+    // Danh sách cơ quan có tính đối xứng giải phẫu 2 bên (Đa phương tiện: Thần kinh, Cột sống, Khớp, Tạng)
     BILATERAL_ORGANS: [
+      // Cơ quan ngực & bụng
       "phổi", "thận", "niệu quản", "buồng trứng", "tuyến thượng thận", "thượng thận",
-      "tinh hoàn", "mắt", "khớp háng", "khớp gối", "màng phổi", "hạch bẹn", "hạch nách",
-      "xương đùi", "cánh tay", "bán cầu đại não", "xoang hàm", "thùy trên", "thùy dưới",
-      "thùy giữa", "đỉnh phổi", "đáy phổi"
+      "tinh hoàn", "mắt", "màng phổi", "hạch bẹn", "hạch nách", "đỉnh phổi", "đáy phổi",
+      "thùy trên", "thùy dưới", "thùy giữa", "xoang hàm",
+
+      // Thần kinh sọ não (CT / MRI Brain)
+      "bán cầu đại não", "bán cầu não", "bán cầu tiểu não", "thùy trán", "thùy thái dương",
+      "thùy đỉnh", "thùy chẩm", "nhân đậu", "đồi thị", "rãnh sylvius", "góc cầu tiểu não",
+
+      // Cột sống & Thần kinh ngoại biên (CT / MRI Spine)
+      "rễ l1", "rễ l2", "rễ l3", "rễ l4", "rễ l5", "rễ s1", "rễ c5", "rễ c6", "rễ c7", "rễ c8",
+      "lỗ tiếp hợp", "khớp liên mấu",
+
+      // Cơ xương khớp (MSK MRI / X-ray)
+      "khớp gối", "dây chằng chéo trước", "dây chằng chéo sau", "dây chằng bên trong", "dây chằng bên ngoài",
+      "sụn chêm trong", "sụn chêm ngoài", "khớp háng", "khớp vai", "chỏm xương đùi", "khớp cổ chân",
+      "xương đùi", "cánh tay",
+
+      // Mạch máu đối xứng (Vascular)
+      "động mạch cảnh trong", "động mạch não giữa", "động mạch đốt sống"
     ],
 
     // Các từ phủ định lâm sàng
@@ -24,12 +40,15 @@
       "chưa phát hiện", "không ghi nhận", "không rõ"
     ],
 
-    // Các thực thể tổn thương bệnh học cần giám sát phủ định
+    // Các thực thể tổn thương bệnh học cần giám sát phủ định (Đa phương tiện)
     PATHOLOGY_ENTITIES: [
       "tràn dịch", "tràn khí", "gãy xương", "hạch to", "khối u", "khối choán chỗ",
       "sỏi", "sỏi thận", "sỏi túi mật", "sỏi niệu quản", "giãn phế quản",
       "dày tổ chức kẽ", "dày màng phổi", "tiêu xương", "tổn thương khu trú",
-      "ứ nước", "thâm nhiễm", "đám mờ", "nốt mờ", "vôi hóa ác tính"
+      "ứ nước", "thâm nhiễm", "đám mờ", "nốt mờ", "vôi hóa ác tính",
+      "xuất huyết", "chảy máu", "tụ máu", "nhồi máu", "dập não", "phù não",
+      "thoát vị đĩa đệm", "phồng đĩa đệm", "rách bao xơ", "chèn ép rễ", "hẹp ống sống",
+      "đứt dây chằng", "rách sụn chêm", "phù tủy xương", "phình động mạch", "bóc tách động mạch"
     ],
 
     /**
@@ -171,7 +190,7 @@
       }
       const sides = [];
       let isBilateral = false;
-      const lesions = "sỏi|nang|nốt|khối|u|tràn\\s*dịch|tràn\\s*khí|gãy\\s*xương|đám\\s*mờ|thâm\\s*nhiễm|vôi\\s*hóa|vôi\\s*hoá|tổn\\s*thương|giãn|ứ\\s*nước";
+      const lesions = "sỏi|nang|nốt|khối|u|tràn\\s*dịch|tràn\\s*khí|gãy\\s*xương|đám\\s*mờ|thâm\\s*nhiễm|vôi\\s*hóa|vôi\\s*hoá|tổn\\s*thương|giãn|ứ\\s*nước|xuất\\s*huyết|chảy\\s*máu|tụ\\s*máu|nhồi\\s*máu|dập\\s*não|thoát\\s*vị|phồng|rách|đứt|chèn\\s*ép|hẹp";
 
       // Pattern 0: Cụm từ 2 bên (Bilateral)
       const bilateralRegex = new RegExp(`(?:(?:hai|2|cả\\s+hai)\\s+${organ}|${organ}[^.,;\\n]{0,25}?(?:hai|2|cả\\s+hai)\\s*bên|${organ}[^.,;\\n]{0,25}?(?:rải\\s*rác\\s*hai\\s*bên)|(?:rải\\s*rác\\s*hai\\s*bên)[^.,;\\n]{0,25}?${organ})`, "gi");
@@ -181,13 +200,13 @@
       }
 
       // Pattern 1: [Tổn thương] + [Cơ quan] + [Bên] (không nhảy qua ranh giới mệnh đề , ; . \n)
-      const regex1 = new RegExp(`(?:${lesions})[^,;.!\\n]{0,35}?\\b${organ}\\s*(phải|trái)\\b`, "gi");
+      const regex1 = new RegExp(`(?:${lesions})[^,;.!\\n]{0,35}?\\b${organ}(?:\\s+bên)?\\s*(phải|trái)\\b`, "gi");
 
       // Pattern 2: [Cơ quan] + [Bên] + [có/thấy/hình ảnh] + [Tổn thương] (không nhảy qua ranh giới mệnh đề , ; . \n)
-      const regex2 = new RegExp(`\\b${organ}\\s*(phải|trái)\\b[^,;.!\\n]{0,35}?(?:có|thấy|xuất\\s*hiện|hình\\s*ảnh|nghi|theo\\s*dõi)?[^,;.!\\n]{0,15}?(?:${lesions})`, "gi");
+      const regex2 = new RegExp(`\\b${organ}(?:\\s+bên)?\\s*(phải|trái)\\b[^,;.!\\n]{0,35}?(?:có|thấy|xuất\\s*hiện|hình\\s*ảnh|nghi|theo\\s*dõi)?[^,;.!\\n]{0,15}?(?:${lesions})`, "gi");
 
-      // Pattern 3: Cụm trực tiếp "thùy trên phổi phải", "màng phổi trái"
-      const regex3 = new RegExp(`(?:tràn\\s*dịch|tràn\\s*khí|dày)[^,;.!\\n]{0,25}?\\b${organ}[^,;.!\\n]{0,15}?\\b(phải|trái)\\b`, "gi");
+      // Pattern 3: Cụm trực tiếp "thùy trên phổi phải", "màng phổi trái", "khớp gối phải"
+      const regex3 = new RegExp(`(?:tràn\\s*dịch|tràn\\s*khí|dày|đứt|rách|thoát\\s*vị|chèn\\s*ép)[^,;.!\\n]{0,35}?\\b${organ}[^,;.!\\n]{0,15}?(?:\\s+bên)?\\s*(phải|trái)\\b`, "gi");
 
       let m;
       while ((m = regex1.exec(text)) !== null) sides.push(m[1].toLowerCase());
@@ -400,10 +419,183 @@
     },
 
     /**
+     * 4. Kiểm tra nhầm lẫn thuật ngữ vật lý xuyên phương tiện (Cross-Modality Confusion)
+     */
+    checkCrossModalityAnomaly(modality = "", proposedText = "") {
+      if (!proposedText) return [];
+      const anomalies = [];
+      const textLower = proposedText.toLowerCase();
+
+      // Nếu không truyền rõ modality, cố gắng phát hiện từ văn bản
+      let activeModality = modality ? modality.toUpperCase() : "";
+      if (!activeModality) {
+        if (/(?:cộng\s*hưởng\s*từ|cht|mri|chuỗi\s*xung|t1w|t2w|flair|dwi)/i.test(textLower)) activeModality = "MRI";
+        else if (/(?:cắt\s*lớp\s*vi\s*tính|clvt|ct\s*scanner|\bct\b|hounsfield)/i.test(textLower)) activeModality = "CT";
+        else if (/(?:x\s*[-]?\s*quang|radiography|\bxray\b)/i.test(textLower)) activeModality = "XR";
+        else if (/(?:siêu\s*âm|ultrasound|doppler)/i.test(textLower)) activeModality = "US";
+      }
+      if (!activeModality) return [];
+
+      const US_ONLY_TERMS = [
+        { term: "giảm âm", label: "thuật ngữ siêu âm 'giảm âm'" },
+        { term: "tăng âm", label: "thuật ngữ siêu âm 'tăng âm'" },
+        { term: "trống âm", label: "thuật ngữ siêu âm 'trống âm'" },
+        { term: "bóng lưng", label: "thuật ngữ siêu âm 'bóng lưng'" },
+        { term: "tăng âm thành sau", label: "thuật ngữ siêu âm 'tăng âm thành sau'" }
+      ];
+
+      const CT_ONLY_TERMS = [
+        { term: "tỷ trọng", label: "thuật ngữ CT 'tỷ trọng'" },
+        { term: "tăng tỷ trọng", label: "thuật ngữ CT 'tăng tỷ trọng'" },
+        { term: "giảm tỷ trọng", label: "thuật ngữ CT 'giảm tỷ trọng'" },
+        { term: "hounsfield", label: "đơn vị CT 'Hounsfield (HU)'" }
+      ];
+
+      const MRI_ONLY_TERMS = [
+        { term: "hạn chế khuếch tán", label: "thuật ngữ MRI 'hạn chế khuếch tán (DWI)'" },
+        { term: "tăng tín hiệu", label: "thuật ngữ MRI 'tăng tín hiệu'" },
+        { term: "giảm tín hiệu", label: "thuật ngữ MRI 'giảm tín hiệu'" },
+        { term: "chuỗi xung", label: "thuật ngữ MRI 'chuỗi xung'" },
+        { term: "flair", label: "chuỗi xung MRI 'FLAIR'" },
+        { term: "dwi", label: "chuỗi xung MRI 'DWI'" },
+        { term: "t1w", label: "chuỗi xung MRI 'T1W'" },
+        { term: "t2w", label: "chuỗi xung MRI 'T2W'" }
+      ];
+
+      // Nếu là CT hoặc MRI hoặc XR nhưng dùng từ siêu âm
+      if (activeModality === "CT" || activeModality === "MRI" || activeModality === "XR") {
+        for (const item of US_ONLY_TERMS) {
+          if (textLower.includes(item.term)) {
+            anomalies.push({
+              type: "CROSS_MODALITY_CONFUSION",
+              severity: "CRITICAL",
+              message: `Nhầm lẫn vật lý: Sử dụng ${item.label} trong báo cáo ${activeModality}. Kết quả ${activeModality} phải dùng đúng thuật ngữ tỷ trọng hoặc tín hiệu!`,
+              details: { modality: activeModality, term: item.term }
+            });
+          }
+        }
+      }
+
+      // Nếu là Siêu âm nhưng dùng từ CT hoặc MRI
+      if (activeModality === "US") {
+        for (const item of CT_ONLY_TERMS) {
+          if (textLower.includes(item.term)) {
+            anomalies.push({
+              type: "CROSS_MODALITY_CONFUSION",
+              severity: "CRITICAL",
+              message: `Nhầm lẫn vật lý: Sử dụng ${item.label} trong kết quả Siêu âm!`,
+              details: { modality: activeModality, term: item.term }
+            });
+          }
+        }
+        for (const item of MRI_ONLY_TERMS) {
+          if (textLower.includes(item.term)) {
+            anomalies.push({
+              type: "CROSS_MODALITY_CONFUSION",
+              severity: "CRITICAL",
+              message: `Nhầm lẫn vật lý: Sử dụng ${item.label} trong kết quả Siêu âm!`,
+              details: { modality: activeModality, term: item.term }
+            });
+          }
+        }
+      }
+
+      // Nếu là CT nhưng dùng từ MRI
+      if (activeModality === "CT") {
+        for (const item of MRI_ONLY_TERMS) {
+          if (textLower.includes(item.term)) {
+            anomalies.push({
+              type: "CROSS_MODALITY_CONFUSION",
+              severity: "CRITICAL",
+              message: `Nhầm lẫn vật lý: Sử dụng ${item.label} trong kết quả Cắt lớp vi tính (CT)!`,
+              details: { modality: activeModality, term: item.term }
+            });
+          }
+        }
+      }
+
+      return anomalies;
+    },
+
+    /**
+     * 5. Giám sát các chỉ số nguy cơ đỏ cấp cứu (Red-Flag Emergency Monitor)
+     */
+    checkRedFlagAnomalies(proposedText = "") {
+      if (!proposedText) return [];
+      const anomalies = [];
+
+      // 1. Đè đẩy / di lệch đường giữa sọ não > 5mm (Nguy cơ tụt kẹt não)
+      const midlineMatch = proposedText.match(/(?:di\s*lệch|đè\s*đẩy|lệch|đẩy\s*lệch)\s*(?:cấu\s*trúc\s*)?(?:đường\s*giữa)[^.\n]*?(\d+(?:[.,]\d+)?)\s*(mm|cm)\b/i);
+      if (midlineMatch) {
+        let val = parseFloat(midlineMatch[1].replace(",", "."));
+        const unit = midlineMatch[2].toLowerCase();
+        if (unit === "cm") val *= 10;
+        if (val > 5.0) {
+          anomalies.push({
+            type: "RED_FLAG_EMERGENCY",
+            severity: "CRITICAL",
+            message: `BÁO ĐỘNG ĐỎ CẤP CỨU: Đường giữa di lệch ${val} mm (> 5mm). Nguy cơ tụt kẹt não đe dọa tính mạng!`,
+            details: { indicator: "midline_shift", value: val, unit: "mm" }
+          });
+        }
+      }
+
+      // 2. Máu tụ ngoài/dưới màng cứng bề dày > 10mm (Chỉ định mổ cấp cứu)
+      const hematomaMatch = proposedText.match(/(?:máu\s*tụ|tụ\s*máu)[^.\n]*?(?:bề\s*dày|dày|đo\s*được)[^.\n]*?(\d+(?:[.,]\d+)?)\s*(mm|cm)\b/i);
+      if (hematomaMatch) {
+        let val = parseFloat(hematomaMatch[1].replace(",", "."));
+        const unit = hematomaMatch[2].toLowerCase();
+        if (unit === "cm") val *= 10;
+        if (val > 10.0) {
+          anomalies.push({
+            type: "RED_FLAG_EMERGENCY",
+            severity: "CRITICAL",
+            message: `BÁO ĐỘNG ĐỎ: Khối máu tụ nội sọ có bề dày ${val} mm (> 10mm). Nguy cơ chèn ép não nặng, có chỉ định phẫu thuật khẩn cấp!`,
+            details: { indicator: "hematoma_thickness", value: val, unit: "mm" }
+          });
+        }
+      }
+
+      // 3. Phình động mạch chủ (AAA) >= 50mm (Nguy cơ vỡ phình)
+      const aaaMatch = proposedText.match(/(?:phình\s*(?:động\s*mạch\s*chủ|đmc\s*bụng|đmc\s*ngực)|đmc\s*bụng\s*đo\s*được)[^.\n]*?(\d+(?:[.,]\d+)?)\s*(mm|cm)\b/i);
+      if (aaaMatch) {
+        let val = parseFloat(aaaMatch[1].replace(",", "."));
+        const unit = aaaMatch[2].toLowerCase();
+        if (unit === "cm") val *= 10;
+        if (val >= 50.0) {
+          anomalies.push({
+            type: "RED_FLAG_EMERGENCY",
+            severity: "CRITICAL",
+            message: `BÁO ĐỘNG ĐỎ: Khối phình ĐMC có đường kính ${val} mm (>= 50mm). Nguy cơ vỡ phình cấp, cần hội chẩn ngoại mạch máu khẩn cấp!`,
+            details: { indicator: "aortic_aneurysm", value: val, unit: "mm" }
+          });
+        }
+      }
+
+      // 4. Hẹp ống sống tuyệt đối < 10mm
+      const canalMatch = proposedText.match(/(?:đường\s*kính\s*trước\s*sau\s*ống\s*sống|ống\s*sống\s*đo\s*được|kích\s*thước\s*ống\s*sống)[^.\n]*?(\d+(?:[.,]\d+)?)\s*(mm|cm)\b/i);
+      if (canalMatch) {
+        let val = parseFloat(canalMatch[1].replace(",", "."));
+        const unit = canalMatch[2].toLowerCase();
+        if (unit === "cm") val *= 10;
+        if (val < 10.0) {
+          anomalies.push({
+            type: "RED_FLAG_ANATOMY",
+            severity: "HIGH",
+            message: `CẢNH BÁO: Đường kính ống sống ${val} mm (< 10mm). Mức độ hẹp ống sống tuyệt đối, nguy cơ chèn ép tủy/chùm đuôi ngựa!`,
+            details: { indicator: "spinal_canal_stenosis", value: val, unit: "mm" }
+          });
+        }
+      }
+
+      return anomalies;
+    },
+
+    /**
      * HÀM KIỂM ĐỊNH TOÀN DIỆN CHÍNH (MAIN VERIFIER)
      * Trả về kết quả đánh giá an toàn, mức độ rủi ro và danh sách cảnh báo chi tiết
      */
-    verifyClinicalSafety(rawASR = "", proposedMota = "", proposedKetluan = "", currentMota = "", currentKetluan = "") {
+    verifyClinicalSafety(rawASR = "", proposedMota = "", proposedKetluan = "", currentMota = "", currentKetluan = "", modality = "") {
       const fullProposedText = `${proposedMota}\n${proposedKetluan}`;
       const anomalies = [];
 
@@ -415,6 +607,12 @@
 
       // 3. Kiểm tra đảo cực phủ định (mất từ "không", "chưa")
       anomalies.push(...this.checkPolarityAnomaly(rawASR, fullProposedText));
+
+      // 4. Kiểm tra nhầm lẫn thuật ngữ vật lý xuyên phương tiện (Cross-Modality)
+      anomalies.push(...this.checkCrossModalityAnomaly(modality, fullProposedText));
+
+      // 5. Kiểm tra các chỉ số nguy cơ đỏ cấp cứu (Red-Flags)
+      anomalies.push(...this.checkRedFlagAnomalies(fullProposedText));
 
       // Tính toán mức độ rủi ro tổng hợp
       let riskLevel = "NONE";
@@ -437,4 +635,7 @@
   };
 
   global.ClinicalSafetyGuard = ClinicalSafetyGuard;
+  if (typeof module !== "undefined" && module.exports) {
+    module.exports = { ClinicalSafetyGuard };
+  }
 })(typeof window !== "undefined" ? window : globalThis);

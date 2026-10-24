@@ -897,9 +897,15 @@
 
     lastSynthesizedData = synthesizedResult;
 
-    // KIỂM ĐỊNH AN TOÀN LÂM SÀNG TRƯỚC KHI ĐIỀN (CLINICAL SAFETY GUARD)
+    // Tự động nhận diện Modality & Vùng giải phẫu (Tri-Source Detector)
+    const serviceTitle = extractRISServiceTitle();
+    const detected = (typeof ModalityDetector !== "undefined" && ModalityDetector.detect)
+      ? ModalityDetector.detect(serviceTitle, `${currentMota} ${currentKetluan}`, cleanDictation)
+      : { modality: "US", region: "ABDOMEN" };
+
+    // KIỂM ĐỊNH AN TOÀN LÂM SÀNG TRƯỚC KHI ĐIỀN (CLINICAL SAFETY GUARD 2.0)
     const safetyCheck = (typeof ClinicalSafetyGuard !== "undefined")
-      ? ClinicalSafetyGuard.verifyClinicalSafety(cleanDictation, synthesizedResult.mota, synthesizedResult.ketluan, currentMota, currentKetluan)
+      ? ClinicalSafetyGuard.verifyClinicalSafety(cleanDictation, synthesizedResult.mota, synthesizedResult.ketluan, currentMota, currentKetluan, detected.modality)
       : { safe: true };
 
     if (!safetyCheck.safe && (safetyCheck.riskLevel === "CRITICAL" || safetyCheck.riskLevel === "HIGH")) {
@@ -936,6 +942,27 @@
       showToast(`⚠️ AutoRIS: Không tìm thấy ô nhập RIS hoặc mẫu không khớp! (Đã copy sẵn Ctrl+V)`, true);
     }
     return applied;
+  }
+
+  // Helper trích xuất tiêu đề chỉ định y khoa từ DOM RIS
+  function extractRISServiceTitle() {
+    try {
+      const selectors = [
+        "#lbl-dichvu", "#txt-service-name", ".patient-study-desc", "td.service-title",
+        "[id*='dich_vu']", "[id*='dichvu']", "[class*='service-name']", "[class*='study-desc']",
+        ".study-description", "#serviceName", "#tenDichVu", ".header-service-title"
+      ];
+      for (const sel of selectors) {
+        const el = document.querySelector(sel);
+        if (el) {
+          const text = (el.innerText || el.value || "").trim();
+          if (text) return text;
+        }
+      }
+    } catch (e) {
+      // Ignored
+    }
+    return "";
   }
 
   // Helper thực thi ghi kết quả vào Editor hoặc các ô riêng biệt

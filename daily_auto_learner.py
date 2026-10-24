@@ -263,11 +263,12 @@ Trả về DUY NHẤT một chuỗi JSON hợp lệ:
 
 
 def run_regression_tests():
-    """Kiểm thử hồi quy toàn bộ luật cũ bằng bộ 3 test suites: Tier 1, Tier 1 v2, và Clinical Safety Guard"""
+    """Kiểm thử hồi quy toàn bộ luật cũ bằng bộ 4 test suites: Tier 1, Tier 1 v2, Clinical Safety Guard và Multi-Modality Clinical Suite"""
     scripts = [
         os.path.join(BASE_DIR, "test_secretary_tier1.js"),
         os.path.join(BASE_DIR, "test_secretary_tier1_v2.js"),
-        os.path.join(BASE_DIR, "test_clinical_safety_guard.js")
+        os.path.join(BASE_DIR, "test_clinical_safety_guard.js"),
+        os.path.join(BASE_DIR, "test_multimodality_clinical_suite.js")
     ]
     for s in scripts:
         if os.path.exists(s):
