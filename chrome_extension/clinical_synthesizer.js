@@ -960,30 +960,40 @@
         if (mucusMatch) {
           const mucusSentence = mucusMatch[1].trim().replace(/\.?$/, ".");
           if (!/(?:nút\s+nhầy|nut\s+nhay)/i.test(motaPart)) {
-            const targetSide = /phổi\s+phải/i.test(mucusSentence) ? "phải" : "trái";
+            const isBoth = /hai\s+phổi|2\s+phổi|hai\s+bên/i.test(mucusSentence);
+            const isRight = /phổi\s+phải/i.test(mucusSentence) || isBoth;
+            const isLeft = /phổi\s+trái/i.test(mucusSentence) || isBoth;
             const suffix = "Không thấy dày tổ chức kẽ, không thấy giãn phế quản, phế nang.";
             const lines = motaPart.split("\n");
             for (let i = 0; i < lines.length; i++) {
-              if (lines[i].toLowerCase().includes("phổi " + targetSide)) {
+              if (isRight && lines[i].toLowerCase().includes("phổi phải")) {
+                const mText = isBoth ? mucusSentence.replace(/hai\s+phổi|hai\s+bên/i, "phổi phải") : mucusSentence;
                 if (lines[i].includes(suffix)) {
-                  lines[i] = lines[i].replace(suffix, mucusSentence + " " + suffix);
+                  lines[i] = lines[i].replace(suffix, mText + " " + suffix);
                 } else {
-                  lines[i] += " " + mucusSentence;
+                  lines[i] += " " + mText;
                 }
-                break;
+              }
+              if (isLeft && lines[i].toLowerCase().includes("phổi trái")) {
+                const mText = isBoth ? mucusSentence.replace(/hai\s+phổi|hai\s+bên/i, "phổi trái") : mucusSentence;
+                if (lines[i].includes(suffix)) {
+                  lines[i] = lines[i].replace(suffix, mText + " " + suffix);
+                } else {
+                  lines[i] += " " + mText;
+                }
               }
             }
             motaPart = lines.join("\n");
           }
         }
 
-        // B. DÀY MÀNG PHỔI KHU TRÚ:
+        // B. DÀY MÀNG PHỔI KHU TRÚ & CÁC BIẾN THỂ DÀY DÍNH:
         // Nếu Kết luận có mà Mô tả KHÔNG CÓ -> Bắt buộc xóa khỏi Kết luận
-        const hasMotaDayMangPhoi = /(?:dày|day)[^.\n]*màng\s+phổi|màng\s+phổi[^.\n]*(?:dày|day)/i.test(motaPart) && !/(?:không|chưa)\s+thấy\s+dày/i.test(motaPart);
+        const hasMotaDayMangPhoi = /(?:dày|day|vôi\s+hóa|vôi\s+hoá|dính|mảng\s+dày)[^.\n]*màng\s+phổi|màng\s+phổi[^.\n]*(?:dày|day|vôi|dính)/i.test(motaPart) && !/(?:không|chưa)\s+thấy\s+(?:dày|bất\s+thường)/i.test(motaPart);
         if (!hasMotaDayMangPhoi) {
-          klBody = klBody.replace(/(?:^|[.!?\n]\s*)(?:Hình\s+ảnh\s+)?dày\s+màng\s+phổi(?:\s+khu\s+trú)?(?:\s+bên\s+(?:phải|trái|hai\s+bên))?[.,;]?/gi, "");
-          klBody = klBody.replace(/(?:và|,)\s*(?:hình\s+ảnh\s+)?dày\s+màng\s+phổi(?:\s+khu\s+trú)?(?:\s+bên\s+(?:phải|trái|hai\s+bên))?/gi, "");
-          klBody = klBody.replace(/(?:hình\s+ảnh\s+)?dày\s+màng\s+phổi(?:\s+khu\s+trú)?(?:\s+bên\s+(?:phải|trái|hai\s+bên))?\s+(?:và|,)\s*/gi, "");
+          klBody = klBody.replace(/(?:^|[.!?\n]\s*)(?:Hình\s+ảnh\s+)?(?:dày|dày\s+dính|dày\s+vôi\s+hóa|dày\s+vôi\s+hoá)\s+màng\s+phổi(?:\s+khu\s+trú)?(?:\s+bên\s+(?:phải|trái|hai\s+bên))?[.,;]?/gi, "");
+          klBody = klBody.replace(/(?:và|,)\s*(?:hình\s+ảnh\s+)?(?:dày|dày\s+dính)\s+màng\s+phổi(?:\s+khu\s+trú)?(?:\s+bên\s+(?:phải|trái|hai\s+bên))?/gi, "");
+          klBody = klBody.replace(/(?:hình\s+ảnh\s+)?(?:dày|dày\s+dính)\s+màng\s+phổi(?:\s+khu\s+trú)?(?:\s+bên\s+(?:phải|trái|hai\s+bên))?\s+(?:và|,)\s*/gi, "");
           klBody = klBody.replace(/\s{2,}/g, " ").replace(/\.\s*\./g, ".").trim();
           if (klBody && !/[.!?]$/.test(klBody)) klBody += ".";
         }
@@ -1000,7 +1010,7 @@
       return text;
     },
 
-    version: 1792717412
+    version: 1792720000
   };
 
   global.ClinicalSynthesizer = ClinicalSynthesizer;

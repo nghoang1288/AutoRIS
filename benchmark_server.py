@@ -387,7 +387,12 @@ def save_feedback_case(payload):
         now_dt = datetime.now()
         now_str = now_dt.strftime("%Y%m%d_%H%M%S")
         rand_suffix = str(int(time.time() * 1000) % 1000000).zfill(6)
-        sid = payload.get("id") or f"fb_{now_str}_{rand_suffix}"
+        raw_id = payload.get("id")
+        if raw_id:
+            safe_id = re.sub(r'[^a-zA-Z0-9_-]', '', os.path.basename(str(raw_id)))
+            sid = safe_id if safe_id else f"fb_{now_str}_{rand_suffix}"
+        else:
+            sid = f"fb_{now_str}_{rand_suffix}"
 
         record = {
             "id": sid,
@@ -523,7 +528,7 @@ def call_qwen_secretary(current_mota: str, current_ketluan: str, command: str) -
             {"role": "user", "content": prompt}
         ],
         "temperature": 0.1,
-        "max_tokens": 512,
+        "max_tokens": 2048,
         "response_format": {"type": "json_object"}
     }
 
@@ -569,6 +574,127 @@ def call_qwen_secretary(current_mota: str, current_ketluan: str, command: str) -
         "summary": "Không thể kết nối đến AI server"
     }
 
+# Closed-loop learning & AI Proxy via VPS
+def get_golden_few_shots(limit=3):
+    examples = []
+    candidate_paths = [
+        os.path.join(BASE_DIR, "data", "golden_few_shot_dataset.jsonl"),
+        os.path.join(BASE_DIR, "golden_few_shot_dataset.jsonl")
+    ]
+    for p in candidate_paths:
+        if os.path.exists(p):
+            try:
+                with open(p, "r", encoding="utf-8") as f:
+                    lines = [line.strip() for line in f if line.strip()]
+                for line in reversed(lines):
+                    try:
+                        d = json.loads(line)
+                        if d.get("raw_input") and d.get("doctor_final"):
+                            examples.append({
+                                "id": d.get("id", ""),
+                                "raw": d["raw_input"].strip(),
+                                "doctor": d["doctor_final"].strip()
+                            })
+                            if len(examples) >= limit:
+                                break
+                    except Exception:
+                        continue
+                if examples:
+                    break
+            except Exception:
+                pass
+    return examples
+
+def call_ai_synthesize_proxy(raw_text, system_prompt, preferred_model="DI/google/gemini-3.7-flash", temperature=0.1):
+    few_shots = get_golden_few_shots(limit=2)
+    prompt_with_shots = (system_prompt or "").strip()
+    if few_shots and "VÍ DỤ THỰC TẾ ĐÃ ĐƯỢC BÁC SĨ BỆNH VIỆN DUYỆT" not in prompt_with_shots:
+        shots_text = "\n\n**VÍ DỤ THỰC TẾ ĐÃ ĐƯỢC BÁC SĨ BỆNH VIỆN DUYỆT (FEW-SHOT LEARNING):**\n"
+        for idx, shot in enumerate(few_shots, 1):
+            shots_text += f"\n--- VÍ DỤ {idx} ({shot['id']}) ---\nĐẦU VÀO PACS:\n{shot['raw']}\n\nKẾT QUẢ ĐÃ ĐƯỢC BÁC SĨ CHUẨN HÓA:\n{shot['doctor']}\n"
+        prompt_with_shots += shots_text
+
+    # Danh sách các mô hình Direct Inference siêu tốc trên 9router
+    models = [
+        "DI/google/gemini-3.7-flash",
+        "DI/google/gemini-3.5-flash",
+        "DI/google/gemini-2.5-flash",
+        "gemini/gemini-3.8-flash",
+        "DI/Qwen/Qwen3.8-Flash"
+    ]
+    if preferred_model and preferred_model not in models:
+        models.insert(0, preferred_model)
+
+    router_urls = [
+        os.environ.get("LLM_ROUTER_URL", "http://9router:20128/v1/chat/completions"),
+        "https://9router.hoang.qzz.io/v1/chat/completions"
+    ]
+    router_key = os.environ.get("ROUTER_API_KEY", "sk-e8ff53fc363b707a-aj81vz-ff55a6d6")
+
+    messages = [
+        {"role": "system", "content": prompt_with_shots},
+        {"role": "user", "content": f"BÁO CÁO ĐẦU VÀO:\n{raw_text}"}
+    ]
+
+    for model_name in models:
+        payload = {
+            "model": model_name,
+            "messages": messages,
+            "temperature": temperature,
+            "stream": False
+        }
+        headers = {
+            "User-Agent": "AutoRIS-Server/2.0",
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {router_key}"
+        }
+        for r_url in router_urls:
+            try:
+                req = urllib.request.Request(r_url, data=json.dumps(payload).encode("utf-8"), headers=headers)
+                with urllib.request.urlopen(req, timeout=12) as resp:
+                    raw = resp.read().decode("utf-8")
+                    try:
+                        data = json.loads(raw)
+                    except Exception:
+                        decoder = json.JSONDecoder()
+                        data, _ = decoder.raw_decode(raw.strip())
+                    content = data.get("choices", [{}])[0].get("message", {}).get("content")
+                    if content and content.strip():
+                        return {"status": "success", "data": content.strip(), "model_used": model_name}
+            except Exception as e:
+                print(f"[AutoRIS Server] Proxy model {model_name} via {r_url} failed ({e}), trying fallback...")
+                continue
+
+    # Fallback cuối: Gọi Google Gemini Direct API từ VPS
+    google_keys = [
+        "AIzaSyAbHAXnTiePACai-G3sF2taXvdRvoADuoc"
+    ]
+    for gkey in google_keys:
+        try:
+            g_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gkey}"
+            g_payload = {
+                "systemInstruction": {"parts": [{"text": prompt_with_shots}]},
+                "contents": [{"parts": [{"text": f"BÁO CÁO ĐẦU VÀO:\n{raw_text}"}]}],
+                "generationConfig": {"temperature": temperature}
+            }
+            g_req = urllib.request.Request(
+                g_url,
+                data=json.dumps(g_payload).encode("utf-8"),
+                headers={"Content-Type": "application/json"}
+            )
+            with urllib.request.urlopen(g_req, timeout=15) as resp:
+                g_data = json.loads(resp.read().decode("utf-8"))
+                text_out = g_data["candidates"][0]["content"]["parts"][0]["text"].strip()
+                if text_out:
+                    return {"status": "success", "data": text_out, "model_used": "google-gemini-2.5-flash-direct"}
+        except Exception as ge:
+            print(f"[AutoRIS Server] Google Gemini direct API fallback failed: {ge}")
+            continue
+
+    return {"status": "error", "error": "Toàn bộ AI models đều bận hoặc hết hạn ngạch"}
+
+    return {"status": "error", "error": "Toàn bộ AI models đều bận hoặc hết hạn ngạch"}
+
 class BenchmarkHandler(BaseHTTPRequestHandler):
 
     def do_OPTIONS(self):
@@ -583,9 +709,24 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def send_cors_headers(self):
-        self.send_header("Access-Control-Allow-Origin", "*")
+        origin = self.headers.get("Origin", "")
+        is_allowed = False
+        if not origin:
+            is_allowed = True
+        elif origin.startswith("chrome-extension://"):
+            is_allowed = True
+        elif any(domain in origin for domain in [
+            "192.168.50.", "10.0.", "localhost", "127.0.0.1",
+            "benhviendaihocyhanoi.com", "autoris.hoang.qzz.io", "hoang.qzz.io"
+        ]):
+            is_allowed = True
+
+        if is_allowed and origin:
+            self.send_header("Access-Control-Allow-Origin", origin)
+        else:
+            self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, Range")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Range, Authorization, X-Client-Token")
 
     def do_GET(self):
         parsed = urlparse(self.path)
@@ -640,6 +781,25 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps(resp, ensure_ascii=False).encode("utf-8"))
             return
 
+        elif path == "/api/clinical/few_shots":
+            limit_str = query.get("limit", ["5"])[0]
+            try:
+                limit = int(limit_str)
+            except ValueError:
+                limit = 5
+            shots = get_golden_few_shots(limit=limit)
+            self.send_response(200)
+            self.send_cors_headers()
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.end_headers()
+            resp = {
+                "status": "success",
+                "count": len(shots),
+                "few_shots": shots
+            }
+            self.wfile.write(json.dumps(resp, ensure_ascii=False).encode("utf-8"))
+            return
+
         elif path == "/api/clinical_synthesizer.js":
             synth_file = find_clinical_synthesizer_file()
             if synth_file:
@@ -686,32 +846,47 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
             apk_size = os.path.getsize(apk_path) if os.path.exists(apk_path) else 0
             apk_mtime = int(os.path.getmtime(apk_path)) if os.path.exists(apk_path) else 0
 
-            # Ưu tiên lấy file zip có version cụ thể v1.2.1
-            ext_zip = os.path.join(RELEASE_APK_DIR, "autoris-extension-v1.2.1.zip")
-            zip_name = "autoris-extension-v1.2.1.zip"
-            if not os.path.exists(ext_zip):
-                ext_zip = os.path.join(RELEASE_APK_DIR, "autoris-extension.zip")
-                zip_name = "autoris-extension.zip"
-            ext_size = os.path.getsize(ext_zip) if os.path.exists(ext_zip) else 0
-            ext_mtime = int(os.path.getmtime(ext_zip)) if os.path.exists(ext_zip) else 0
-
-            # Đọc version trực tiếp từ manifest.json hoặc từ trong file zip
-            ext_ver = "1.2.1"
+            # Đọc version trực tiếp từ manifest.json trước
+            ext_ver = "1.2.2"
             manifest_path = os.path.join(BASE_DIR, "chrome_extension", "manifest.json")
             if os.path.exists(manifest_path):
                 try:
                     with open(manifest_path, "r", encoding="utf-8") as mf:
                         mdata = json.load(mf)
-                        ext_ver = mdata.get("version", "1.2.1")
+                        ext_ver = mdata.get("version", "1.2.2")
                 except Exception:
                     pass
-            elif os.path.exists(ext_zip):
+
+            # Tìm file zip tương ứng với version hoặc file zip mới nhất
+            ext_candidates = [
+                f"autoris-extension-v{ext_ver}.zip",
+                "autoris-extension-v1.2.2.zip",
+                "autoris-extension-v1.2.1.zip",
+                "autoris-extension.zip"
+            ]
+            ext_zip = None
+            zip_name = f"autoris-extension-v{ext_ver}.zip"
+            for cand in ext_candidates:
+                p = os.path.join(RELEASE_APK_DIR, cand)
+                if os.path.exists(p):
+                    ext_zip = p
+                    zip_name = cand
+                    break
+
+            if not ext_zip:
+                ext_zip = os.path.join(RELEASE_APK_DIR, "autoris-extension.zip")
+                zip_name = "autoris-extension.zip"
+
+            ext_size = os.path.getsize(ext_zip) if os.path.exists(ext_zip) else 0
+            ext_mtime = int(os.path.getmtime(ext_zip)) if os.path.exists(ext_zip) else 0
+
+            if not os.path.exists(manifest_path) and os.path.exists(ext_zip):
                 try:
                     import zipfile
                     with zipfile.ZipFile(ext_zip, "r") as zf:
                         if "manifest.json" in zf.namelist():
                             mdata = json.loads(zf.read("manifest.json").decode("utf-8"))
-                            ext_ver = mdata.get("version", "1.2.1")
+                            ext_ver = mdata.get("version", ext_ver)
                 except Exception:
                     pass
 
@@ -737,7 +912,7 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
                     "file_size": ext_size,
                     "updated_at": ext_mtime,
                     "synthesizer_version": synth_ver,
-                    "release_notes": "v1.2.1: Khóa cứng đường kính 3.5mm/4.5mm, cấm dày màng phổi thừa, OTA 1.6s",
+                    "release_notes": "v1.2.2: Lung-RADS nốt bán đặc v2022, nút nhầy 2 phổi, khép kín vòng lặp tự học qua Server Proxy",
                     "force_update": False
                 }
             }
@@ -920,11 +1095,18 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
         elif path.endswith(".zip"):
             zip_filename = os.path.basename(path)
             zip_path = os.path.join(RELEASE_APK_DIR, zip_filename)
-            # Nếu yêu cầu autoris-extension.zip mà có bản cụ thể v1.2.1, ưu tiên phục vụ bản mới nhất
-            if not os.path.exists(zip_path) and zip_filename == "autoris-extension.zip":
-                v_path = os.path.join(RELEASE_APK_DIR, "autoris-extension-v1.2.1.zip")
-                if os.path.exists(v_path):
-                    zip_path = v_path
+            # Nếu file không tồn tại, tìm các file zip dự phòng mới nhất
+            if not os.path.exists(zip_path):
+                candidates = [
+                    "autoris-extension-v1.2.2.zip",
+                    "autoris-extension-v1.2.1.zip",
+                    "autoris-extension.zip"
+                ]
+                for cand in candidates:
+                    v_path = os.path.join(RELEASE_APK_DIR, cand)
+                    if os.path.exists(v_path):
+                        zip_path = v_path
+                        break
 
             if os.path.exists(zip_path):
                 self.send_response(200)
@@ -1151,6 +1333,34 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
 
             result = call_qwen_secretary(current_mota, current_ketluan, command)
             self.send_response(200)
+            self.send_cors_headers()
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.end_headers()
+            self.wfile.write(json.dumps(result, ensure_ascii=False).encode("utf-8"))
+            return
+
+        elif path == "/api/ai/synthesize":
+            content_length = int(self.headers.get("Content-Length", 0))
+            if content_length == 0 or content_length > 2 * 1024 * 1024:
+                self.send_error(400, "Invalid payload size")
+                return
+            body = self.rfile.read(content_length).decode("utf-8")
+            try:
+                data = json.loads(body)
+            except Exception as e:
+                self.send_error(400, f"Invalid JSON: {e}")
+                return
+
+            raw_text = data.get("rawText", "")
+            system_prompt = data.get("systemPrompt", "")
+            preferred_model = data.get("preferredModel", "gemini/gemini-3.8-flash")
+            try:
+                temperature = float(data.get("temperature", 0.1))
+            except Exception:
+                temperature = 0.1
+
+            result = call_ai_synthesize_proxy(raw_text, system_prompt, preferred_model, temperature)
+            self.send_response(200 if result.get("status") == "success" else 500)
             self.send_cors_headers()
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self.end_headers()

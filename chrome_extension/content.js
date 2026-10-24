@@ -1177,6 +1177,7 @@
   // 6. THANH ĐIỀU KHIỂN NỔI (CHỈ HIỆN TRÊN TRANG RIS)
   // =========================================================================
   function createFloatingVoiceBar() {
+    if (window.self !== window.top) return; // Chỉ hiện thanh nổi trên Top Frame, tránh nhân bản trong các iframes con
     if (isViewerPage()) {
       const existing = document.getElementById("autoris-floating-bar");
       if (existing) existing.remove();
@@ -1335,6 +1336,7 @@
 
     // Phím tắt F8 hoặc Alt+D trên trang RIS: Điền lại ngay lập tức
     window.addEventListener("keydown", (e) => {
+      if (window.self !== window.top) return;
       if (e.key === "F8" || (e.altKey && (e.key === "D" || e.key === "d" || e.code === "KeyD"))) {
         if (isRISPage()) {
           e.preventDefault();
@@ -1352,6 +1354,7 @@
 
     // Phím tắt Ctrl+Shift+S hoặc Alt+S: Báo lỗi / Lưu ca sửa lên server
     window.addEventListener("keydown", (e) => {
+      if (window.self !== window.top) return;
       if ((e.ctrlKey && e.shiftKey && (e.key === "S" || e.key === "s" || e.code === "KeyS")) ||
           (e.altKey && (e.key === "S" || e.key === "s" || e.code === "KeyS"))) {
         e.preventDefault();
@@ -1587,6 +1590,7 @@
 
   // Lắng nghe phím tắt F9 trên PACS (chỉ kích hoạt khi khung báo cáo PACS đang sẵn sàng)
   window.addEventListener("keydown", (e) => {
+    if (window.self !== window.top) return;
     if (e.key === "F9" && isPACSPage()) {
       const btn = document.getElementById(BUTTON_ID);
       const reportEl = findPACSElement();

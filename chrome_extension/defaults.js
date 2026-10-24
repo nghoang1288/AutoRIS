@@ -268,11 +268,22 @@ Mô tả trong mỗi phổi theo thứ tự: thuỳ trên, thuỳ giữa (chỉ 
 
 **4. Bảng phân loại Lung-RADS v2022**:
 * Lung-RADS 1: Phổi không có tổn thương, hoặc nốt vôi hoá lành tính hoàn toàn.
-* Lung-RADS 2: Nốt đặc < 6mm, nốt kính mờ < 30mm.
-* Lung-RADS 3: Nốt đặc 6mm đến < 8mm, nốt kính mờ >= 30mm.
-* Lung-RADS 4A: Nốt đặc 8mm đến < 15mm.
-* Lung-RADS 4B: Nốt đặc >= 15mm.
-* Lung-RADS 4X: Nốt có bờ tua gai hoặc đặc điểm ác tính cao.`;
+* Lung-RADS 2:
+  - Nốt đặc đường kính trung bình < 6mm.
+  - Nốt kính mờ thuần túy (pGGN) < 30mm.
+  - Nốt bán đặc (Part-solid): Có thành phần đặc < 6mm (bất kể kích thước tổng thể).
+* Lung-RADS 3:
+  - Nốt đặc đường kính trung bình từ 6mm đến < 8mm.
+  - Nốt kính mờ thuần túy (pGGN) >= 30mm.
+  - Nốt bán đặc: Có thành phần đặc từ 6mm đến < 8mm.
+* Lung-RADS 4A:
+  - Nốt đặc đường kính trung bình từ 8mm đến < 15mm.
+  - Nốt bán đặc: Có thành phần đặc >= 8mm.
+* Lung-RADS 4B:
+  - Nốt đặc đường kính trung bình >= 15mm.
+  - Nốt đặc hoặc nốt bán đặc tăng kích thước nhanh so với phim cũ.
+* Lung-RADS 4X:
+  - Bất kỳ nốt nào (đặc, bán đặc, kính mờ) có bờ tua gai (Spiculation/Burr), co kéo màng phổi ác tính, hạch to rốn phổi/trung thất kèm theo, hoặc dấu hiệu ác tính cao bất kể kích thước.`;
 
 function formatMaskedKey(key) {
   if (!key) return "Chưa thiết lập";
@@ -434,30 +445,40 @@ function sanitizeLungRADSReport(reportText) {
     if (mucusMatch) {
       const mucusSentence = mucusMatch[1].trim().replace(/\.?$/, ".");
       if (!/(?:nút\s+nhầy|nut\s+nhay)/i.test(motaPart)) {
-        const targetSide = /phổi\s+phải/i.test(mucusSentence) ? "phải" : "trái";
+        const isBoth = /hai\s+phổi|2\s+phổi|hai\s+bên/i.test(mucusSentence);
+        const isRight = /phổi\s+phải/i.test(mucusSentence) || isBoth;
+        const isLeft = /phổi\s+trái/i.test(mucusSentence) || isBoth;
         const suffix = "Không thấy dày tổ chức kẽ, không thấy giãn phế quản, phế nang.";
         const lines = motaPart.split("\n");
         for (let i = 0; i < lines.length; i++) {
-          if (lines[i].toLowerCase().includes("phổi " + targetSide)) {
+          if (isRight && lines[i].toLowerCase().includes("phổi phải")) {
+            const mText = isBoth ? mucusSentence.replace(/hai\s+phổi|hai\s+bên/i, "phổi phải") : mucusSentence;
             if (lines[i].includes(suffix)) {
-              lines[i] = lines[i].replace(suffix, mucusSentence + " " + suffix);
+              lines[i] = lines[i].replace(suffix, mText + " " + suffix);
             } else {
-              lines[i] += " " + mucusSentence;
+              lines[i] += " " + mText;
             }
-            break;
+          }
+          if (isLeft && lines[i].toLowerCase().includes("phổi trái")) {
+            const mText = isBoth ? mucusSentence.replace(/hai\s+phổi|hai\s+bên/i, "phổi trái") : mucusSentence;
+            if (lines[i].includes(suffix)) {
+              lines[i] = lines[i].replace(suffix, mText + " " + suffix);
+            } else {
+              lines[i] += " " + mText;
+            }
           }
         }
         motaPart = lines.join("\n");
       }
     }
 
-    // B. DÀY MÀNG PHỔI KHU TRÚ:
+    // B. DÀY MÀNG PHỔI KHU TRÚ & CÁC BIẾN THỂ DÀY DÍNH:
     // Nếu Kết luận có mà Mô tả KHÔNG CÓ -> Bắt buộc xóa khỏi Kết luận
-    const hasMotaDayMangPhoi = /(?:dày|day)[^.\n]*màng\s+phổi|màng\s+phổi[^.\n]*(?:dày|day)/i.test(motaPart) && !/(?:không|chưa)\s+thấy\s+dày/i.test(motaPart);
+    const hasMotaDayMangPhoi = /(?:dày|day|vôi\s+hóa|vôi\s+hoá|dính|mảng\s+dày)[^.\n]*màng\s+phổi|màng\s+phổi[^.\n]*(?:dày|day|vôi|dính)/i.test(motaPart) && !/(?:không|chưa)\s+thấy\s+(?:dày|bất\s+thường)/i.test(motaPart);
     if (!hasMotaDayMangPhoi) {
-      klBody = klBody.replace(/(?:^|[.!?\n]\s*)(?:Hình\s+ảnh\s+)?dày\s+màng\s+phổi(?:\s+khu\s+trú)?(?:\s+bên\s+(?:phải|trái|hai\s+bên))?[.,;]?/gi, "");
-      klBody = klBody.replace(/(?:và|,)\s*(?:hình\s+ảnh\s+)?dày\s+màng\s+phổi(?:\s+khu\s+trú)?(?:\s+bên\s+(?:phải|trái|hai\s+bên))?/gi, "");
-      klBody = klBody.replace(/(?:hình\s+ảnh\s+)?dày\s+màng\s+phổi(?:\s+khu\s+trú)?(?:\s+bên\s+(?:phải|trái|hai\s+bên))?\s+(?:và|,)\s*/gi, "");
+      klBody = klBody.replace(/(?:^|[.!?\n]\s*)(?:Hình\s+ảnh\s+)?(?:dày|dày\s+dính|dày\s+vôi\s+hóa|dày\s+vôi\s+hoá)\s+màng\s+phổi(?:\s+khu\s+trú)?(?:\s+bên\s+(?:phải|trái|hai\s+bên))?[.,;]?/gi, "");
+      klBody = klBody.replace(/(?:và|,)\s*(?:hình\s+ảnh\s+)?(?:dày|dày\s+dính)\s+màng\s+phổi(?:\s+khu\s+trú)?(?:\s+bên\s+(?:phải|trái|hai\s+bên))?/gi, "");
+      klBody = klBody.replace(/(?:hình\s+ảnh\s+)?(?:dày|dày\s+dính)\s+màng\s+phổi(?:\s+khu\s+trú)?(?:\s+bên\s+(?:phải|trái|hai\s+bên))?\s+(?:và|,)\s*/gi, "");
       klBody = klBody.replace(/\s{2,}/g, " ").replace(/\.\s*\./g, ".").trim();
       if (klBody && !/[.!?]$/.test(klBody)) klBody += ".";
     }

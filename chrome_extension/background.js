@@ -465,16 +465,62 @@ async function handleFeedbackSubmission(payload) {
   return await res.json();
 }
 
-// 6. Xử lý gọi AI Synthesizer cho lời đọc điện thoại (9router -> Fallback Direct Google)
+// 5.5. Gọi Server Proxy (AutoRIS VPS Proxy - Bảo vệ API Key & Tích hợp Few-Shot)
+async function callAutorisServerProxy(serverUrl, rawText, systemPrompt, preferredModel, timeoutMs = 25000, externalSignal = null) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  const onAbort = () => controller.abort();
+  if (externalSignal) {
+    externalSignal.addEventListener("abort", onAbort, { once: true });
+  }
+
+  try {
+    const cleanUrl = (serverUrl || DEFAULT_CONFIG.serverUrl).trim().replace(/\/+$/, "");
+    const response = await fetch(`${cleanUrl}/api/ai/synthesize`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        rawText: rawText,
+        systemPrompt: systemPrompt,
+        preferredModel: preferredModel || DEFAULT_CONFIG.aiModel
+      }),
+      signal: controller.signal
+    });
+
+    clearTimeout(timeoutId);
+    if (externalSignal) externalSignal.removeEventListener("abort", onAbort);
+
+    if (!response.ok) {
+      throw new Error(`Server proxy error: HTTP ${response.status}`);
+    }
+
+    const resJson = await response.json();
+    if (resJson.status === "success" && resJson.data) {
+      return resJson.data;
+    }
+    throw new Error(resJson.error || "Không nhận được dữ liệu hợp lệ từ Server Proxy");
+  } catch (err) {
+    clearTimeout(timeoutId);
+    if (externalSignal) externalSignal.removeEventListener("abort", onAbort);
+    throw err;
+  }
+}
+
+// 6. Xử lý gọi AI Synthesizer cho lời đọc điện thoại (Proxy VPS -> 9router -> Fallback Direct Google)
 async function handleAISynthesis(payload) {
   const { currentMota, currentKetluan, dictationText } = payload;
   const config = await chrome.storage.local.get([
     STORAGE_KEYS.AI_API_ENDPOINT,
     STORAGE_KEYS.AI_API_KEY,
     STORAGE_KEYS.AI_MODEL,
-    STORAGE_KEYS.GOOGLE_KEYS_POOL
+    STORAGE_KEYS.GOOGLE_KEYS_POOL,
+    STORAGE_KEYS.SERVER_URL
   ]);
 
+  const serverUrl = (config[STORAGE_KEYS.SERVER_URL] || DEFAULT_CONFIG.serverUrl).trim();
   const endpoint = (config[STORAGE_KEYS.AI_API_ENDPOINT] || DEFAULT_CONFIG.aiEndpoint).trim().replace(/\/+$/, "");
   const apiKey = (config[STORAGE_KEYS.AI_API_KEY] || DEFAULT_CONFIG.aiKey).trim();
   const model = (config[STORAGE_KEYS.AI_MODEL] || DEFAULT_CONFIG.aiModel).trim();
@@ -492,24 +538,31 @@ ${dictationText}
 `;
 
   try {
-    const rawOut = await callOpenAICompatibleServer(endpoint, apiKey, model, RADIOLOGY_SYSTEM_PROMPT, userPrompt);
+    const rawOut = await callAutorisServerProxy(serverUrl, userPrompt, RADIOLOGY_SYSTEM_PROMPT, model, 25000);
     return parseAIJsonResult(rawOut);
-  } catch (serverErr) {
-    console.warn("[AutoRIS BG] 9router gặp sự cố, chuyển tiếp sang Google Direct API...", serverErr.message);
+  } catch (proxyErr) {
+    console.warn("[AutoRIS BG] Server proxy gặp sự cố, thử tiếp 9router...", proxyErr.message);
     try {
-      const rawOut = await callGoogleGeminiDirect(googleKeysPool, model, RADIOLOGY_SYSTEM_PROMPT, userPrompt);
+      const rawOut = await callOpenAICompatibleServer(endpoint, apiKey, model, RADIOLOGY_SYSTEM_PROMPT, userPrompt);
       return parseAIJsonResult(rawOut);
-    } catch (directErr) {
-      throw new Error(`9router lỗi: ${serverErr.message}; Google Direct lỗi: ${directErr.message}`);
+    } catch (serverErr) {
+      console.warn("[AutoRIS BG] 9router gặp sự cố, chuyển tiếp sang Google Direct API...", serverErr.message);
+      try {
+        const rawOut = await callGoogleGeminiDirect(googleKeysPool, model, RADIOLOGY_SYSTEM_PROMPT, userPrompt);
+        return parseAIJsonResult(rawOut);
+      } catch (directErr) {
+        throw new Error(`Server: ${proxyErr.message}; 9router: ${serverErr.message}; Google Direct: ${directErr.message}`);
+      }
     }
   }
 }
 
-// 7. Xử lý gọi AI Synthesizer cho PACS Chest CT Lung-RADS (9router -> Fallback Direct Google)
+// 7. Xử lý gọi AI Synthesizer cho PACS Chest CT Lung-RADS (Server Proxy -> 9router -> Fallback Direct Google)
 async function handlePACSSynthesizeReport(payload) {
-  const { connectionMode, apiEndpoint, apiKey, googleKeysPool, preferredModel, systemPrompt, rawText } = payload;
+  const { connectionMode, apiEndpoint, apiKey, googleKeysPool, preferredModel, systemPrompt, rawText, serverUrl } = payload;
   const mode = connectionMode || DEFAULT_CONFIG.connectionMode;
 
+  const targetServerUrl = (serverUrl || DEFAULT_CONFIG.serverUrl).trim().replace(/\/+$/, "");
   const serverEndpoint = (apiEndpoint || DEFAULT_CONFIG.aiEndpoint).trim().replace(/\/+$/, "");
   const serverKey = apiKey || DEFAULT_CONFIG.aiKey;
   const activeGooglePool = (googleKeysPool && googleKeysPool.length > 0) ? googleKeysPool : DEFAULT_CONFIG.googleKeysPool;
@@ -528,18 +581,30 @@ async function handlePACSSynthesizeReport(payload) {
   const executionPromise = (async () => {
     try {
       if (mode === "server") {
-        return await callOpenAICompatibleServer(serverEndpoint, serverKey, preferredModel, activePrompt, `BÁO CÁO ĐẦU VÀO:\n${rawText}`, 15000, abortController.signal);
+        try {
+          return await callAutorisServerProxy(targetServerUrl, rawText, activePrompt, preferredModel, 25000, abortController.signal);
+        } catch (proxyErr) {
+          if (abortController.signal.aborted) throw proxyErr;
+          console.warn("[AutoRIS BG] Server proxy lỗi, chuyển sang 9router trực tiếp:", proxyErr.message);
+          return await callOpenAICompatibleServer(serverEndpoint, serverKey, preferredModel, activePrompt, `BÁO CÁO ĐẦU VÀO:\n${rawText}`, 15000, abortController.signal);
+        }
       }
       if (mode === "direct") {
         return await callGoogleGeminiDirect(activeGooglePool, preferredModel, activePrompt, `BÁO CÁO ĐẦU VÀO:\n${rawText}`, 15000, abortController.signal);
       }
-      // Chế độ "auto": Thử Server -> nếu lỗi chuyển Google Direct
+      // Chế độ "auto": Thử Server Proxy -> nếu lỗi thử 9router -> nếu lỗi chuyển Google Direct
       try {
-        return await callOpenAICompatibleServer(serverEndpoint, serverKey, preferredModel, activePrompt, `BÁO CÁO ĐẦU VÀO:\n${rawText}`, 15000, abortController.signal);
-      } catch (err) {
-        if (abortController.signal.aborted) throw err;
-        console.warn("[AutoRIS BG] Server 9router gặp lỗi, tự động chuyển sang Google Direct...", err.message);
-        return await callGoogleGeminiDirect(activeGooglePool, preferredModel, activePrompt, `BÁO CÁO ĐẦU VÀO:\n${rawText}`, 15000, abortController.signal);
+        return await callAutorisServerProxy(targetServerUrl, rawText, activePrompt, preferredModel, 25000, abortController.signal);
+      } catch (proxyErr) {
+        if (abortController.signal.aborted) throw proxyErr;
+        console.warn("[AutoRIS BG] Server Proxy lỗi, chuyển sang 9router...", proxyErr.message);
+        try {
+          return await callOpenAICompatibleServer(serverEndpoint, serverKey, preferredModel, activePrompt, `BÁO CÁO ĐẦU VÀO:\n${rawText}`, 15000, abortController.signal);
+        } catch (routerErr) {
+          if (abortController.signal.aborted) throw routerErr;
+          console.warn("[AutoRIS BG] 9router gặp lỗi, tự động chuyển sang Google Direct...", routerErr.message);
+          return await callGoogleGeminiDirect(activeGooglePool, preferredModel, activePrompt, `BÁO CÁO ĐẦU VÀO:\n${rawText}`, 15000, abortController.signal);
+        }
       }
     } finally {
       if (timeoutId) clearTimeout(timeoutId);

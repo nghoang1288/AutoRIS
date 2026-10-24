@@ -8,6 +8,17 @@
   let currentVersion = 0;
 
   window.addEventListener("message", async (event) => {
+    // Kiểm tra an ninh: Chỉ chấp nhận tin nhắn từ parent window và nguồn đáng tin cậy
+    if (event.source !== window.parent) return;
+    if (event.origin && event.origin !== "null" &&
+        !event.origin.startsWith("chrome-extension://") &&
+        !event.origin.includes("192.168.50.") &&
+        !event.origin.includes("benhviendaihocyhanoi.com") &&
+        !event.origin.includes("autoris.hoang.qzz.io")) {
+      console.warn("[AutoRIS Sandbox] Chặn message từ origin không tin cậy:", event.origin);
+      return;
+    }
+
     const data = event.data;
     if (!data || !data.action) return;
 
