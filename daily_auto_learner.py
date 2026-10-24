@@ -43,7 +43,7 @@ API_BASE_URL = os.environ.get("AUTORIS_SERVER_URL", "https://autoris.hoang.qzz.i
 
 # Cấu hình Model AI: Ưu tiên Gemini 3.8 Flash, tự động fallback sang Gemini 3.5 Flash nếu hết quota
 ROUTER_URL = os.environ.get("LLM_ROUTER_URL", "http://127.0.0.1:20128/v1/chat/completions")
-ROUTER_API_KEY = os.environ.get("ROUTER_API_KEY", "sk-e8ff53fc363b707a-aj81vz-ff55a6d6")
+ROUTER_API_KEY = os.environ.get("ROUTER_API_KEY", "")
 AI_MODELS = [
     os.environ.get("AUTORIS_LEARNER_MODEL", "gemini/gemini-3.8-flash"),
     "gemini/gemini-3.5-flash-lite",
@@ -412,17 +412,35 @@ def run_daily_pipeline():
             print(f"    -> Trạng thái: {ver_res['status']} ({ver_res.get('score', 100)}%)")
 
     # 4. Kiểm thử hồi quy hệ thống (Regression Test Suite)
-    print("[*] Đang chạy bộ kiểm thử hồi quy 11/11 tests (Regression Test Suite)...")
+    print("[*] Đang chạy bộ kiểm thử hồi quy (Regression Test Suite)...")
     reg_passed = run_regression_tests()
     print(f"[*] Kết quả Regression Test: {'PASS 100% ✅' if reg_passed else 'FAIL ❌'}")
 
-    # 5. Cập nhật Golden Memory
-    saved_count = update_golden_memory(learning_cases)
-    print(f"[+] Đã lưu {saved_count} ca vào kho tri thức Golden Few-Shot Memory: {GOLDEN_DATASET_FILE}")
+    if not reg_passed:
+        print("🚨 [CẢNH BÁO AN TOÀN LÂM SÀNG] Kiểm thử hồi quy thất bại! TẠM DỪNG pipeline tự học, KHÔNG ghi vào Golden Memory và KHÔNG resolve ca bệnh.")
+        report_file, _ = generate_daily_audit_report(learning_cases, False)
+        print(f"[!] Đã xuất báo cáo cảnh báo sự cố tại: {report_file}")
+        return
 
-    # 6. Đánh dấu ca hoàn thành trên server
-    resolve_cases_on_server(case_ids, summary_note=f"Gemini 3.8 Flash đã học và đối chiếu đạt chuẩn ngày {datetime.now().strftime('%Y-%m-%d')}")
-    print(f"[+] Đã đánh dấu {len(case_ids)} ca chuyển sang trạng thái RESOLVED.")
+    # Lọc chỉ những ca vượt qua xác minh độc lập (score >= 80 và VERIFIED_PASS)
+    valid_cases = [
+        lc for lc in learning_cases
+        if lc.get("verification", {}).get("status") == "VERIFIED_PASS" and lc.get("verification", {}).get("score", 0) >= 80
+    ]
+    rejected_cases = [lc for lc in learning_cases if lc not in valid_cases]
+
+    if rejected_cases:
+        print(f"⚠️ Có {len(rejected_cases)} ca không đạt ngưỡng xác minh (score < 80% hoặc không pass). Giữ trạng thái pending để bác sĩ kiểm tra thủ công.")
+
+    # 5. Cập nhật Golden Memory CHỈ với ca đạt chuẩn
+    saved_count = update_golden_memory(valid_cases)
+    print(f"[+] Đã lưu {saved_count}/{len(learning_cases)} ca đạt chuẩn vào kho tri thức Golden Few-Shot Memory: {GOLDEN_DATASET_FILE}")
+
+    # 6. Đánh dấu ca hoàn thành trên server CHỈ cho ca đạt chuẩn
+    valid_ids = [lc["case_id"] for lc in valid_cases]
+    if valid_ids:
+        resolve_cases_on_server(valid_ids, summary_note=f"Gemini 3.8 Flash đã học và đối chiếu đạt chuẩn ngày {datetime.now().strftime('%Y-%m-%d')}")
+        print(f"[+] Đã đánh dấu {len(valid_ids)} ca chuyển sang trạng thái RESOLVED.")
 
     # 7. Xuất báo cáo đối chiếu
     report_file, _ = generate_daily_audit_report(learning_cases, reg_passed)

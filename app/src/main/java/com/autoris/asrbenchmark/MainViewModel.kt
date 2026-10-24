@@ -171,8 +171,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _serverUrl = MutableStateFlow(
         run {
             val saved = prefs.getString("server_url", null)
-            if (saved.isNullOrBlank() || saved.contains("192.168.50.100") || saved.contains("localhost")) {
-                prefs.edit().putString("server_url", "https://autoris.hoang.qzz.io").apply()
+            if (saved.isNullOrBlank()) {
                 "https://autoris.hoang.qzz.io"
             } else {
                 saved
@@ -330,6 +329,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (_operatingMode.value == AppOperatingMode.BENCHMARK) {
             _statusMessage.value = "Từ chối gửi RIS: Đang ở chế độ Benchmark kiểm thử!"
             return false
+        }
+
+        // Clinical Safety Gate Check: Fail-closed enforcement
+        val decision = _safetyGateDecision.value
+        if (_operatingMode.value == AppOperatingMode.CLINICAL_SAFE && decision != null) {
+            if (decision.status == SafetyGateStatus.REJECTED) {
+                val reason = decision.reasons.firstOrNull() ?: "Vi phạm an toàn lâm sàng nghiêm trọng"
+                _statusMessage.value = "⛔ Từ chối gửi RIS: $reason"
+                Log.w(TAG, "exportToRis REJECTED by Safety Gate: $reason")
+                return false
+            }
+            if (isLiveStream && decision.status == SafetyGateStatus.REVIEW_REQUIRED) {
+                Log.i(TAG, "exportToRis live auto-send suspended: REVIEW_REQUIRED")
+                return false
+            }
         }
 
         val currentText = (customText ?: _finalTranscript.value.ifBlank { _livePartial.value }).trim()
@@ -1106,7 +1120,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             if (_isAutoSyncEnabled.value) {
                 val toUpload = session.copy(id = insertedId)
                 BenchmarkSyncClient.uploadSessions(_serverUrl.value, listOf(toUpload))
-                if (!audioToSave.isNullOrBlank()) {
+                // Clinical privacy: only upload audio if explicitly enabled or if local server
+                val isLocalServer = _serverUrl.value.contains("192.168.") || _serverUrl.value.contains("10.") || _serverUrl.value.contains("localhost") || _serverUrl.value.contains("127.0.0.1")
+                if (!audioToSave.isNullOrBlank() && (_operatingMode.value != AppOperatingMode.CLINICAL_SAFE || isLocalServer)) {
                     val audioFile = File(audioToSave)
                     if (audioFile.exists()) {
                         BenchmarkSyncClient.uploadAudio(_serverUrl.value, insertedId, audioFile)
@@ -1214,9 +1230,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun deleteAllHistory() {
         viewModelScope.launch(Dispatchers.IO) {
             db.deleteAll()
+            try {
+                val baseDir = getApplication<Application>().getExternalFilesDir(android.os.Environment.DIRECTORY_RECORDINGS)
+                    ?: File(getApplication<Application>().filesDir, "benchmark_audio")
+                val audioDir = File(baseDir, "autoris_recordings")
+                if (audioDir.exists()) {
+                    audioDir.listFiles()?.forEach { it.delete() }
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Error cleaning up recordings directory: ${e.message}")
+            }
             loadHistory()
             withContext(Dispatchers.Main) {
-                _statusMessage.value = "Đã xóa toàn bộ dữ liệu benchmark"
+                _statusMessage.value = "Đã xóa toàn bộ dữ liệu & file ghi âm"
             }
         }
     }

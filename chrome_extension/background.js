@@ -82,12 +82,25 @@ async function checkAndUpdateSynthesizerCode(force = false) {
         const newCode = await codeRes.text();
 
         if (newCode && newCode.includes("ClinicalSynthesizer")) {
+          // Kiểm tra toàn vẹn SHA-256 chống MITM / file hỏng
+          if (verData.sha256) {
+            const encoder = new TextEncoder();
+            const dataBuffer = encoder.encode(newCode);
+            const hashBuffer = await crypto.subtle.digest("SHA-256", dataBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const computedSha256 = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+            if (computedSha256.toLowerCase() !== verData.sha256.toLowerCase()) {
+              console.error(`[AutoRIS BG] ❌ Lỗi kiểm tra toàn vẹn mã JS! Hash không khớp: tính toán ${computedSha256} vs server ${verData.sha256}`);
+              return { updated: false, reason: "integrity_check_failed" };
+            }
+          }
+
           await chrome.storage.local.set({
             [STORAGE_KEYS.SYNTHESIZER_CODE]: newCode,
             [STORAGE_KEYS.SYNTHESIZER_VERSION]: verData.version,
             [STORAGE_KEYS.SYNTHESIZER_SYNC_TIME]: Date.now()
           });
-          console.log(`[AutoRIS BG] ⚡ Nhận thành công luật ClinicalSynthesizer mới (v${verData.version}) từ ${serverUrl}!`);
+          console.log(`[AutoRIS BG] ⚡ Nhận thành công luật ClinicalSynthesizer mới (v${verData.version}) từ ${serverUrl} (xác thực SHA-256 toàn vẹn)!`);
           return { updated: true, version: verData.version };
         }
       }
@@ -202,11 +215,15 @@ async function pollLatestDictation() {
     }
 
     const data = await resp.json();
-    if (data && data.has_new && data.dictation) {
-      const item = data.dictation;
-      const itemId = item.id;
+    if (data && data.has_new) {
+      const itemsToProcess = (data.dictations && Array.isArray(data.dictations) && data.dictations.length > 0)
+        ? data.dictations
+        : (data.dictation ? [data.dictation] : []);
 
-      if (itemId && itemId !== lastId) {
+      for (const item of itemsToProcess) {
+        const itemId = item.id;
+        if (!itemId || itemId === lastSeenId) continue;
+
         lastSeenId = itemId;
         await chrome.storage.local.set({
           [STORAGE_KEYS.LAST_APPLIED_ID]: itemId,
@@ -222,7 +239,7 @@ async function pollLatestDictation() {
         if (history.length > 10) history.pop();
         await chrome.storage.local.set({ [STORAGE_KEYS.RECENT_HISTORY]: history });
 
-        // Phát sóng lệnh tới tất cả các tab RIS đang mở
+        // Phát sóng lệnh tới tất cả các tab RIS đang mở theo đúng thứ tự
         broadcastDictationToRISTabs(item);
       }
     }

@@ -378,6 +378,25 @@
     const isCE = editorEl.isContentEditable || editorEl.getAttribute("contenteditable") === "true";
     const isInput = editorEl.tagName === "TEXTAREA" || editorEl.tagName === "INPUT";
 
+    // Xử lý lệnh xóa trắng / xóa toàn bộ văn bản
+    if (synthResult.action === "clear_all") {
+      if (isCE) {
+        const footerRegex = /(?:<table\b|<h1\b|(?:<p\b[^>]*>)?\s*(?:<strong>|<b>)?\s*(?:Người\s*ký|Kỹ\s*thuật\s*viên|Bác\s*sĩ\s*đọc|Chữ\s*ký|Alt\s*\+\s*1|Alt\s*\+\s*2))/i;
+        const footerMatch = editorEl.innerHTML.normalize("NFC").match(footerRegex);
+        const footerHTML = footerMatch ? editorEl.innerHTML.normalize("NFC").slice(footerMatch.index) : "";
+        editorEl.innerHTML = footerHTML ? "<p><br></p>" + footerHTML : "<p><br></p>";
+      } else {
+        const footerRegex = /(?:^|\n)\s*(?:Người\s*ký|Kỹ\s*thuật\s*viên|Bác\s*sĩ\s*đọc|Chữ\s*ký|Alt\s*\+\s*1|Alt\s*\+\s*2)[^\n]*/i;
+        const text = (editorEl.value || "").normalize("NFC");
+        const footerMatch = text.match(footerRegex);
+        const footerText = footerMatch ? text.slice(footerMatch.index) : "";
+        editorEl.value = footerText ? "\n\n" + footerText.trim() : "";
+      }
+      triggerInputEvents(editorEl);
+      highlightElement(editorEl);
+      return true;
+    }
+
     const organFindings = synthResult.organs || [];
     // Hỗ trợ trường hợp cũ nếu synthResult chỉ trả về affected_organ đơn lẻ
     if (organFindings.length === 0 && synthResult.affected_organ) {
@@ -924,7 +943,18 @@
       showCommandPill(synthesizedResult.summary);
     }
 
-    let applied = executeDirectApply(synthesizedResult, editor, sep);
+    let applied = false;
+    const isAutoApplyEnabled = storedConfig[STORAGE_KEYS.AUTO_APPLY] !== false;
+
+    if (!isAutoApplyEnabled && !synthesizedResult.isSecretary) {
+      // Auto Apply bị tắt: Không tự ý điền vào RIS, chỉ cập nhật lên Floating Bar
+      applied = false;
+      lastSynthesizedReport = `${synthesizedResult.mota || ""}\n\nKẾT LUẬN:\n${synthesizedResult.ketluan || ""}`.trim();
+      updateFloatingPreview(cleanDictation, synthesizedResult, "Auto Apply đang TẮT. Bấm F8 hoặc '✍️ Điền lại' để chèn!");
+      showToast("ℹ️ Auto Apply đang tắt. Bấm F8 để điền vào RIS!");
+    } else {
+      applied = executeDirectApply(synthesizedResult, editor, sep);
+    }
 
     if (storedConfig[STORAGE_KEYS.AUTO_COPY] !== false) {
       copyToClipboard(`${synthesizedResult.mota || ""}\n\nKẾT LUẬN:\n${synthesizedResult.ketluan || ""}`);
@@ -977,12 +1007,12 @@
       }
     } else if (sep) {
       saveUndoSnapshot(sep.motaEl, sep.ketluanEl, null);
-      if (sep.motaEl && synthesizedResult.mota) {
+      if (sep.motaEl && typeof synthesizedResult.mota === "string") {
         sep.motaEl.value = synthesizedResult.mota;
         triggerInputEvents(sep.motaEl);
         applied = true;
       }
-      if (sep.ketluanEl && synthesizedResult.ketluan) {
+      if (sep.ketluanEl && typeof synthesizedResult.ketluan === "string") {
         sep.ketluanEl.value = synthesizedResult.ketluan;
         triggerInputEvents(sep.ketluanEl);
         applied = true;
@@ -1212,30 +1242,36 @@
     }
 
     if (lastState.unifiedEl) {
-      const activeEl = document.body.contains(lastState.unifiedEl) ? lastState.unifiedEl : findRISEditor();
-      if (activeEl) {
-        if (activeEl.isContentEditable) {
-          activeEl.innerHTML = lastState.unifiedVal;
-        } else {
-          activeEl.value = lastState.unifiedVal;
-        }
-        triggerInputEvents(activeEl);
-        highlightElement(activeEl);
+      if (!document.body.contains(lastState.unifiedEl)) {
+        showToast("⚠️ Khung soạn thảo của ca bệnh trước đã đóng. Từ chối hoàn tác sang ca bệnh mới để chống nhiễm chéo!", true);
+        return;
       }
+      const activeEl = lastState.unifiedEl;
+      if (activeEl.isContentEditable) {
+        activeEl.innerHTML = lastState.unifiedVal;
+      } else {
+        activeEl.value = lastState.unifiedVal;
+      }
+      triggerInputEvents(activeEl);
+      highlightElement(activeEl);
     } else {
-      const curSep = findSeparateFields();
-      const activeMota = (lastState.motaEl && document.body.contains(lastState.motaEl)) ? lastState.motaEl : curSep?.motaEl;
-      const activeKL = (lastState.ketluanEl && document.body.contains(lastState.ketluanEl)) ? lastState.ketluanEl : curSep?.ketluanEl;
+      const motaInDom = lastState.motaEl && document.body.contains(lastState.motaEl);
+      const klInDom = lastState.ketluanEl && document.body.contains(lastState.ketluanEl);
 
-      if (activeMota) {
-        if (activeMota.isContentEditable) activeMota.innerHTML = lastState.motaVal;
-        else activeMota.value = lastState.motaVal;
-        triggerInputEvents(activeMota);
+      if (!motaInDom && !klInDom) {
+        showToast("⚠️ Các ô nhập liệu của ca bệnh trước đã đóng. Từ chối hoàn tác sang ca bệnh mới để chống nhiễm chéo!", true);
+        return;
       }
-      if (activeKL) {
-        if (activeKL.isContentEditable) activeKL.innerHTML = lastState.ketluanVal;
-        else activeKL.value = lastState.ketluanVal;
-        triggerInputEvents(activeKL);
+
+      if (motaInDom) {
+        if (lastState.motaEl.isContentEditable) lastState.motaEl.innerHTML = lastState.motaVal;
+        else lastState.motaEl.value = lastState.motaVal;
+        triggerInputEvents(lastState.motaEl);
+      }
+      if (klInDom) {
+        if (lastState.ketluanEl.isContentEditable) lastState.ketluanEl.innerHTML = lastState.ketluanVal;
+        else lastState.ketluanEl.value = lastState.ketluanVal;
+        triggerInputEvents(lastState.ketluanEl);
       }
     }
 
@@ -1505,9 +1541,11 @@
 
       const editor = findRISEditor();
 
-      // 1. Kiểm tra bản dịch PACS Lung-RADS gần nhất (F9)
-      const store = await chrome.storage.local.get([STORAGE_KEYS.LAST_REPORT]);
-      const pacsReport = lastSynthesizedReport || store[STORAGE_KEYS.LAST_REPORT];
+      // 1. Kiểm tra bản dịch PACS Lung-RADS gần nhất (F9) - Chống nhiễm chéo ca bệnh cũ (> 5 phút coi như hết hạn)
+      const store = await chrome.storage.local.get([STORAGE_KEYS.LAST_REPORT, STORAGE_KEYS.LAST_REPORT_TIME]);
+      const lastRepTime = store[STORAGE_KEYS.LAST_REPORT_TIME] || 0;
+      const isStale = (Date.now() - lastRepTime) > 5 * 60 * 1000;
+      const pacsReport = lastSynthesizedReport || (!isStale ? store[STORAGE_KEYS.LAST_REPORT] : null);
 
       if (pacsReport && editor) {
         applySynthesizedReportToRISEditor(editor, pacsReport);
@@ -1974,6 +2012,29 @@
           if (msg.rawText) {
             lastInputText = msg.rawText;
           }
+
+          // Kiểm định an toàn lâm sàng (Clinical Safety Guard) cho kết quả PACS
+          if (typeof ClinicalSafetyGuard !== "undefined") {
+            const safetyCheck = ClinicalSafetyGuard.verifyClinicalSafety(msg.rawText || "", report, "", "", "", "CT");
+            if (!safetyCheck.safe && (safetyCheck.riskLevel === "CRITICAL" || safetyCheck.riskLevel === "HIGH")) {
+              const reason = safetyCheck.anomalies?.[0]?.message || "Bất thường lâm sàng";
+              console.warn("[AutoRIS PACS Safety] Từ chối tự động điền PACS:", reason);
+              showToast(`⛔ Chặn tự điền PACS: ${reason}`, true);
+              updateFloatingPreview(msg.rawText || "", null, `⚠️ ${reason}`);
+              sendResponse({ received: true, blocked: true, reason: reason });
+              return;
+            }
+          }
+
+          // Kiểm tra cài đặt Auto Apply
+          const isAutoApplyEnabled = storedConfig[STORAGE_KEYS.AUTO_APPLY] !== false;
+          if (!isAutoApplyEnabled) {
+            showToast("ℹ️ Auto Apply đang tắt. Bấm F8 để điền kết quả PACS vào RIS!");
+            updateFloatingPreview(msg.rawText || "", null, "Đã nhận kết quả PACS. Bấm F8 để điền!");
+            sendResponse({ received: true, autoApplyDisabled: true });
+            return;
+          }
+
           const editor = findRISEditor();
           if (editor) {
             applySynthesizedReportToRISEditor(editor, report);

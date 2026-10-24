@@ -7,6 +7,7 @@ stores them locally, serves real-time analysis reports and web dashboard.
 
 import os
 import sys
+import re
 import json
 from html import escape as html_escape
 import csv
@@ -56,14 +57,14 @@ os.makedirs(RELEASE_APK_DIR, exist_ok=True)
 FEEDBACK_DIR = os.environ.get("FEEDBACK_DIR", os.path.join(BASE_DIR, "feedback_cases"))
 FEEDBACK_AGGREGATE_JSONL = os.path.join(FEEDBACK_DIR, "feedback_cases_aggregate.jsonl")
 os.makedirs(FEEDBACK_DIR, exist_ok=True)
-FEEDBACK_LOCK = threading.Lock()
+FEEDBACK_LOCK = threading.RLock()
 
 # Real-time Dictation Sync (Chrome Extension & RIS Integration)
 RECENT_DICTATIONS = []
-RECENT_LOCK = threading.Lock()
+RECENT_LOCK = threading.RLock()
 DICTATION_LISTENERS = []
-LISTENERS_LOCK = threading.Lock()
-FILE_LOCK = threading.Lock()
+LISTENERS_LOCK = threading.RLock()
+FILE_LOCK = threading.RLock()
 
 MAX_UPLOAD_SIZE = 10 * 1024 * 1024   # 10 MB
 MAX_AUDIO_SIZE = 50 * 1024 * 1024    # 50 MB
@@ -690,7 +691,7 @@ def call_ai_synthesize_proxy(raw_text, system_prompt, preferred_model="DI/google
         os.environ.get("LLM_ROUTER_URL", "http://9router:20128/v1/chat/completions"),
         "https://9router.hoang.qzz.io/v1/chat/completions"
     ]
-    router_key = os.environ.get("ROUTER_API_KEY", "sk-e8ff53fc363b707a-aj81vz-ff55a6d6")
+    router_key = os.environ.get("ROUTER_API_KEY", "")
 
     messages = [
         {"role": "system", "content": prompt_with_shots},
@@ -769,6 +770,16 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.end_headers()
 
+    def is_authenticated(self):
+        expected_token = os.environ.get("AUTORIS_API_TOKEN", "").strip()
+        if not expected_token:
+            return True  # No token configured, allow open local intranet access
+        client_token = self.headers.get("X-Client-Token", "").strip()
+        auth_header = self.headers.get("Authorization", "").strip()
+        if auth_header.startswith("Bearer "):
+            client_token = auth_header[7:].strip()
+        return client_token == expected_token
+
     def send_cors_headers(self):
         origin = self.headers.get("Origin", "")
         is_allowed = False
@@ -784,10 +795,12 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
 
         if is_allowed and origin:
             self.send_header("Access-Control-Allow-Origin", origin)
-        else:
-            self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, Range, Authorization, X-Client-Token")
+            self.send_header("Vary", "Origin")
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type, Range, Authorization, X-Client-Token")
+        elif not origin:
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type, Range, Authorization, X-Client-Token")
 
     def do_GET(self):
         parsed = urlparse(self.path)
@@ -809,6 +822,9 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
             return
 
         elif path == "/api/feedback/list":
+            if not self.is_authenticated():
+                self.send_error(401, "Unauthorized: Invalid or missing client token")
+                return
             status = query.get("status", ["pending"])[0]
             limit_str = query.get("limit", ["100"])[0]
             try:
@@ -889,9 +905,12 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
             if synth_file:
                 mtime = int(os.path.getmtime(synth_file))
                 size = os.path.getsize(synth_file)
-                resp = {"status": "ok", "version": mtime, "size": size}
+                import hashlib
+                with open(synth_file, "rb") as f:
+                    sha256 = hashlib.sha256(f.read()).hexdigest()
+                resp = {"status": "ok", "version": mtime, "size": size, "sha256": sha256}
             else:
-                resp = {"status": "not_found", "version": 0, "size": 0}
+                resp = {"status": "not_found", "version": 0, "size": 0, "sha256": ""}
             self.send_response(200)
             self.send_cors_headers()
             self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -1046,6 +1065,9 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
             return
 
         elif path == "/api/benchmark/sessions":
+            if not self.is_authenticated():
+                self.send_error(401, "Unauthorized: Invalid or missing client token")
+                return
             sessions = get_all_sessions()
             self.send_response(200)
             self.send_cors_headers()
@@ -1055,14 +1077,17 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
             return
 
         elif path == "/api/dictation/latest":
+            if not self.is_authenticated():
+                self.send_error(401, "Unauthorized: Invalid or missing client token")
+                return
             after_id = query.get("after_id", [""])[0]
             with RECENT_LOCK:
                 items = list(RECENT_DICTATIONS)
             
             if not items:
-                resp = {"has_new": False}
+                resp = {"has_new": False, "dictations": []}
             elif not after_id:
-                resp = {"has_new": True, "dictation": items[-1]}
+                resp = {"has_new": True, "dictation": items[-1], "dictations": [items[-1]]}
             else:
                 new_items = []
                 found = False
@@ -1073,9 +1098,9 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
                     elif found:
                         new_items.append(it)
                 if new_items:
-                    resp = {"has_new": True, "dictation": new_items[-1]}
+                    resp = {"has_new": True, "dictation": new_items[-1], "dictations": new_items}
                 else:
-                    resp = {"has_new": False}
+                    resp = {"has_new": False, "dictations": []}
             
             self.send_response(200)
             self.send_cors_headers()
@@ -1237,6 +1262,10 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         path = parsed.path
         query = parse_qs(parsed.query)
+
+        if not self.is_authenticated():
+            self.send_error(401, "Unauthorized: Invalid or missing client token")
+            return
 
         if path == "/api/benchmark/upload":
             content_length = int(self.headers.get("Content-Length", 0))

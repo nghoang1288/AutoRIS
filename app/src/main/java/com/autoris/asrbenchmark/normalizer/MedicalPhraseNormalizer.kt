@@ -35,8 +35,6 @@ object MedicalPhraseNormalizer {
         Regex("\\b(?:phù\\s+hợp\\s+)?(?:cho|theo)\\s+não\\s+tuổi\\s+già\\b", RegexOption.IGNORE_CASE) to "phù hợp teo não tuổi già",
         Regex("\\bxoang\\s+chán\\b", RegexOption.IGNORE_CASE) to "xoang trán",
         Regex("\\b(?:xương|xoang)\\s+hàm\\s+(?:xương|xoang)\\s+sàng\\b", RegexOption.IGNORE_CASE) to "xoang hàm, xoang sàng",
-        Regex("\\bxương\\s+sàng\\b", RegexOption.IGNORE_CASE) to "xoang sàng",
-        Regex("\\bxương\\s+bướm\\b", RegexOption.IGNORE_CASE) to "xoang bướm",
         Regex("\\b(?:từ|tử)\\s+mặt\\b", RegexOption.IGNORE_CASE) to "túi mật",
         Regex("\\bsỏi\\s+chẳng\\s+qua\\b", RegexOption.IGNORE_CASE) to "sỏi cản quang",
         Regex("\\btuỳ\\s+(kích\\s+thước|nhu\\s+mô|đồng\\s+nhất)\\b", RegexOption.IGNORE_CASE) to "tụy $1",
@@ -48,9 +46,10 @@ object MedicalPhraseNormalizer {
         Regex("\\bmuôn\\s+vị\\b", RegexOption.IGNORE_CASE) to "môn vị",
         Regex("\\b(?:hang|hai)\\s+môn\\s+vị\\b", RegexOption.IGNORE_CASE) to "hang - môn vị",
         Regex("\\btỉ\\s+trọng\\b", RegexOption.IGNORE_CASE) to "tỷ trọng",
-        // Spoken punctuation deduction: "phải" as comma when between clinical descriptors/clauses
-        Regex("\\s+(?:phẩy|phải)\\s+(nghĩ|không|giảm|tăng|kèm|di\\s+động|đường\\s+kính|kích\\s+thước|liên\\s+tục)\\b", RegexOption.IGNORE_CASE) to ", $1",
-        Regex("\\b(dày|lan\\s+tỏa|lan\\s+toả|rõ|đều|liên\\s+tục|sâu|nhẹ|đồng\\s+nhất|bình\\s+thường|khu\\s+trú|mũn|gai|mm)\\s+(?:phẩy|phải)\\s+", RegexOption.IGNORE_CASE) to "$1, ",
+        // Spoken punctuation deduction: ONLY convert "phẩy" or "dấu phẩy" to comma.
+        // NEVER convert "phải" to comma, to strictly protect anatomical laterality ("thận phải", "phổi phải"...)
+        Regex("\\s+(?:dấu\\s+)?phẩy\\s+(nghĩ|không|giảm|tăng|kèm|di\\s+động|đường\\s+kính|kích\\s+thước|liên\\s+tục)\\b", RegexOption.IGNORE_CASE) to ", $1",
+        Regex("\\b(dày|lan\\s+tỏa|lan\\s+toả|rõ|đều|liên\\s+tục|sâu|nhẹ|đồng\\s+nhất|bình\\s+thường|khu\\s+trú|mũn|gai|mm)\\s+(?:dấu\\s+)?phẩy\\s+", RegexOption.IGNORE_CASE) to "$1, ",
 
         // Radiology Phonetics & Dialect calibration
         Regex("\\b(?:và|va)\\s+hoành\\b", RegexOption.IGNORE_CASE) to "vòm hoành",

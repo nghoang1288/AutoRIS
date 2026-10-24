@@ -111,7 +111,7 @@ object ModelManager {
             fileName = "tokens.txt",
             expectedSize = 23238L,
             expectedSha256 = "",
-            downloadUrl = "https://huggingface.co/hynt/ZipFormer-150M-CR-CTC-RNNT-6000h/raw/main/config.json",
+            downloadUrl = "https://huggingface.co/hynt/ZipFormer-150M-CR-CTC-RNNT-6000h/raw/main/tokens.txt",
             localServerRelativePath = "models/zipformer-150m/tokens.txt"
         ),
         ModelFileInfo(

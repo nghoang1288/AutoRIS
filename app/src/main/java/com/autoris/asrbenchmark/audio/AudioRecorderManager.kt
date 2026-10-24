@@ -444,14 +444,26 @@ class AudioRecorderManager(
             currentSegmentPcm.clear()
         }
         if (leftoverSamples.size >= (SAMPLE_RATE * 0.4f)) {
-            val (lastText, costMs) = asrEngine.decodeSegment(leftoverSamples)
-            totalProcessingMs += costMs
-            if (lastText.isNotBlank()) {
-                val formatted = formatSentence(lastText)
-                synchronized(accumulatedSegments) {
-                    accumulatedSegments.add(formatted)
+            var allowDecode = true
+            if (isSpeakerLockEnabled && speakerVerifier != null) {
+                val vResult = speakerVerifier.verify(leftoverSamples)
+                onSpeakerVerificationResult?.invoke(vResult)
+                if (vResult.state == VoiceLockState.REJECT) {
+                    Log.w(TAG, "Leftover segment REJECTED by speaker verifier: sim=${vResult.similarity}, conf=${vResult.confidence}. Ignoring.")
+                    allowDecode = false
                 }
-                Log.i(TAG, "Leftover segment decoded in ${costMs}ms: '$formatted'")
+            }
+
+            if (allowDecode) {
+                val (lastText, costMs) = asrEngine.decodeSegment(leftoverSamples)
+                totalProcessingMs += costMs
+                if (lastText.isNotBlank()) {
+                    val formatted = formatSentence(lastText)
+                    synchronized(accumulatedSegments) {
+                        accumulatedSegments.add(formatted)
+                    }
+                    Log.i(TAG, "Leftover segment decoded in ${costMs}ms: '$formatted'")
+                }
             }
         }
 
@@ -490,13 +502,11 @@ class AudioRecorderManager(
 
     /**
      * Resets the accumulated segments buffer so that subsequent speech forms a new distinct sentence.
+     * Note: Does NOT clear currentSegmentPcm to prevent dropping incoming audio of the next sentence currently being spoken.
      */
     fun clearAccumulatedSegments() {
         synchronized(accumulatedSegments) {
             accumulatedSegments.clear()
-        }
-        synchronized(currentSegmentPcm) {
-            currentSegmentPcm.clear()
         }
         lastStreamingTranscript = ""
         streamingEngine?.reset()

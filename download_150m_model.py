@@ -8,7 +8,7 @@ DEST_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models", "z
 os.makedirs(DEST_DIR, exist_ok=True)
 
 FILES = [
-    ("tokens.txt", "https://huggingface.co/hynt/ZipFormer-150M-CR-CTC-RNNT-6000h/raw/main/config.json"),
+    ("tokens.txt", "https://huggingface.co/hynt/ZipFormer-150M-CR-CTC-RNNT-6000h/raw/main/tokens.txt"),
     ("bpe.model", "https://huggingface.co/hynt/ZipFormer-150M-CR-CTC-RNNT-6000h/resolve/main/bpe.model"),
     ("decoder.onnx", "https://huggingface.co/hynt/ZipFormer-150M-CR-CTC-RNNT-6000h/resolve/main/decoder-epoch-11-avg-2.int8.onnx"),
     ("joiner.onnx", "https://huggingface.co/hynt/ZipFormer-150M-CR-CTC-RNNT-6000h/resolve/main/joiner-epoch-11-avg-2.int8.onnx"),

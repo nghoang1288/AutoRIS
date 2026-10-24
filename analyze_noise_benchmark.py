@@ -79,7 +79,11 @@ def compute_metrics(sessions: List[Dict[str, Any]], matrix: Dict[str, Any]) -> D
         latencies = [s.get("finalLatencyMs", 0) for s in group if s.get("finalLatencyMs") is not None]
         med_terms = [s.get("medicalTermAccuracy", 1.0) for s in group if s.get("medicalTermAccuracy") is not None]
 
-        # Critical error counts
+        # Critical error audit validation
+        has_crit_data = any(
+            any(k in s for k in ["criticalNumericError", "criticalMeasurementError", "criticalNegationError", "criticalLateralityError", "criticalSpineError"])
+            for s in group
+        )
         crit_num = sum(1 for s in group if s.get("criticalNumericError", False))
         crit_meas = sum(1 for s in group if s.get("criticalMeasurementError", False))
         crit_neg = sum(1 for s in group if s.get("criticalNegationError", False))
@@ -113,6 +117,7 @@ def compute_metrics(sessions: List[Dict[str, Any]], matrix: Dict[str, Any]) -> D
             "crit_lat": crit_lat,
             "crit_spine": crit_spine,
             "total_crit": total_crit,
+            "has_crit_data": has_crit_data,
         }
 
     # 2. Add matrix scenarios that have not yet been measured on device
@@ -191,10 +196,18 @@ def generate_markdown_report(summary: Dict[Tuple[str, str], Dict[str, Any]], tot
 
     for k, st in sorted(summary.items()):
         if st["has_real_data"]:
-            crit_status = "0 Errors (Compliant)" if st["total_crit"] == 0 else f"🚨 {st['total_crit']} ERRORS"
+            if not st.get("has_crit_data", False):
+                crit_status = "⚠️ Chưa đo đạc (Thiếu trường audit)"
+                num_str = meas_str = neg_str = lat_str = spine_str = "N/A"
+            elif st["total_crit"] == 0:
+                crit_status = "0 Errors (Compliant)"
+                num_str, meas_str, neg_str, lat_str, spine_str = st['crit_num'], st['crit_meas'], st['crit_neg'], st['crit_lat'], st['crit_spine']
+            else:
+                crit_status = f"🚨 {st['total_crit']} ERRORS"
+                num_str, meas_str, neg_str, lat_str, spine_str = st['crit_num'], st['crit_meas'], st['crit_neg'], st['crit_lat'], st['crit_spine']
             md.append(
                 f"| `{st['room']}` | `{st['profile']}` | {st['count']} | "
-                f"{st['crit_num']} | {st['crit_meas']} | {st['crit_neg']} | {st['crit_lat']} | {st['crit_spine']} | {crit_status} |"
+                f"{num_str} | {meas_str} | {neg_str} | {lat_str} | {spine_str} | {crit_status} |"
             )
         else:
             md.append(
