@@ -143,8 +143,8 @@ AutoRIS là giải pháp trợ lý AI toàn diện cho bác sĩ Chẩn đoán H�
 
 #### 1. Lộ lọt Toàn bộ API Keys trong Mã Nguồn Extension:
 - File `chrome_extension/defaults.js` chứa trực tiếp:
-  * Key 9Router: `sk-e8ff53fc363b707a-aj81vz-ff55a6d6`
-  * Key Google Gemini API: `AIzaSyAbHAXnTiePACai-G3sF2taXvdRvoADuoc`
+  * Key 9Router: `sk-***` (đã thu hồi và chuyển sang biến môi trường)
+  * Key Google Gemini API: `AIzaSy***` (đã thu hồi và chuyển sang biến môi trường)
 - Do extension phân phối dưới dạng file nén `.zip` (`/autoris-extension.zip`) công khai trên web, bất kỳ ai cũng có thể trích xuất API keys này để dùng miễn phí, gây cạn kiệt hạn ngạch (quota exhaustion) hoặc tấn công từ chối dịch vụ (DoS).
 
 #### 2. Không Xác Thực (Zero-Authentication) & CORS Mở Toàn Bộ (`*`):

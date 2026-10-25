@@ -180,6 +180,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     )
     val serverUrl: StateFlow<String> = _serverUrl.asStateFlow()
 
+    private val _apiToken = MutableStateFlow(prefs.getString("api_token", "") ?: "")
+    val apiToken: StateFlow<String> = _apiToken.asStateFlow()
+
+    fun setApiToken(token: String) {
+        _apiToken.value = token.trim()
+        prefs.edit().putString("api_token", token.trim()).apply()
+    }
+
     private val _isAutoSyncEnabled = MutableStateFlow(prefs.getBoolean("auto_sync_server", true))
     val isAutoSyncEnabled: StateFlow<Boolean> = _isAutoSyncEnabled.asStateFlow()
 
@@ -325,23 +333,28 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _safetyGateDecision = MutableStateFlow<SafetyGateDecision?>(null)
     val safetyGateDecision: StateFlow<SafetyGateDecision?> = _safetyGateDecision.asStateFlow()
 
-    fun exportToRis(customText: String? = null, isLiveStream: Boolean = false): Boolean {
+    fun exportToRis(customText: String? = null, isLiveStream: Boolean = false, isUserConfirmed: Boolean = false): Boolean {
         if (_operatingMode.value == AppOperatingMode.BENCHMARK) {
             _statusMessage.value = "Từ chối gửi RIS: Đang ở chế độ Benchmark kiểm thử!"
             return false
         }
 
         // Clinical Safety Gate Check: Fail-closed enforcement
-        val decision = _safetyGateDecision.value
-        if (_operatingMode.value == AppOperatingMode.CLINICAL_SAFE && decision != null) {
-            if (decision.status == SafetyGateStatus.REJECTED) {
-                val reason = decision.reasons.firstOrNull() ?: "Vi phạm an toàn lâm sàng nghiêm trọng"
+        var decision = _safetyGateDecision.value
+        if (decision == null) {
+            recomputeSafetyGate()
+            decision = _safetyGateDecision.value
+        }
+        if (_operatingMode.value == AppOperatingMode.CLINICAL_SAFE) {
+            if (decision == null || decision.status == SafetyGateStatus.REJECTED) {
+                val reason = decision?.reasons?.firstOrNull() ?: "Vi phạm an toàn lâm sàng nghiêm trọng"
                 _statusMessage.value = "⛔ Từ chối gửi RIS: $reason"
                 Log.w(TAG, "exportToRis REJECTED by Safety Gate: $reason")
                 return false
             }
-            if (isLiveStream && decision.status == SafetyGateStatus.REVIEW_REQUIRED) {
-                Log.i(TAG, "exportToRis live auto-send suspended: REVIEW_REQUIRED")
+            if (!isUserConfirmed && decision.status == SafetyGateStatus.REVIEW_REQUIRED) {
+                _statusMessage.value = "⚠️ Cần bác sĩ xác nhận trước khi gửi RIS (Nghi ngờ sai sót)"
+                Log.i(TAG, "exportToRis auto-send suspended: REVIEW_REQUIRED (User confirmation required)")
                 return false
             }
         }
@@ -826,11 +839,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                                     if (currentClean.isNotBlank() && currentClean != lastAutoSentText) {
                                         lastAutoSentText = currentClean
                                         withContext(Dispatchers.Main) {
-                                            exportToRis(currentClean, isLiveStream = true)
-                                            // Sau khi gửi xong câu này, reset buffer để câu tiếp theo gửi riêng biệt từng dòng
-                                            audioRecorderManager?.clearAccumulatedSegments()
-                                            _livePartial.value = ""
-                                            lastAutoSentText = ""
+                                            val sent = exportToRis(currentClean, isLiveStream = true)
+                                            if (sent) {
+                                                // Chỉ reset buffer khi câu này đã thực sự được xuất sang RIS thành công
+                                                audioRecorderManager?.clearAccumulatedSegments()
+                                                _livePartial.value = ""
+                                                lastAutoSentText = ""
+                                            } else {
+                                                Log.w(TAG, "Live auto-send suppressed or rejected by SafetyGate. Keeping text in buffer.")
+                                            }
                                         }
                                     }
                                 }
@@ -949,7 +966,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val textToSend = norm.normalizedSuggestion.ifBlank { finalText }.trim()
             if (textToSend.isNotBlank() && textToSend != lastAutoSentText) {
                 lastAutoSentText = textToSend
-                exportToRis(textToSend, isLiveStream = false)
+                exportToRis(textToSend, isLiveStream = false, isUserConfirmed = false)
             }
         }
     }
@@ -1118,15 +1135,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
             // Auto-sync to local PC server if enabled
             if (_isAutoSyncEnabled.value) {
-                val toUpload = session.copy(id = insertedId)
-                BenchmarkSyncClient.uploadSessions(_serverUrl.value, listOf(toUpload))
-                // Clinical privacy: only upload audio if explicitly enabled or if local server
-                val isLocalServer = _serverUrl.value.contains("192.168.") || _serverUrl.value.contains("10.") || _serverUrl.value.contains("localhost") || _serverUrl.value.contains("127.0.0.1")
-                if (!audioToSave.isNullOrBlank() && (_operatingMode.value != AppOperatingMode.CLINICAL_SAFE || isLocalServer)) {
-                    val audioFile = File(audioToSave)
-                    if (audioFile.exists()) {
-                        BenchmarkSyncClient.uploadAudio(_serverUrl.value, insertedId, audioFile)
+                val decision = _safetyGateDecision.value
+                val isBlocked = _operatingMode.value == AppOperatingMode.CLINICAL_SAFE &&
+                    (decision?.status == SafetyGateStatus.REJECTED || decision?.status == SafetyGateStatus.REVIEW_REQUIRED)
+
+                if (!isBlocked) {
+                    val toUpload = session.copy(id = insertedId)
+                    BenchmarkSyncClient.uploadSessions(_serverUrl.value, listOf(toUpload), authToken = _apiToken.value)
+                    // Clinical privacy: only upload audio if explicitly enabled or if local server
+                    val isLocalServer = _serverUrl.value.contains("192.168.") || _serverUrl.value.contains("10.") || _serverUrl.value.contains("localhost") || _serverUrl.value.contains("127.0.0.1")
+                    if (!audioToSave.isNullOrBlank() && (_operatingMode.value != AppOperatingMode.CLINICAL_SAFE || isLocalServer)) {
+                        val audioFile = File(audioToSave)
+                        if (audioFile.exists()) {
+                            BenchmarkSyncClient.uploadAudio(_serverUrl.value, insertedId, audioFile, authToken = _apiToken.value)
+                        }
                     }
+                } else {
+                    Log.w(TAG, "Suppressed auto-sync to PC server: SafetyGate decision is ${decision?.status}")
                 }
             }
         }
@@ -1144,7 +1169,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun testServerConnection(onResult: (Boolean, String) -> Unit) {
         viewModelScope.launch {
-            val res = BenchmarkSyncClient.checkServer(_serverUrl.value)
+            val res = BenchmarkSyncClient.checkServer(_serverUrl.value, _apiToken.value)
             res.fold(
                 onSuccess = { msg ->
                     _serverStatus.value = "Online"
@@ -1171,7 +1196,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         viewModelScope.launch {
             _isSyncing.value = true
-            val uploadRes = BenchmarkSyncClient.uploadSessions(_serverUrl.value, list)
+            val uploadRes = BenchmarkSyncClient.uploadSessions(_serverUrl.value, list, authToken = _apiToken.value)
             uploadRes.fold(
                 onSuccess = { count ->
                     var audioCount = 0
@@ -1180,7 +1205,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         if (!path.isNullOrBlank()) {
                             val audioFile = File(path)
                             if (audioFile.exists()) {
-                                val audioRes = BenchmarkSyncClient.uploadAudio(_serverUrl.value, session.id, audioFile)
+                                val audioRes = BenchmarkSyncClient.uploadAudio(_serverUrl.value, session.id, audioFile, authToken = _apiToken.value)
                                 if (audioRes.isSuccess) audioCount++
                             }
                         }

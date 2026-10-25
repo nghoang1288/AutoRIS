@@ -257,11 +257,17 @@ class MedicalNormalizerTest {
         val pleuraRes = MedicalTextNormalizer.process(pleuraRaw)
         assertTrue("Khoang màng phổi must be fixed from qua màng phổi", pleuraRes.normalizedSuggestion.contains("khoang màng phổi"))
 
-        // 10. Spoken comma deduction ("phải" as comma) and thoracic ratio
-        val commaRaw = "Nhu mô gan dày phải tăng âm nhẹ lan toả phải giảm hút âm vùng sâu phải nghĩ gan nhiễm mỡ độ một."
+        // 10. Spoken comma deduction ("phẩy" as comma) and thoracic ratio
+        val commaRaw = "Nhu mô gan dày phẩy tăng âm nhẹ lan toả phẩy giảm hút âm vùng sâu phẩy nghĩ gan nhiễm mỡ độ một."
         val commaRes = MedicalTextNormalizer.process(commaRaw)
         assertTrue("Nhu mô gan dày, tăng âm", commaRes.normalizedSuggestion.contains("Nhu mô gan dày, tăng âm"))
         assertTrue("giảm hút âm vùng sâu, nghĩ", commaRes.normalizedSuggestion.contains("giảm hút âm vùng sâu, nghĩ"))
+
+        // Laterality preservation: "phải" (right) must NEVER become a comma
+        val kidneyRightRaw = "Thận phải không giãn, kích thước bình thường."
+        val kidneyRightRes = MedicalTextNormalizer.process(kidneyRightRaw)
+        assertTrue("Thận phải must be preserved", kidneyRightRes.normalizedSuggestion.contains("Thận phải"))
+        assertFalse("Thận phải must NOT become Thận,", kidneyRightRes.normalizedSuggestion.contains("Thận,"))
 
         val diaphragmRaw = "Và hoành hai bên đều phải liên tục phải không thấy lềm hơi dưới hoành."
         val diaphragmRes = MedicalTextNormalizer.process(diaphragmRaw)

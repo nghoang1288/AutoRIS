@@ -40,6 +40,7 @@ os.makedirs(REPORTS_DIR, exist_ok=True)
 
 # Cấu hình API Server AutoRIS
 API_BASE_URL = os.environ.get("AUTORIS_SERVER_URL", "https://autoris.hoang.qzz.io")
+API_TOKEN = os.environ.get("AUTORIS_API_TOKEN", "")
 
 # Cấu hình Model AI: Ưu tiên Gemini 3.8 Flash, tự động fallback sang Gemini 3.5 Flash nếu hết quota
 ROUTER_URL = os.environ.get("LLM_ROUTER_URL", "http://127.0.0.1:20128/v1/chat/completions")
@@ -105,7 +106,11 @@ def fetch_pending_feedback():
     """Lấy danh sách các ca bác sĩ gửi phản hồi còn pending"""
     url = f"{API_BASE_URL}/api/feedback/list?status=pending&limit=100"
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "AutoRIS-DailyLearner/2.0"})
+        headers = {"User-Agent": "AutoRIS-DailyLearner/2.0"}
+        if API_TOKEN:
+            headers["X-Client-Token"] = API_TOKEN
+            headers["Authorization"] = f"Bearer {API_TOKEN}"
+        req = urllib.request.Request(url, headers=headers)
         with urllib.request.urlopen(req, timeout=10) as resp:
             data = json.loads(resp.read().decode("utf-8"))
             return data.get("cases", [])
@@ -313,7 +318,11 @@ def resolve_cases_on_server(case_ids, summary_note=""):
     }
     try:
         data = json.dumps(payload).encode("utf-8")
-        req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
+        headers = {"Content-Type": "application/json", "User-Agent": "AutoRIS-DailyLearner/2.0"}
+        if API_TOKEN:
+            headers["X-Client-Token"] = API_TOKEN
+            headers["Authorization"] = f"Bearer {API_TOKEN}"
+        req = urllib.request.Request(url, data=data, headers=headers)
         with urllib.request.urlopen(req, timeout=10) as resp:
             return resp.status == 200
     except Exception:

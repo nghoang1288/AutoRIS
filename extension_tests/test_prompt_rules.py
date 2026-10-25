@@ -69,10 +69,11 @@ LỜI BÁC SĨ ĐỌC:
         "temperature": 0.1,
         "stream": False
     }
+    router_key = os.environ.get("ROUTER_API_KEY", os.environ.get("AI_API_KEY", ""))
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
         "Content-Type": "application/json",
-        "Authorization": "Bearer sk-e8ff53fc363b707a-aj81vz-ff55a6d6"
+        "Authorization": f"Bearer {router_key}"
     }
     req = urllib.request.Request("https://9router.hoang.qzz.io/v1/chat/completions", data=json.dumps(data).encode("utf-8"), headers=headers)
     with urllib.request.urlopen(req, timeout=15) as resp:

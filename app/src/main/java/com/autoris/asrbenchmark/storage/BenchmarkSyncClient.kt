@@ -16,7 +16,7 @@ object BenchmarkSyncClient {
     private const val TAG = "BenchmarkSyncClient"
     private val gson: Gson = GsonBuilder().setPrettyPrinting().create()
 
-    suspend fun checkServer(serverUrl: String): Result<String> = withContext(Dispatchers.IO) {
+    suspend fun checkServer(serverUrl: String, authToken: String? = null): Result<String> = withContext(Dispatchers.IO) {
         try {
             val normalizedUrl = serverUrl.trimEnd('/') + "/api/health"
             val url = URL(normalizedUrl)
@@ -24,6 +24,10 @@ object BenchmarkSyncClient {
                 connectTimeout = 3000
                 readTimeout = 3000
                 requestMethod = "GET"
+                if (!authToken.isNullOrBlank()) {
+                    setRequestProperty("X-Client-Token", authToken)
+                    setRequestProperty("Authorization", "Bearer $authToken")
+                }
             }
 
             val code = connection.responseCode
@@ -44,6 +48,7 @@ object BenchmarkSyncClient {
     suspend fun uploadSessions(
         serverUrl: String, 
         sessions: List<BenchmarkSession>,
+        authToken: String? = null,
         maxRetries: Int = 3,
         onRetry: ((attempt: Int, max: Int, err: Throwable) -> Unit)? = null
     ): Result<Int> = withContext(Dispatchers.IO) {
@@ -62,6 +67,10 @@ object BenchmarkSyncClient {
                     requestMethod = "POST"
                     doOutput = true
                     setRequestProperty("Content-Type", "application/json; charset=utf-8")
+                    if (!authToken.isNullOrBlank()) {
+                        setRequestProperty("X-Client-Token", authToken)
+                        setRequestProperty("Authorization", "Bearer $authToken")
+                    }
                 }
 
                 OutputStreamWriter(connection.outputStream, "UTF-8").use { writer ->
@@ -93,14 +102,20 @@ object BenchmarkSyncClient {
         Result.failure(lastError ?: Exception("Upload thất bại sau $maxRetries lần thử"))
     }
 
-    suspend fun uploadAudio(serverUrl: String, sessionId: Long, audioFile: File): Result<Boolean> = withContext(Dispatchers.IO) {
+    suspend fun uploadAudio(
+        serverUrl: String,
+        sessionId: Long,
+        audioFile: File,
+        authToken: String? = null
+    ): Result<Boolean> = withContext(Dispatchers.IO) {
         if (!audioFile.exists() || audioFile.length() == 0L) {
             return@withContext Result.failure(Exception("File audio không tồn tại hoặc rỗng"))
         }
 
         try {
             val encodedName = java.net.URLEncoder.encode(audioFile.name, "UTF-8")
-            val normalizedUrl = serverUrl.trimEnd('/') + "/api/benchmark/upload_audio?id=$sessionId&filename=$encodedName"
+            val tokenParam = if (!authToken.isNullOrBlank()) "&token=${java.net.URLEncoder.encode(authToken, "UTF-8")}" else ""
+            val normalizedUrl = serverUrl.trimEnd('/') + "/api/benchmark/upload_audio?id=$sessionId&filename=$encodedName$tokenParam"
             val url = URL(normalizedUrl)
 
             val connection = (url.openConnection() as HttpURLConnection).apply {
@@ -109,6 +124,10 @@ object BenchmarkSyncClient {
                 requestMethod = "POST"
                 doOutput = true
                 setRequestProperty("Content-Type", "audio/wav")
+                if (!authToken.isNullOrBlank()) {
+                    setRequestProperty("X-Client-Token", authToken)
+                    setRequestProperty("Authorization", "Bearer $authToken")
+                }
                 setFixedLengthStreamingMode(audioFile.length())
             }
 

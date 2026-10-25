@@ -60,16 +60,24 @@ async function checkAndUpdateSynthesizerCode(force = false) {
   try {
     const config = await chrome.storage.local.get([
       STORAGE_KEYS.SERVER_URL,
+      STORAGE_KEYS.API_TOKEN,
       STORAGE_KEYS.SYNTHESIZER_VERSION,
       STORAGE_KEYS.SYNTHESIZER_CODE
     ]);
     const serverUrl = (config[STORAGE_KEYS.SERVER_URL] || DEFAULT_CONFIG.serverUrl).trim().replace(/\/+$/, "");
+    const token = (config[STORAGE_KEYS.API_TOKEN] || "").trim();
     const currentVersion = config[STORAGE_KEYS.SYNTHESIZER_VERSION] || 0;
     const hasCode = !!config[STORAGE_KEYS.SYNTHESIZER_CODE];
 
+    const headers = {};
+    if (token) {
+      headers["X-Client-Token"] = token;
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
     // 1. Kiểm tra version nhẹ từ server trước
     const verUrl = `${serverUrl}/api/clinical_synthesizer/version?t=${Date.now()}`;
-    const verRes = await fetch(verUrl, { cache: "no-store" });
+    const verRes = await fetch(verUrl, { cache: "no-store", headers });
     if (!verRes.ok) return { updated: false, reason: "server_offline" };
     const verData = await verRes.json();
 
@@ -77,7 +85,7 @@ async function checkAndUpdateSynthesizerCode(force = false) {
       if (force || !hasCode || verData.version !== currentVersion) {
         // 2. Tải toàn bộ mã JS mới từ server
         const codeUrl = `${serverUrl}/api/clinical_synthesizer.js?t=${Date.now()}`;
-        const codeRes = await fetch(codeUrl, { cache: "no-store" });
+        const codeRes = await fetch(codeUrl, { cache: "no-store", headers });
         if (!codeRes.ok) return { updated: false, reason: "fetch_code_failed" };
         const newCode = await codeRes.text();
 
@@ -130,9 +138,11 @@ async function checkExtensionPackageUpdate(force = false) {
   try {
     const config = await chrome.storage.local.get([
       STORAGE_KEYS.SERVER_URL,
+      STORAGE_KEYS.API_TOKEN,
       STORAGE_KEYS.EXTENSION_LAST_CHECK_TIME
     ]);
     const serverUrl = (config[STORAGE_KEYS.SERVER_URL] || DEFAULT_CONFIG.serverUrl).trim().replace(/\/+$/, "");
+    const token = (config[STORAGE_KEYS.API_TOKEN] || "").trim();
     const lastCheck = config[STORAGE_KEYS.EXTENSION_LAST_CHECK_TIME] || 0;
 
     // Giới hạn kiểm tra 5 phút 1 lần nếu không phải ép buộc
@@ -142,7 +152,12 @@ async function checkExtensionPackageUpdate(force = false) {
 
     const currentVersion = chrome.runtime.getManifest().version;
     const url = `${serverUrl}/api/extension/version?t=${Date.now()}`;
-    const res = await fetch(url, { cache: "no-store" });
+    const headers = {};
+    if (token) {
+      headers["X-Client-Token"] = token;
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+    const res = await fetch(url, { cache: "no-store", headers });
     if (!res.ok) return { checked: false, reason: "server_offline" };
 
     const data = await res.json();
@@ -198,15 +213,25 @@ async function pollLatestDictation() {
   }
 
   try {
-    const config = await chrome.storage.local.get([STORAGE_KEYS.SERVER_URL, STORAGE_KEYS.LAST_APPLIED_ID]);
+    const config = await chrome.storage.local.get([
+      STORAGE_KEYS.SERVER_URL,
+      STORAGE_KEYS.API_TOKEN,
+      STORAGE_KEYS.LAST_APPLIED_ID
+    ]);
     const serverUrl = (config[STORAGE_KEYS.SERVER_URL] || DEFAULT_CONFIG.serverUrl).trim().replace(/\/+$/, "");
+    const token = (config[STORAGE_KEYS.API_TOKEN] || "").trim();
     const lastId = config[STORAGE_KEYS.LAST_APPLIED_ID] || lastSeenId || 0;
 
     const url = `${serverUrl}/api/dictation/latest${lastId ? `?after_id=${encodeURIComponent(lastId)}` : ""}`;
+    const headers = { "Accept": "application/json" };
+    if (token) {
+      headers["X-Client-Token"] = token;
+      headers["Authorization"] = `Bearer ${token}`;
+    }
     const resp = await fetch(url, {
       method: "GET",
       cache: "no-store",
-      headers: { "Accept": "application/json" }
+      headers
     });
 
     if (!resp.ok) {
@@ -463,14 +488,19 @@ chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
 
 // 5.5. Gửi log phản hồi ca bệnh của bác sĩ lên server AutoRIS (VPS)
 async function handleFeedbackSubmission(payload) {
-  const config = await chrome.storage.local.get([STORAGE_KEYS.SERVER_URL]);
+  const config = await chrome.storage.local.get([STORAGE_KEYS.SERVER_URL, STORAGE_KEYS.API_TOKEN]);
   const serverUrl = (config[STORAGE_KEYS.SERVER_URL] || DEFAULT_CONFIG.serverUrl).trim().replace(/\/+$/, "");
+  const token = (config[STORAGE_KEYS.API_TOKEN] || "").trim();
+
+  const headers = { "Content-Type": "application/json" };
+  if (token) {
+    headers["X-Client-Token"] = token;
+    headers["Authorization"] = `Bearer ${token}`;
+  }
 
   const res = await fetch(`${serverUrl}/api/feedback/submit`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
+    headers,
     body: JSON.stringify(payload)
   });
 
@@ -493,12 +523,19 @@ async function callAutorisServerProxy(serverUrl, rawText, systemPrompt, preferre
   }
 
   try {
+    const config = await chrome.storage.local.get([STORAGE_KEYS.API_TOKEN]);
+    const token = (config[STORAGE_KEYS.API_TOKEN] || "").trim();
     const cleanUrl = (serverUrl || DEFAULT_CONFIG.serverUrl).trim().replace(/\/+$/, "");
+
+    const headers = { "Content-Type": "application/json" };
+    if (token) {
+      headers["X-Client-Token"] = token;
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
     const response = await fetch(`${cleanUrl}/api/ai/synthesize`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
+      headers,
       body: JSON.stringify({
         rawText: rawText,
         systemPrompt: systemPrompt,

@@ -10,7 +10,7 @@
 
 | Room ID | Profile | Real Tests (N) | Avg CER (%) | Avg WER (%) | Med Entity Acc (%) | P95 Latency | Avg RTF | Benchmark Status |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| `ROOM_01` | `RAW` | 23 | 15.73% | 21.10% | 67.8% | 464 ms | N/A (Streaming/Partial) | ✅ PASS |
+| `ROOM_01` | `RAW` | 23 | 15.73% | 21.10% | 67.8% | 464 ms | N/A (Streaming/Partial) | ⚠️ REVIEW (Thiếu audit critical) |
 | `ROOM_ANGIO` | `ANDROID_NS_DPDFNET` | 0 | Chưa đo đạc | Chưa đo đạc | Chưa đo đạc | Chưa đo đạc | Chưa đo đạc | Chưa có số liệu thực nghiệm |
 | `ROOM_CT` | `ANDROID_NS_AGC` | 0 | Chưa đo đạc | Chưa đo đạc | Chưa đo đạc | Chưa đo đạc | Chưa đo đạc | Chưa có số liệu thực nghiệm |
 | `ROOM_ER` | `ANDROID_NS_DPDFNET` | 0 | Chưa đo đạc | Chưa đo đạc | Chưa đo đạc | Chưa đo đạc | Chưa đo đạc | Chưa có số liệu thực nghiệm |
@@ -22,7 +22,7 @@
 
 | Room ID | Profile | Real Tests (N) | Num Err | Meas Err | Neg Err | Lat Err | Spine Err | Critical Status |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| `ROOM_01` | `RAW` | 23 | 0 | 0 | 0 | 0 | 0 | 0 Errors (Compliant) |
+| `ROOM_01` | `RAW` | 23 | N/A | N/A | N/A | N/A | N/A | ⚠️ Chưa đo đạc (Thiếu trường audit) |
 | `ROOM_ANGIO` | `ANDROID_NS_DPDFNET` | 0 | - | - | - | - | - | Chưa có số liệu thực nghiệm |
 | `ROOM_CT` | `ANDROID_NS_AGC` | 0 | - | - | - | - | - | Chưa có số liệu thực nghiệm |
 | `ROOM_ER` | `ANDROID_NS_DPDFNET` | 0 | - | - | - | - | - | Chưa có số liệu thực nghiệm |

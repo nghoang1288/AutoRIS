@@ -2,6 +2,7 @@
 const STORAGE_KEYS = {
   // Máy chủ AutoRIS (Điện thoại)
   SERVER_URL: "autoris_server_url",
+  API_TOKEN: "autoris_api_token",
   AUTO_APPLY: "autoris_auto_apply",
   SMART_SYNTHESIZE: "autoris_smart_synthesize",
   AUTO_COPY: "autoris_auto_copy",
@@ -66,6 +67,7 @@ const GOOGLE_MODEL_MAP = {
 
 const DEFAULT_CONFIG = {
   serverUrl: "https://autoris.hoang.qzz.io",
+  apiToken: "",
   autoApply: true,
   smartSynthesize: true,
   autoCopy: true,

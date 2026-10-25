@@ -170,7 +170,12 @@ def generate_markdown_report(summary: Dict[Tuple[str, str], Dict[str, Any]], tot
         for k in room_profiles:
             st = summary[k]
             if st["has_real_data"]:
-                status = "✅ PASS" if st["total_crit"] == 0 and st["avg_rtf"] <= 0.25 else "⚠️ REVIEW"
+                if not st.get("has_crit_data", False):
+                    status = "⚠️ REVIEW (Thiếu audit critical)"
+                elif st["total_crit"] == 0 and st["avg_rtf"] <= 0.25:
+                    status = "✅ PASS"
+                else:
+                    status = "⚠️ REVIEW"
                 cer_str = f"{st['avg_cer']:.2f}%"
                 wer_str = f"{st['avg_wer']:.2f}%"
                 med_str = f"{st['avg_med_term_acc']:.1f}%"

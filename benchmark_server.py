@@ -728,9 +728,7 @@ def call_ai_synthesize_proxy(raw_text, system_prompt, preferred_model="DI/google
                 continue
 
     # Fallback cuối: Gọi Google Gemini Direct API từ VPS
-    google_keys = [
-        "AIzaSyAbHAXnTiePACai-G3sF2taXvdRvoADuoc"
-    ]
+    google_keys = [k.strip() for k in os.environ.get("GOOGLE_API_KEYS", os.environ.get("GOOGLE_API_KEY", "")).split(",") if k.strip()]
     for gkey in google_keys:
         try:
             g_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gkey}"
@@ -778,6 +776,12 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
         auth_header = self.headers.get("Authorization", "").strip()
         if auth_header.startswith("Bearer "):
             client_token = auth_header[7:].strip()
+        if not client_token:
+            parsed = urlparse(self.path)
+            q = parse_qs(parsed.query)
+            token_query = q.get("token", [""])[0].strip()
+            if token_query:
+                client_token = token_query
         return client_token == expected_token
 
     def send_cors_headers(self):
@@ -859,6 +863,9 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
             return
 
         elif path == "/api/clinical/few_shots":
+            if not self.is_authenticated():
+                self.send_error(401, "Unauthorized: Invalid or missing client token")
+                return
             limit_str = query.get("limit", ["5"])[0]
             try:
                 limit = int(limit_str)
@@ -966,19 +973,21 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
             apk_mtime = int(os.path.getmtime(apk_path)) if os.path.exists(apk_path) else 0
 
             # Đọc version trực tiếp từ manifest.json trước
-            ext_ver = "2.0.0"
+            ext_ver = "2.0.2"
             manifest_path = os.path.join(BASE_DIR, "chrome_extension", "manifest.json")
             if os.path.exists(manifest_path):
                 try:
                     with open(manifest_path, "r", encoding="utf-8") as mf:
                         mdata = json.load(mf)
-                        ext_ver = mdata.get("version", "2.0.0")
+                        ext_ver = mdata.get("version", "2.0.2")
                 except Exception:
                     pass
 
             # Tìm file zip tương ứng với version hoặc file zip mới nhất
             ext_candidates = [
                 f"autoris-extension-v{ext_ver}.zip",
+                "autoris-extension-v2.0.2.zip",
+                "autoris-extension-v2.0.1.zip",
                 "autoris-extension-v2.0.0.zip",
                 "autoris-extension-v1.3.1.zip",
                 "autoris-extension-v1.3.0.zip",
@@ -1055,6 +1064,9 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
             return
 
         elif path == "/api/benchmark/summary":
+            if not self.is_authenticated():
+                self.send_error(401, "Unauthorized: Invalid or missing client token")
+                return
             sessions = get_all_sessions()
             stats = calculate_summary_stats(sessions)
             self.send_response(200)
@@ -1110,6 +1122,9 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
             return
 
         elif path == "/api/dictation/stream":
+            if not self.is_authenticated():
+                self.send_error(401, "Unauthorized: Invalid or missing client token")
+                return
             client_queue = queue.Queue(maxsize=50)
             with LISTENERS_LOCK:
                 DICTATION_LISTENERS.append(client_queue)
@@ -1143,15 +1158,37 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
             return
 
         elif path == "/dashboard":
+            if not self.is_authenticated():
+                self.send_response(401)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.end_headers()
+                html = """<!DOCTYPE html><html><head><meta charset="utf-8"><title>401 Unauthorized</title>
+                <style>body{font-family:system-ui;padding:40px;background:#0f172a;color:#f8fafc;text-align:center;}
+                .box{max-width:500px;margin:50px auto;background:#1e293b;padding:30px;border-radius:12px;border:1px solid #334155;}
+                input{width:80%;padding:10px;margin:15px 0;border-radius:6px;border:1px solid #475569;background:#0f172a;color:#fff;}
+                button{padding:10px 20px;border-radius:6px;background:#3b82f6;color:#fff;border:none;cursor:pointer;}
+                </style></head><body><div class="box"><h2>🔒 AutoRIS Dashboard - Yêu Cầu Mã Xác Thực</h2>
+                <p>Vui lòng nhập Access Token để truy cập bảng điều khiển.</p>
+                <input type="password" id="t" placeholder="Nhập AUTORIS_API_TOKEN..."><br>
+                <button onclick="location.href='/dashboard?token='+encodeURIComponent(document.getElementById('t').value)">Đăng nhập</button>
+                </div></body></html>"""
+                self.wfile.write(html.encode("utf-8"))
+                return
             self.render_dashboard()
             return
 
         elif path.startswith("/audio/"):
-            filename = os.path.basename(path)
+            if not self.is_authenticated():
+                self.send_error(401, "Unauthorized: Invalid or missing client token")
+                return
+            filename = os.path.basename(path.rstrip("/"))
+            if not filename:
+                self.send_error(404, "File not found")
+                return
             audio_path = os.path.join(AUDIO_DIR_V2, filename)
-            if not os.path.exists(audio_path):
+            if not os.path.exists(audio_path) or not os.path.isfile(audio_path):
                 audio_path = os.path.join(AUDIO_DIR, filename)
-            if os.path.exists(audio_path):
+            if os.path.exists(audio_path) and os.path.isfile(audio_path):
                 self.send_response(200)
                 self.send_cors_headers()
                 self.send_header("Content-Type", "audio/wav")
@@ -1226,6 +1263,8 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
             # Nếu file không tồn tại, tìm các file zip dự phòng mới nhất
             if not os.path.exists(zip_path):
                 candidates = [
+                    "autoris-extension-v2.0.2.zip",
+                    "autoris-extension-v2.0.1.zip",
                     "autoris-extension-v2.0.0.zip",
                     "autoris-extension-v1.3.1.zip",
                     "autoris-extension-v1.3.0.zip",

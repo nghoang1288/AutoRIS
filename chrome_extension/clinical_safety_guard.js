@@ -60,11 +60,13 @@
     extractMeasurements(text) {
       if (!text) return [];
       const measurements = [];
+      const matched3DRanges = [];
 
       // 1. Regex cho kích thước 3 chiều (3D): ví dụ 12x10x8 mm hoặc 12 x 10 x 8 mm hoặc 12×10×8mm
       const regex3D = /(\d+(?:[.,]\d+)?)\s*(?:x|×|\*)\s*(\d+(?:[.,]\d+)?)\s*(?:x|×|\*)\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|milimét|milimet|xen-ti-mét|centimet|xentimet|ly|phân)\b/gi;
       let match;
       while ((match = regex3D.exec(text)) !== null) {
+        matched3DRanges.push([match.index, match.index + match[0].length]);
         const val1 = parseFloat(match[1].replace(",", "."));
         const val2 = parseFloat(match[2].replace(",", "."));
         const val3 = parseFloat(match[3].replace(",", "."));
@@ -87,9 +89,9 @@
       // 2. Regex cho 1 chiều hoặc 2 chiều hoặc dải (range): ví dụ 12x10mm, 3-5mm, 3 đến 5 mm, 12mm, 3 phân, 5 ly
       const regex2D = /(\d+(?:[.,]\d+)?)\s*(?:(?:x|×|\*|\s+đến\s+|\s*-\s*)\s*(\d+(?:[.,]\d+)?))?\s*(mm|cm|milimét|milimet|xen-ti-mét|centimet|xentimet|ly|phân)\b/gi;
       while ((match = regex2D.exec(text)) !== null) {
-        // Tránh trùng lặp nếu đã được trích xuất trong regex3D
-        const alreadyMatched = measurements.some(m => m.rawMatch.includes(match[0]) || match[0].includes(m.rawMatch));
-        if (alreadyMatched) continue;
+        // Tránh trùng lặp nếu vị trí nằm trọn trong cấu trúc 3D đã trích xuất trước đó
+        const isInside3D = matched3DRanges.some(([start, end]) => match.index >= start && match.index < end);
+        if (isInside3D) continue;
 
         const val1 = parseFloat(match[1].replace(",", "."));
         const val2 = match[2] ? parseFloat(match[2].replace(",", ".")) : null;
@@ -121,47 +123,67 @@
       const proposedMeasurements = this.extractMeasurements(proposedText);
 
       // A. Nhảy vọt hoặc sụt giảm đơn vị đo x10 lần (mm <-> cm)
-      for (const rawM of rawMeasurements) {
-        const rawValues = [rawM.val1, rawM.val2, rawM.val3].filter(v => v !== null && v !== undefined);
-
-        for (const propM of proposedMeasurements) {
-          const propValues = [propM.val1, propM.val2, propM.val3].filter(v => v !== null && v !== undefined);
-          const hasMatchingNumber = rawValues.some(rv => propValues.some(pv => Math.abs(rv - pv) < 0.1));
-
-          if (!hasMatchingNumber) continue;
-
-          // Hướng 1: raw mm -> prop cm (12 mm -> 12 cm, phóng to x10 lần)
-          if (rawM.unit === "mm" && propM.unit === "cm") {
-            const rawHadThisInCm = rawMeasurements.some(m => m.unit === "cm" && [m.val1, m.val2, m.val3].some(v => v !== null && Math.abs(v - rawM.maxVal) < 0.1));
-            if (!rawHadThisInCm) {
-              anomalies.push({
-                type: "UNIT_SCALE_JUMP",
-                severity: "CRITICAL",
-                message: `Phát hiện nhảy vọt đơn vị đo x10 lần: ${rawM.rawMatch} (trong câu đọc) biến thành ${propM.rawMatch} (trong văn bản đề xuất).`,
-                details: {
-                  rawMeasurement: rawM.rawMatch,
-                  proposedMeasurement: propM.rawMatch,
-                  factor: 10
-                }
-              });
-            }
+      // Sử dụng Multiset Balance Accounting chống bỏ lọt đa thực thể (multi-entity collision)
+      // Bắt trọn vẹn case: "U gan 12 cm, nang thận 12 mm" -> "U gan 12 mm, nang thận 12 mm"
+      const getNumUnitList = (measurements) => {
+        const list = [];
+        for (const m of measurements) {
+          const vals = [m.val1, m.val2, m.val3].filter(v => v !== null && v !== undefined);
+          for (const v of vals) {
+            list.push({ val: Math.round(v * 10) / 10, unit: m.unit, rawMatch: m.rawMatch });
           }
+        }
+        return list;
+      };
 
-          // Hướng 2: raw cm -> prop mm (12 cm -> 12 mm, thu nhỏ 10 lần)
-          if (rawM.unit === "cm" && propM.unit === "mm") {
-            const rawHadThisInMm = rawMeasurements.some(m => m.unit === "mm" && [m.val1, m.val2, m.val3].some(v => v !== null && Math.abs(v - rawM.maxVal) < 0.1));
-            if (!rawHadThisInMm) {
-              anomalies.push({
-                type: "UNIT_SCALE_JUMP",
-                severity: "CRITICAL",
-                message: `Phát hiện sụt giảm đơn vị đo 10 lần: ${rawM.rawMatch} (trong câu đọc) biến thành ${propM.rawMatch} (trong văn bản đề xuất).`,
-                details: {
-                  rawMeasurement: rawM.rawMatch,
-                  proposedMeasurement: propM.rawMatch,
-                  factor: 0.1
-                }
-              });
-            }
+      const rawList = getNumUnitList(rawMeasurements);
+      const propList = getNumUnitList(proposedMeasurements);
+      const allVals = Array.from(new Set([...rawList.map(x => x.val), ...propList.map(x => x.val)]));
+      const seenRawMatches = new Set();
+
+      for (const v of allVals) {
+        const rawMm = rawList.filter(x => Math.abs(x.val - v) < 0.1 && x.unit === "mm").length;
+        const rawCm = rawList.filter(x => Math.abs(x.val - v) < 0.1 && x.unit === "cm").length;
+        const propMm = propList.filter(x => Math.abs(x.val - v) < 0.1 && x.unit === "mm").length;
+        const propCm = propList.filter(x => Math.abs(x.val - v) < 0.1 && x.unit === "cm").length;
+
+        // Hướng 1: raw mm -> prop cm (phóng to x10 lần: số lượng cm tăng lên trong khi số lượng mm giảm đi)
+        if (propCm > rawCm && propMm < rawMm) {
+          const rawItem = rawList.find(x => Math.abs(x.val - v) < 0.1 && x.unit === "mm");
+          const propItem = propList.find(x => Math.abs(x.val - v) < 0.1 && x.unit === "cm");
+          const matchKey = `UP_${rawItem ? rawItem.rawMatch : v}`;
+          if (!seenRawMatches.has(matchKey)) {
+            seenRawMatches.add(matchKey);
+            anomalies.push({
+              type: "UNIT_SCALE_JUMP",
+              severity: "CRITICAL",
+              message: `Phát hiện nhảy vọt đơn vị đo x10 lần: ${rawItem ? rawItem.rawMatch : v + " mm"} (trong câu đọc) biến thành ${propItem ? propItem.rawMatch : v + " cm"} (trong văn bản đề xuất).`,
+              details: {
+                rawMeasurement: rawItem ? rawItem.rawMatch : `${v} mm`,
+                proposedMeasurement: propItem ? propItem.rawMatch : `${v} cm`,
+                factor: 10
+              }
+            });
+          }
+        }
+
+        // Hướng 2: raw cm -> prop mm (thu nhỏ 10 lần: số lượng mm tăng lên trong khi số lượng cm giảm đi)
+        if (propMm > rawMm && propCm < rawCm) {
+          const rawItem = rawList.find(x => Math.abs(x.val - v) < 0.1 && x.unit === "cm");
+          const propItem = propList.find(x => Math.abs(x.val - v) < 0.1 && x.unit === "mm");
+          const matchKey = `DOWN_${rawItem ? rawItem.rawMatch : v}`;
+          if (!seenRawMatches.has(matchKey)) {
+            seenRawMatches.add(matchKey);
+            anomalies.push({
+              type: "UNIT_SCALE_JUMP",
+              severity: "CRITICAL",
+              message: `Phát hiện sụt giảm đơn vị đo 10 lần: ${rawItem ? rawItem.rawMatch : v + " cm"} (trong câu đọc) biến thành ${propItem ? propItem.rawMatch : v + " mm"} (trong văn bản đề xuất).`,
+              details: {
+                rawMeasurement: rawItem ? rawItem.rawMatch : `${v} cm`,
+                proposedMeasurement: propItem ? propItem.rawMatch : `${v} mm`,
+                factor: 0.1
+              }
+            });
           }
         }
       }

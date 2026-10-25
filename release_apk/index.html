@@ -255,11 +255,11 @@
         </p>
 
         <div class="actions-group">
-            <a href="/autoris-extension-v2.0.1.zip" class="btn-extension" download="autoris-extension-v2.0.1.zip">
+            <a href="/autoris-extension-v2.0.2.zip" class="btn-extension" download="autoris-extension-v2.0.2.zip">
                 <div class="btn-main-title">
-                    <span>🧩</span> TẢI CHROME EXTENSION <span class="version-tag">v2.0.1 MỚI</span>
+                    <span>🧩</span> TẢI CHROME EXTENSION <span class="version-tag">v2.0.2 MỚI</span>
                 </div>
-                <div class="btn-file-subtext">File: autoris-extension-v2.0.1.zip • 80 KB • 24/10/2026</div>
+                <div class="btn-file-subtext">File: autoris-extension-v2.0.2.zip • 82 KB • 25/10/2026</div>
             </a>
 
             <a href="/ViASRBenchmark_S24Ultra.apk" class="btn-apk" download="ViASRBenchmark_S24Ultra.apk">
@@ -276,16 +276,15 @@
 
         <div class="changelog-box">
             <div class="changelog-title">
-                <span>✨ ĐIỂM MỚI BẢN EXTENSION v2.0.1 (24/10/2026)</span>
-                <span style="font-size:10.5px;color:#94a3b8;font-weight:400;">Bảo mật An toàn Lâm sàng • Chống Nhiễm chéo Ca bệnh & Deadlock Server</span>
+                <span>✨ ĐIỂM MỚI BẢN EXTENSION v2.0.2 (25/10/2026)</span>
+                <span style="font-size:10.5px;color:#94a3b8;font-weight:400;">Bảo mật Toàn diện • Khóa Chặt DOM Fingerprint & Gác Cổng Đa Thực Thể</span>
             </div>
             <ul class="changelog-items">
-                <li><b>Chống Nhiễm chéo Ca bệnh (Cross-Study Protection):</b> Khóa chặt Undo theo DOM element thực tế trong SPA, chặn đứng việc hoàn tác sang ca bệnh mới khi đổi bệnh nhân; Giới hạn thời gian hiệu lực F8 (quá 5 phút tự hủy).</li>
-                <li><b>Bảo vệ An toàn Lâm sàng 2 Chiều:</b> Phát hiện nhảy vọt đơn vị cả 2 chiều (12mm &rarr; 12cm VÀ 12cm &rarr; 12mm), loại bỏ bypass toàn cục; Bảo vệ tuyệt đối giải phẫu 'thận phải/xoang bướm'.</li>
-                <li><b>Gác cổng An toàn F9 PACS & Tôn trọng Auto-Apply:</b> Tự động kiểm tra an toàn trước khi điền từ PACS; Tôn trọng 100% nút gạt Auto-Apply của bác sĩ.</li>
-                <li><b>Triệt tiêu Deadlock Server & Chống mất câu:</b> Đổi sang RLock đệ quy trên máy chủ, truyền mảng câu đọc sequence qua polling, bảo toàn buffer câu tiếp theo trên Android.</li>
-                <li><b>Hỗ trợ Đa phương tiện Toàn diện:</b> Tự động nhận diện và xử lý Siêu âm (US), Cắt lớp vi tính (CT), Cộng hưởng từ (MRI) và X-quang (XR).</li>
-                <li><b>Giám sát Chỉ số Nguy cơ Đỏ cấp cứu:</b> Tự động báo động đỏ khi di lệch đường giữa sọ não &gt; 5mm (tụt kẹt não), phình ĐMC &ge; 50mm, bề dày máu tụ nội sọ &gt; 10mm, hẹp ống sống &lt; 10mm.</li>
+                <li><b>Khắc phục Lỗi PACS Crash & Bảo toàn Buffer Android:</b> Sửa triệt để lỗi ReferenceError storedConfig khi bấm F9; Android giữ nguyên buffer văn bản đã giải mã khi bị SafetyGate chặn hoặc hoãn gửi, không làm mất câu của bác sĩ.</li>
+                <li><b>Khóa Chặt Study DOM Fingerprint Chống Nhầm Ca:</b> Ràng buộc mã định danh bệnh nhân, dịch vụ và editor hash trước khi áp kết quả AI; Huỷ lệnh Undo/F8 nếu tab RIS chuyển sang ca bệnh nhân khác.</li>
+                <li><b>Gác Cổng An Toàn Nhảy Đơn Vị Đa Thực Thể:</b> Kế toán cân đối đa tập hợp (Multiset Balance Accounting) phát hiện chính xác mọi trường hợp nhảy vọt hoặc sụt giảm đơn vị (12 cm &rarr; 12 mm) ngay cả khi câu đọc chứa nhiều cơ quan có số đo trùng lặp.</li>
+                <li><b>Bảo Mật Đầu-Cuối API Token & Thanh Trừng Credential:</b> Bảo vệ toàn diện các endpoint /audio/*, /dashboard, /api/dictation/stream, few-shots bằng X-Client-Token; Loại bỏ 100% API key hardcode trong mã nguồn.</li>
+                <li><b>Hỗ trợ Đa Phương Tiện & Giám Sát Nguy Cơ Đỏ Cấp Cứu:</b> Nhận diện chính xác Siêu âm, CT, MRI, X-quang, chống nhầm lẫn vật lý xuyên phương tiện và cảnh báo tức thì các chỉ số nguy cơ đỏ (di lệch đường giữa, máu tụ nội sọ, phình ĐMC).</li>
             </ul>
         </div>
 

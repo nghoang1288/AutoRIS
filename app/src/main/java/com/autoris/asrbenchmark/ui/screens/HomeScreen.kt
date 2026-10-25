@@ -465,7 +465,7 @@ fun HomeScreen(
                                         modifier = Modifier
                                             .clip(RoundedCornerShape(8.dp))
                                             .background(Color(0xFFFEE2E2))
-                                            .clickable { if (currentTextToSend.isNotBlank()) viewModel.exportToRis(currentTextToSend) }
+                                            .clickable { if (currentTextToSend.isNotBlank()) viewModel.exportToRis(currentTextToSend, isUserConfirmed = true) }
                                             .padding(horizontal = 6.dp, vertical = 2.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
@@ -645,7 +645,7 @@ fun HomeScreen(
                 Button(
                     onClick = {
                         if (canSend) {
-                            viewModel.exportToRis(currentTextToSend)
+                            viewModel.exportToRis(currentTextToSend, isUserConfirmed = true)
                         }
                     },
                     enabled = canSend,

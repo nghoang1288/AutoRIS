@@ -65,6 +65,15 @@ const r2c = ClinicalSafetyGuard.verifyClinicalSafety(
 assert(!r2c.safe && r2c.anomalies.some(a => a.type === "UNIT_SCALE_JUMP" && a.details.rawMeasurement.includes("12")),
   "Bắt lỗi: 12 cm biến thành 12 mm ngay cả khi câu đọc chứa số đo mm khác");
 
+// Test 2d: Câu đọc chứa CÙNG số đo 12 ở cả cm và mm ("U gan 12 cm, nang thận 12 mm") -> U gan 12 mm, nang thận 12 mm (Codex probe recheck)
+const r2d = ClinicalSafetyGuard.verifyClinicalSafety(
+  "U gan 12 cm, nang thận 12 mm",
+  "- Gan: U kích thước 12 mm. Thận: Có nang 12 mm.",
+  "U gan và nang thận."
+);
+assert(!r2d.safe && r2d.anomalies.some(a => a.type === "UNIT_SCALE_JUMP" && a.details.factor === 0.1),
+  "Bắt lỗi đa thực thể: U gan 12 cm, nang thận 12 mm biến thành hai số đo 12 mm (sụt giảm x10 lần)");
+
 // Test 3: Đúng đơn vị mm -> mm (không báo lỗi)
 const r3 = ClinicalSafetyGuard.verifyClinicalSafety(
   "Nốt mờ thùy trên phổi phải kích thước 12mm",

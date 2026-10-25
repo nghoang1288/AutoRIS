@@ -839,6 +839,7 @@
     try {
       if (isExtensionValid()) {
         storedConfig = await chrome.storage.local.get([
+          STORAGE_KEYS.AUTO_APPLY,
           STORAGE_KEYS.SMART_SYNTHESIZE,
           STORAGE_KEYS.AUTO_COPY,
           STORAGE_KEYS.PLAY_CHIME
@@ -871,6 +872,7 @@
     }
 
     let synthesizedResult = null;
+    const initialStudyFingerprint = getRISStudyFingerprint();
 
     // KIỂM TRA LỆNH THƯ KÝ Y KHOA (TIER 1 & TIER 2)
     const isSecretary = await SynthesizerBridge.isSecretaryCommand(cleanDictation);
@@ -915,6 +917,15 @@
     }
 
     lastSynthesizedData = synthesizedResult;
+
+    // Chống nhiễm chéo ca bệnh (Cross-Study Contamination Guard)
+    const currentStudyFingerprint = getRISStudyFingerprint();
+    if (!isStudyMatching(initialStudyFingerprint, currentStudyFingerprint)) {
+      console.warn("[AutoRIS Cross-Study Guard] Ca bệnh trên RIS đã thay đổi!", { initialStudyFingerprint, currentStudyFingerprint });
+      showToast("⚠️ Ca bệnh trên màn hình đã chuyển sang ca khác trong lúc AI đang xử lý! Đã hủy tự động điền để chống ghi nhầm ca.", true);
+      updateFloatingPreview(cleanDictation, null, "⚠️ Đã hủy điền do ca bệnh bị đổi (chống nhiễm chéo)");
+      return false;
+    }
 
     // Tự động nhận diện Modality & Vùng giải phẫu (Tri-Source Detector)
     const serviceTitle = extractRISServiceTitle();
@@ -993,6 +1004,60 @@
       // Ignored
     }
     return "";
+  }
+
+  // Helper trích xuất định danh ca bệnh / bệnh nhân hiện tại trên RIS SPA (chống nhiễm chéo)
+  function getRISStudyFingerprint() {
+    try {
+      const idSelectors = [
+        "#lbl-mabenhnhan", "#txt-patient-id", ".patient-id", "[id*='ma_bn']", "[id*='mabn']",
+        "[class*='patient-code']", "#lbl-tenbenhnhan", ".patient-name", "[id*='hoten']",
+        "[id*='ho_ten']", "#patientName", ".accession-number", "[id*='accession']",
+        "[id*='so_phieu']", "[id*='sophieu']", ".study-id", "#txtMaYTe", "#txtHoTen",
+        ".patient-info", "#patientInfo"
+      ];
+      let pId = "";
+      for (const sel of idSelectors) {
+        const el = document.querySelector(sel);
+        if (el) {
+          const val = (el.innerText || el.value || "").trim();
+          if (val) pId += `|${val}`;
+        }
+      }
+
+      const serviceTitle = extractRISServiceTitle();
+      const editor = findRISEditor();
+      const sep = findSeparateFields();
+      let editorBaselineHash = "";
+      if (editor) {
+        const txt = getElementText(editor);
+        editorBaselineHash = `${txt.length}_${txt.slice(0, 30)}`;
+      } else if (sep) {
+        const mt = sep.motaEl ? getElementText(sep.motaEl) : "";
+        const kl = sep.ketluanEl ? getElementText(sep.ketluanEl) : "";
+        editorBaselineHash = `${mt.length}_${mt.slice(0, 20)}_${kl.length}`;
+      }
+
+      return {
+        patientId: pId || "UNKNOWN_PATIENT",
+        serviceTitle: serviceTitle || "",
+        editorBaselineHash: editorBaselineHash,
+        timestamp: Date.now()
+      };
+    } catch (e) {
+      return { patientId: "UNKNOWN_PATIENT", serviceTitle: "", editorBaselineHash: "", timestamp: Date.now() };
+    }
+  }
+
+  function isStudyMatching(fp1, fp2) {
+    if (!fp1 || !fp2) return true;
+    if (fp1.patientId !== "UNKNOWN_PATIENT" && fp2.patientId !== "UNKNOWN_PATIENT") {
+      return fp1.patientId === fp2.patientId;
+    }
+    if (fp1.serviceTitle && fp2.serviceTitle && fp1.serviceTitle !== fp2.serviceTitle) {
+      return false;
+    }
+    return true;
   }
 
   // Helper thực thi ghi kết quả vào Editor hoặc các ô riêng biệt
@@ -1191,7 +1256,8 @@
       unifiedEl,
       motaVal: curMota,
       ketluanVal: curKL,
-      unifiedVal: curUnified
+      unifiedVal: curUnified,
+      studyFingerprint: getRISStudyFingerprint()
     };
     undoStack.push(snapshot);
     if (isStream) {
@@ -1239,6 +1305,14 @@
         undoStack.push(lastState);
         return;
       }
+    }
+
+    // Kiểm tra định danh ca bệnh chống nhiễm chéo (Cross-Study Isolation)
+    const curStudyFingerprint = getRISStudyFingerprint();
+    if (lastState.studyFingerprint && !isStudyMatching(lastState.studyFingerprint, curStudyFingerprint)) {
+      undoStack.push(lastState);
+      showToast("⚠️ Ca bệnh trên màn hình hiện tại không khớp với ca bệnh lúc thao tác. Từ chối hoàn tác!", true);
+      return;
     }
 
     if (lastState.unifiedEl) {
@@ -1541,11 +1615,23 @@
 
       const editor = findRISEditor();
 
-      // 1. Kiểm tra bản dịch PACS Lung-RADS gần nhất (F9) - Chống nhiễm chéo ca bệnh cũ (> 5 phút coi như hết hạn)
-      const store = await chrome.storage.local.get([STORAGE_KEYS.LAST_REPORT, STORAGE_KEYS.LAST_REPORT_TIME]);
+      // 1. Kiểm tra bản dịch PACS Lung-RADS gần nhất (F9) - Chống nhiễm chéo ca bệnh cũ
+      const store = await chrome.storage.local.get([
+        STORAGE_KEYS.LAST_REPORT,
+        STORAGE_KEYS.LAST_REPORT_TIME,
+        "autoris_last_report_study_fingerprint"
+      ]);
       const lastRepTime = store[STORAGE_KEYS.LAST_REPORT_TIME] || 0;
       const isStale = (Date.now() - lastRepTime) > 5 * 60 * 1000;
-      const pacsReport = lastSynthesizedReport || (!isStale ? store[STORAGE_KEYS.LAST_REPORT] : null);
+      const savedFp = store["autoris_last_report_study_fingerprint"];
+      const curFp = getRISStudyFingerprint();
+      const isCrossStudy = savedFp && !isStudyMatching(savedFp, curFp);
+
+      if (isCrossStudy) {
+        showToast("⚠️ Báo cáo đã lưu thuộc về ca bệnh khác. Không thể điền vào ca này!", true);
+        return;
+      }
+      const pacsReport = !isStale ? (lastSynthesizedReport || store[STORAGE_KEYS.LAST_REPORT]) : null;
 
       if (pacsReport && editor) {
         applySynthesizedReportToRISEditor(editor, pacsReport);
@@ -2002,49 +2088,75 @@
       if (msg.action === ACTIONS.AUTO_APPLY_PACS || msg.action === ACTIONS.AUTO_APPLY) {
         if (!isTabSelectedForFilling()) {
           console.log("[AutoRIS RIS] Bỏ qua kết quả PACS vì tab này chưa được tick '🎯 Điền tab này'.");
+          sendResponse({ received: false, skipped: true });
           return;
         }
-        const report = msg.report;
-        const reportTime = msg.timestamp || Date.now();
-        if (report && reportTime >= lastAppliedReportTime) {
-          lastAppliedReportTime = reportTime;
-          lastSynthesizedReport = report;
-          if (msg.rawText) {
-            lastInputText = msg.rawText;
-          }
 
-          // Kiểm định an toàn lâm sàng (Clinical Safety Guard) cho kết quả PACS
-          if (typeof ClinicalSafetyGuard !== "undefined") {
-            const safetyCheck = ClinicalSafetyGuard.verifyClinicalSafety(msg.rawText || "", report, "", "", "", "CT");
-            if (!safetyCheck.safe && (safetyCheck.riskLevel === "CRITICAL" || safetyCheck.riskLevel === "HIGH")) {
-              const reason = safetyCheck.anomalies?.[0]?.message || "Bất thường lâm sàng";
-              console.warn("[AutoRIS PACS Safety] Từ chối tự động điền PACS:", reason);
-              showToast(`⛔ Chặn tự điền PACS: ${reason}`, true);
-              updateFloatingPreview(msg.rawText || "", null, `⚠️ ${reason}`);
-              sendResponse({ received: true, blocked: true, reason: reason });
+        (async () => {
+          try {
+            const report = msg.report;
+            const reportTime = msg.timestamp || Date.now();
+            if (!report || reportTime < lastAppliedReportTime) {
+              sendResponse({ received: false, reason: "stale_report" });
               return;
             }
-          }
 
-          // Kiểm tra cài đặt Auto Apply
-          const isAutoApplyEnabled = storedConfig[STORAGE_KEYS.AUTO_APPLY] !== false;
-          if (!isAutoApplyEnabled) {
-            showToast("ℹ️ Auto Apply đang tắt. Bấm F8 để điền kết quả PACS vào RIS!");
-            updateFloatingPreview(msg.rawText || "", null, "Đã nhận kết quả PACS. Bấm F8 để điền!");
-            sendResponse({ received: true, autoApplyDisabled: true });
-            return;
-          }
+            lastAppliedReportTime = reportTime;
+            lastSynthesizedReport = report;
+            if (msg.rawText) {
+              lastInputText = msg.rawText;
+            }
 
-          const editor = findRISEditor();
-          if (editor) {
-            applySynthesizedReportToRISEditor(editor, report);
-            playChimeSound();
-            showToast("✅ Đã tự động điền kết quả dịch Lung-RADS từ PACS!");
-          } else {
-            console.warn("[AutoRIS RIS] Chưa tìm thấy ô soạn thảo RIS để tự điền tự động. Bác sĩ có thể bấm '✍️ Điền lại' (F8) hoặc Ctrl+V!");
+            // Lưu dấu vân tay ca bệnh của bản dịch PACS (chống nhiễm chéo)
+            const curStudyFp = getRISStudyFingerprint();
+            chrome.storage.local.set({
+              "autoris_last_report_study_fingerprint": curStudyFp
+            });
+
+            // Kiểm định an toàn lâm sàng (Clinical Safety Guard) cho kết quả PACS
+            if (typeof ClinicalSafetyGuard !== "undefined") {
+              const safetyCheck = ClinicalSafetyGuard.verifyClinicalSafety(msg.rawText || "", report, "", "", "", "CT");
+              if (!safetyCheck.safe && (safetyCheck.riskLevel === "CRITICAL" || safetyCheck.riskLevel === "HIGH")) {
+                const reason = safetyCheck.anomalies?.[0]?.message || "Bất thường lâm sàng";
+                console.warn("[AutoRIS PACS Safety] Từ chối tự động điền PACS:", reason);
+                showToast(`⛔ Chặn tự điền PACS: ${reason}`, true);
+                updateFloatingPreview(msg.rawText || "", null, `⚠️ ${reason}`);
+                sendResponse({ received: true, blocked: true, reason: reason });
+                return;
+              }
+            }
+
+            // Kiểm tra cài đặt Auto Apply & Play Chime từ Storage
+            let isAutoApplyEnabled = true;
+            let playChime = true;
+            try {
+              const cfg = await chrome.storage.local.get([STORAGE_KEYS.AUTO_APPLY, STORAGE_KEYS.PLAY_CHIME]);
+              if (cfg[STORAGE_KEYS.AUTO_APPLY] === false) isAutoApplyEnabled = false;
+              if (cfg[STORAGE_KEYS.PLAY_CHIME] === false) playChime = false;
+            } catch (e) {}
+
+            if (!isAutoApplyEnabled) {
+              showToast("ℹ️ Auto Apply đang tắt. Bấm F8 để điền kết quả PACS vào RIS!");
+              updateFloatingPreview(msg.rawText || "", null, "Đã nhận kết quả PACS. Bấm F8 để điền!");
+              sendResponse({ received: true, autoApplyDisabled: true });
+              return;
+            }
+
+            const editor = findRISEditor();
+            if (editor) {
+              applySynthesizedReportToRISEditor(editor, report);
+              if (playChime) playChimeSound();
+              showToast("✅ Đã tự động điền kết quả dịch Lung-RADS từ PACS!");
+            } else {
+              console.warn("[AutoRIS RIS] Chưa tìm thấy ô soạn thảo RIS để tự điền tự động. Bác sĩ có thể bấm '✍️ Điền lại' (F8) hoặc Ctrl+V!");
+            }
+            sendResponse({ received: true });
+          } catch (err) {
+            console.error("[AutoRIS RIS] Lỗi xử lý kết quả PACS:", err);
+            sendResponse({ received: false, error: err.message });
           }
-          sendResponse({ received: true });
-        }
+        })();
+        return true; // Giữ kết nối bất đồng bộ cho sendResponse
       }
     });
 
