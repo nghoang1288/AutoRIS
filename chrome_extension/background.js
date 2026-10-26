@@ -786,8 +786,7 @@ async function callOpenAICompatibleServer(endpoint, apiKey, preferredModel, syst
         outputText = data.choices?.[0]?.message?.content?.trim() || "";
       } catch (parseErr) {
         if (rawBody.includes("data:")) {
-          const chunks = rawBody.split(/(?:^|
-)data:\s*/);
+          const chunks = rawBody.split(/(?:^|\n)data:\s*/);
           for (const chunk of chunks) {
             const trimmed = chunk.trim();
             if (trimmed && trimmed !== "[DONE]") {
@@ -801,7 +800,7 @@ async function callOpenAICompatibleServer(endpoint, apiKey, preferredModel, syst
       }
 
       if (!outputText && rawBody.includes('"content":')) {
-        const m = rawBody.match(/"content"\s*:\s*"([^"\]*(?:\.[^"\]*)*)"/);
+        const m = rawBody.match(/"content"\s*:\s*"((?:[^"\\]|\\.)*)"/);
         if (m) {
           try {
             outputText = JSON.parse(`"${m[1]}"`);

@@ -56,20 +56,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     const pool = (Array.isArray(rawPool) && rawPool.length > 0)
       ? rawPool
       : (DEFAULT_CONFIG.googleKeysPool || []);
-    geminiKeysTextarea.value = pool.join("
-");
+    geminiKeysTextarea.value = pool.join("\n");
     updateKeyCountDisplay(pool.length);
 
     geminiKeysTextarea.addEventListener("input", () => {
-      const lines = geminiKeysTextarea.value.split("
-").map(s => s.trim()).filter(Boolean);
+      const lines = geminiKeysTextarea.value.split("\n").map(s => s.trim()).filter(Boolean);
       updateKeyCountDisplay(lines.length);
     });
 
     if (btnSaveKey) {
       btnSaveKey.addEventListener("click", async () => {
-        const lines = geminiKeysTextarea.value.split("
-").map(s => s.trim()).filter(Boolean);
+        const lines = geminiKeysTextarea.value.split("\n").map(s => s.trim()).filter(Boolean);
         const poolToSave = lines.length > 0 ? lines : DEFAULT_CONFIG.googleKeysPool;
         await chrome.storage.local.set({
           [STORAGE_KEYS.GOOGLE_KEYS_POOL]: poolToSave,
@@ -260,7 +257,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       chrome.runtime.sendMessage({ action: "DOWNLOAD_EXTENSION_UPDATE" }, (res) => {
         btnDownloadUpdate.disabled = false;
         btnDownloadUpdate.textContent = "🚀 Tải lại bản ZIP";
-        alert("📥 Đã bắt đầu tải file autoris-extension.zip về máy!\nSau khi tải xong, giải nén và nạp vào chrome://extensions để hoàn tất.");
+        alert("📥 Đã bắt đầu tải file autoris-extension.zip về máy!\n\n💡 Mẹo 1-Click: Bạn chỉ cần nhấp đúp file 'cap_nhat.bat' trong thư mục Extension hiện tại để tự động tải & ghi đè, sau đó ấn biểu tượng 🔄 Reload trong chrome://extensions là xong!");
       });
     });
   }
