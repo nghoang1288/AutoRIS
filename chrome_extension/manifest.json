@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AutoRIS - Multi-Modality Medical Secretary & PACS Translator",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "author": "AutoRIS Team",
   "description": "Thư ký Y khoa Trí tuệ Nhân tạo Đa Phương tiện (Siêu âm, CT, MRI, X-quang) & Bộ Gác cổng An toàn Lâm sàng 2.0",
   "permissions": [

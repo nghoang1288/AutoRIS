@@ -6,18 +6,85 @@ document.addEventListener("DOMContentLoaded", async () => {
   const playChimeCheck = document.getElementById("play-chime");
   const statusBadge = document.getElementById("server-status-badge");
 
+  const modeSelect = document.getElementById("connection-mode");
+  const geminiKeyInput = document.getElementById("gemini-api-key");
+  const btnSaveKey = document.getElementById("btn-save-gemini-key");
+  const keySavedMsg = document.getElementById("key-saved-msg");
+  const btnTestAi = document.getElementById("btn-test-ai");
+  const aiTestResult = document.getElementById("ai-test-result");
+
   // Load cấu hình đã lưu
   const stored = await chrome.storage.local.get([
     STORAGE_KEYS.AUTO_APPLY,
     STORAGE_KEYS.SMART_SYNTHESIZE,
     STORAGE_KEYS.SHOW_FLOATING_BAR,
-    STORAGE_KEYS.PLAY_CHIME
+    STORAGE_KEYS.PLAY_CHIME,
+    STORAGE_KEYS.CONNECTION_MODE,
+    STORAGE_KEYS.GOOGLE_KEYS_POOL,
+    STORAGE_KEYS.AI_API_KEY
   ]);
 
   autoApplyCheck.checked = stored[STORAGE_KEYS.AUTO_APPLY] !== undefined ? stored[STORAGE_KEYS.AUTO_APPLY] : DEFAULT_CONFIG.autoApply;
   smartSynthesizeCheck.checked = stored[STORAGE_KEYS.SMART_SYNTHESIZE] !== undefined ? stored[STORAGE_KEYS.SMART_SYNTHESIZE] : DEFAULT_CONFIG.smartSynthesize;
   showFloatingBarCheck.checked = stored[STORAGE_KEYS.SHOW_FLOATING_BAR] !== undefined ? stored[STORAGE_KEYS.SHOW_FLOATING_BAR] : DEFAULT_CONFIG.showFloatingBar;
   playChimeCheck.checked = stored[STORAGE_KEYS.PLAY_CHIME] !== undefined ? stored[STORAGE_KEYS.PLAY_CHIME] : DEFAULT_CONFIG.playChime;
+
+  if (modeSelect) {
+    modeSelect.value = stored[STORAGE_KEYS.CONNECTION_MODE] || DEFAULT_CONFIG.connectionMode;
+    modeSelect.addEventListener("change", () => {
+      chrome.storage.local.set({ [STORAGE_KEYS.CONNECTION_MODE]: modeSelect.value });
+    });
+  }
+
+  if (geminiKeyInput) {
+    const keys = stored[STORAGE_KEYS.GOOGLE_KEYS_POOL] || [];
+    const directKey = (keys && keys.length > 0) ? keys[0] : (stored[STORAGE_KEYS.AI_API_KEY] || "");
+    if (directKey) {
+      geminiKeyInput.value = directKey;
+    }
+
+    if (btnSaveKey) {
+      btnSaveKey.addEventListener("click", async () => {
+        const val = geminiKeyInput.value.trim();
+        const pool = val ? [val] : [];
+        await chrome.storage.local.set({
+          [STORAGE_KEYS.GOOGLE_KEYS_POOL]: pool,
+          [STORAGE_KEYS.AI_API_KEY]: val
+        });
+        if (keySavedMsg) {
+          keySavedMsg.style.display = "block";
+          setTimeout(() => { keySavedMsg.style.display = "none"; }, 3000);
+        }
+      });
+    }
+  }
+
+  if (btnTestAi) {
+    btnTestAi.addEventListener("click", () => {
+      btnTestAi.disabled = true;
+      btnTestAi.textContent = "⏳ Đang kiểm tra AI...";
+      if (aiTestResult) aiTestResult.style.display = "none";
+
+      chrome.runtime.sendMessage({ action: "TEST_AI_CONNECTION" }, (res) => {
+        btnTestAi.disabled = false;
+        btnTestAi.textContent = "🧪 Kiểm tra kết nối AI ngay";
+        if (aiTestResult) {
+          aiTestResult.style.display = "block";
+          if (res && res.success) {
+            aiTestResult.style.background = "rgba(16, 185, 129, 0.15)";
+            aiTestResult.style.color = "#34d399";
+            aiTestResult.style.border = "1px solid rgba(16, 185, 129, 0.3)";
+            aiTestResult.textContent = `🟢 AI phản hồi tốt (${res.latencyMs}ms)! ${res.modelUsed ? `Mô hình: ${res.modelUsed}` : ""}`;
+          } else {
+            aiTestResult.style.background = "rgba(239, 68, 68, 0.15)";
+            aiTestResult.style.color = "#f87171";
+            aiTestResult.style.border = "1px solid rgba(239, 68, 68, 0.3)";
+            aiTestResult.textContent = `🔴 Lỗi AI: ${res?.error || "Không có phản hồi từ AI"}`;
+          }
+        }
+      });
+    });
+  }
 
   // Tự động lưu cấu hình mỗi khi bật/tắt switch
   const saveOptions = () => {

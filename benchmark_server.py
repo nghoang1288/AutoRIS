@@ -730,26 +730,27 @@ def call_ai_synthesize_proxy(raw_text, system_prompt, preferred_model="DI/google
     # Fallback cuối: Gọi Google Gemini Direct API từ VPS
     google_keys = [k.strip() for k in os.environ.get("GOOGLE_API_KEYS", os.environ.get("GOOGLE_API_KEY", "")).split(",") if k.strip()]
     for gkey in google_keys:
-        try:
-            g_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gkey}"
-            g_payload = {
-                "systemInstruction": {"parts": [{"text": prompt_with_shots}]},
-                "contents": [{"parts": [{"text": f"BÁO CÁO ĐẦU VÀO:\n{raw_text}"}]}],
-                "generationConfig": {"temperature": temperature}
-            }
-            g_req = urllib.request.Request(
-                g_url,
-                data=json.dumps(g_payload).encode("utf-8"),
-                headers={"Content-Type": "application/json"}
-            )
-            with urllib.request.urlopen(g_req, timeout=15) as resp:
-                g_data = json.loads(resp.read().decode("utf-8"))
-                text_out = g_data["candidates"][0]["content"]["parts"][0]["text"].strip()
-                if text_out:
-                    return {"status": "success", "data": text_out, "model_used": "google-gemini-2.5-flash-direct"}
-        except Exception as ge:
-            print(f"[AutoRIS Server] Google Gemini direct API fallback failed: {ge}")
-            continue
+        for gmodel in ["gemini-1.5-flash", "gemini-2.0-flash"]:
+            try:
+                g_url = f"https://generativelanguage.googleapis.com/v1beta/models/{gmodel}:generateContent?key={gkey}"
+                g_payload = {
+                    "systemInstruction": {"parts": [{"text": prompt_with_shots}]},
+                    "contents": [{"parts": [{"text": f"BÁO CÁO ĐẦU VÀO:\n{raw_text}"}]}],
+                    "generationConfig": {"temperature": temperature}
+                }
+                g_req = urllib.request.Request(
+                    g_url,
+                    data=json.dumps(g_payload).encode("utf-8"),
+                    headers={"Content-Type": "application/json"}
+                )
+                with urllib.request.urlopen(g_req, timeout=15) as resp:
+                    g_data = json.loads(resp.read().decode("utf-8"))
+                    text_out = g_data["candidates"][0]["content"]["parts"][0]["text"].strip()
+                    if text_out:
+                        return {"status": "success", "data": text_out, "model_used": f"google-{gmodel}-direct"}
+            except Exception as ge:
+                print(f"[AutoRIS Server] Google Gemini direct API fallback failed for {gmodel}: {ge}")
+                continue
 
     return {"status": "error", "error": "Toàn bộ AI models đều bận hoặc hết hạn ngạch"}
 
@@ -973,19 +974,20 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
             apk_mtime = int(os.path.getmtime(apk_path)) if os.path.exists(apk_path) else 0
 
             # Đọc version trực tiếp từ manifest.json trước
-            ext_ver = "2.0.2"
+            ext_ver = "2.0.3"
             manifest_path = os.path.join(BASE_DIR, "chrome_extension", "manifest.json")
             if os.path.exists(manifest_path):
                 try:
                     with open(manifest_path, "r", encoding="utf-8") as mf:
                         mdata = json.load(mf)
-                        ext_ver = mdata.get("version", "2.0.2")
+                        ext_ver = mdata.get("version", "2.0.3")
                 except Exception:
                     pass
 
             # Tìm file zip tương ứng với version hoặc file zip mới nhất
             ext_candidates = [
                 f"autoris-extension-v{ext_ver}.zip",
+                "autoris-extension-v2.0.3.zip",
                 "autoris-extension-v2.0.2.zip",
                 "autoris-extension-v2.0.1.zip",
                 "autoris-extension-v2.0.0.zip",
@@ -1263,6 +1265,7 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
             # Nếu file không tồn tại, tìm các file zip dự phòng mới nhất
             if not os.path.exists(zip_path):
                 candidates = [
+                    "autoris-extension-v2.0.3.zip",
                     "autoris-extension-v2.0.2.zip",
                     "autoris-extension-v2.0.1.zip",
                     "autoris-extension-v2.0.0.zip",

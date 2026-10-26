@@ -443,6 +443,40 @@ chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
     return true;
   }
 
+  // D0. Kiểm tra kết nối AI từ Popup
+  if (req.action === "TEST_AI_CONNECTION") {
+    (async () => {
+      const startTime = Date.now();
+      try {
+        const config = await chrome.storage.local.get([
+          STORAGE_KEYS.CONNECTION_MODE,
+          STORAGE_KEYS.AI_API_ENDPOINT,
+          STORAGE_KEYS.AI_API_KEY,
+          STORAGE_KEYS.AI_MODEL,
+          STORAGE_KEYS.GOOGLE_KEYS_POOL,
+          STORAGE_KEYS.SERVER_URL
+        ]);
+
+        const rawResult = await handlePACSSynthesizeReport({
+          connectionMode: config[STORAGE_KEYS.CONNECTION_MODE] || DEFAULT_CONFIG.connectionMode,
+          apiEndpoint: config[STORAGE_KEYS.AI_API_ENDPOINT] || DEFAULT_CONFIG.aiEndpoint,
+          apiKey: config[STORAGE_KEYS.AI_API_KEY] || DEFAULT_CONFIG.aiKey,
+          googleKeysPool: config[STORAGE_KEYS.GOOGLE_KEYS_POOL] || DEFAULT_CONFIG.googleKeysPool,
+          preferredModel: config[STORAGE_KEYS.AI_MODEL] || DEFAULT_CONFIG.aiModel,
+          systemPrompt: "Bạn là trợ lý kiểm tra kết nối hệ thống. Trả về đúng 1 câu ngắn: 'AutoRIS AI Connected'.",
+          rawText: "Test ping",
+          serverUrl: config[STORAGE_KEYS.SERVER_URL] || DEFAULT_CONFIG.serverUrl
+        });
+
+        const elapsed = Date.now() - startTime;
+        sendResponse({ success: true, latencyMs: elapsed, preview: (rawResult || "").slice(0, 80) });
+      } catch (err) {
+        sendResponse({ success: false, error: err.message });
+      }
+    })();
+    return true;
+  }
+
   // D1. Phát sóng lại báo cáo PACS sang các tab RIS theo yêu cầu
   if (req.action === "BROADCAST_PACS") {
     const report = req.payload?.report;
@@ -765,11 +799,26 @@ async function callOpenAICompatibleServer(endpoint, apiKey, preferredModel, syst
 
 // 9. Gọi trực tiếp Google Gemini API khi dự phòng
 async function callGoogleGeminiDirect(keysPool, preferredModel, systemPrompt, userPrompt, timeoutMs = 15000, externalSignal = null) {
-  const activeKeys = (keysPool && keysPool.length > 0) ? keysPool : DEFAULT_CONFIG.googleKeysPool;
+  let activeKeys = (keysPool && keysPool.length > 0) ? keysPool : DEFAULT_CONFIG.googleKeysPool;
+  if (!activeKeys || activeKeys.length === 0) {
+    // Tự động tìm key trong storage nếu chưa được truyền trong payload
+    const stored = await chrome.storage.local.get([STORAGE_KEYS.GOOGLE_KEYS_POOL, STORAGE_KEYS.AI_API_KEY]);
+    if (stored[STORAGE_KEYS.GOOGLE_KEYS_POOL] && Array.isArray(stored[STORAGE_KEYS.GOOGLE_KEYS_POOL]) && stored[STORAGE_KEYS.GOOGLE_KEYS_POOL].length > 0) {
+      activeKeys = stored[STORAGE_KEYS.GOOGLE_KEYS_POOL];
+    } else if (stored[STORAGE_KEYS.AI_API_KEY] && stored[STORAGE_KEYS.AI_API_KEY].trim().startsWith("AIzaSy")) {
+      activeKeys = [stored[STORAGE_KEYS.AI_API_KEY].trim()];
+    }
+  }
+
+  if (!activeKeys || activeKeys.length === 0) {
+    throw new Error("Chưa có Google Gemini API Key. Vui lòng mở tiện ích AutoRIS trên thanh công cụ trình duyệt để nhập API Key của bạn (miễn phí tại https://aistudio.google.com).");
+  }
+
   const candidateModels = [
-    GOOGLE_MODEL_MAP[preferredModel] || preferredModel || "gemini-3.5-flash-lite",
-    "gemini-3.5-flash",
-    "gemini-3.5-flash-lite"
+    GOOGLE_MODEL_MAP[preferredModel] || "gemini-1.5-flash",
+    "gemini-1.5-flash",
+    "gemini-2.0-flash",
+    "gemini-1.5-flash-8b"
   ];
   const models = Array.from(new Set(candidateModels.filter(Boolean)));
   const contents = [
@@ -813,8 +862,9 @@ async function callGoogleGeminiDirect(keysPool, preferredModel, systemPrompt, us
         if (!response.ok) {
           const errData = await response.json().catch(() => ({}));
           const errMsg = errData.error?.message || `HTTP ${response.status}`;
+          lastError = new Error(`Google API (${model}): ${errMsg}`);
           if (response.status === 400 || response.status === 403 || response.status === 429) {
-            break; // Thử key tiếp theo
+            break; // Thử key tiếp theo nếu key lỗi / bị khóa / hết quota
           }
           throw new Error(errMsg);
         }
