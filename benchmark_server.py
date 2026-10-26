@@ -1002,19 +1002,20 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
             apk_mtime = int(os.path.getmtime(apk_path)) if os.path.exists(apk_path) else 0
 
             # Đọc version trực tiếp từ manifest.json trước
-            ext_ver = "2.0.4"
+            ext_ver = "2.0.5"
             manifest_path = os.path.join(BASE_DIR, "chrome_extension", "manifest.json")
             if os.path.exists(manifest_path):
                 try:
                     with open(manifest_path, "r", encoding="utf-8") as mf:
                         mdata = json.load(mf)
-                        ext_ver = mdata.get("version", "2.0.4")
+                        ext_ver = mdata.get("version", "2.0.5")
                 except Exception:
                     pass
 
             # Tìm file zip tương ứng với version hoặc file zip mới nhất
             ext_candidates = [
                 f"autoris-extension-v{ext_ver}.zip",
+                "autoris-extension-v2.0.5.zip",
                 "autoris-extension-v2.0.4.zip",
                 "autoris-extension-v2.0.3.zip",
                 "autoris-extension-v2.0.2.zip",
@@ -1294,6 +1295,7 @@ class BenchmarkHandler(BaseHTTPRequestHandler):
             # Nếu file không tồn tại, tìm các file zip dự phòng mới nhất
             if not os.path.exists(zip_path):
                 candidates = [
+                    "autoris-extension-v2.0.5.zip",
                     "autoris-extension-v2.0.4.zip",
                     "autoris-extension-v2.0.3.zip",
                     "autoris-extension-v2.0.2.zip",

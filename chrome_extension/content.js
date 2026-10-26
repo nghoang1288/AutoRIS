@@ -1482,7 +1482,7 @@
   // =========================================================================
   // 6. THANH ĐIỀU KHIỂN NỔI (CHỈ HIỆN TRÊN TRANG RIS)
   // =========================================================================
-  function createFloatingVoiceBar() {
+  async function createFloatingVoiceBar() {
     if (window.self !== window.top) return; // Chỉ hiện thanh nổi trên Top Frame, tránh nhân bản trong các iframes con
     if (isViewerPage()) {
       const existing = document.getElementById("autoris-floating-bar");
@@ -1490,10 +1490,24 @@
       return;
     }
     if (!isRISPage() || document.getElementById("autoris-floating-bar")) return;
+    if (!document.body) return;
+
+    let shouldShow = true;
+    try {
+      if (isExtensionValid()) {
+        const stored = await chrome.storage.local.get([STORAGE_KEYS.SHOW_FLOATING_BAR]);
+        if (stored[STORAGE_KEYS.SHOW_FLOATING_BAR] === false) {
+          shouldShow = false;
+        }
+      }
+    } catch (e) {}
 
     const bar = document.createElement("div");
     bar.id = "autoris-floating-bar";
     bar.className = "autoris-bar-container";
+    if (!shouldShow) {
+      bar.style.display = "none";
+    }
     bar.innerHTML = `
       <div class="autoris-bar-header" id="autoris-bar-drag">
         <div class="autoris-status-pill">
@@ -2164,6 +2178,22 @@
 
     // Khởi tạo Sandbox Bridge & Floating Bar
     SynthesizerBridge.init();
+
+    // Lắng nghe thay đổi bật/tắt Floating Bar theo thời gian thực từ Popup Cài đặt
+    if (chrome.storage && chrome.storage.onChanged) {
+      chrome.storage.onChanged.addListener((changes, area) => {
+        if (area === "local" && changes[STORAGE_KEYS.SHOW_FLOATING_BAR]) {
+          const shouldShow = changes[STORAGE_KEYS.SHOW_FLOATING_BAR].newValue !== false;
+          const bar = document.getElementById("autoris-floating-bar");
+          if (bar) {
+            bar.style.display = shouldShow ? "block" : "none";
+          } else if (shouldShow) {
+            createFloatingVoiceBar();
+          }
+        }
+      });
+    }
+
     if (document.readyState === "loading") {
       document.addEventListener("DOMContentLoaded", createFloatingVoiceBar);
     } else {

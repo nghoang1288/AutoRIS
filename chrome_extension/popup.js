@@ -9,6 +9,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const modeSelect = document.getElementById("connection-mode");
   const geminiKeysTextarea = document.getElementById("gemini-api-keys");
   const geminiKeysCount = document.getElementById("gemini-keys-count");
+  const btnToggleMaskKey = document.getElementById("btn-toggle-mask-key");
   const btnSaveKey = document.getElementById("btn-save-gemini-key");
   const keySavedMsg = document.getElementById("key-saved-msg");
   const btnTestAi = document.getElementById("btn-test-ai");
@@ -58,6 +59,20 @@ document.addEventListener("DOMContentLoaded", async () => {
       : (DEFAULT_CONFIG.googleKeysPool || []);
     geminiKeysTextarea.value = pool.join("\n");
     updateKeyCountDisplay(pool.length);
+
+    let isKeyMasked = true;
+    if (btnToggleMaskKey) {
+      btnToggleMaskKey.addEventListener("click", () => {
+        isKeyMasked = !isKeyMasked;
+        if (isKeyMasked) {
+          geminiKeysTextarea.style.webkitTextSecurity = "disc";
+          btnToggleMaskKey.textContent = "👁️ Hiện key";
+        } else {
+          geminiKeysTextarea.style.webkitTextSecurity = "none";
+          btnToggleMaskKey.textContent = "🙈 Ẩn key";
+        }
+      });
+    }
 
     geminiKeysTextarea.addEventListener("input", () => {
       const lines = geminiKeysTextarea.value.split("\n").map(s => s.trim()).filter(Boolean);
