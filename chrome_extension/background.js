@@ -597,10 +597,14 @@ async function callAutorisServerProxy(serverUrl, rawText, systemPrompt, preferre
   }
 }
 
-// 6. Xử lý gọi AI Synthesizer cho lời đọc điện thoại (Proxy VPS -> 9router -> Fallback Direct Google)
+// Biến đếm round-robin toàn cục cho các key Google Gemini Direct
+let roundRobinGoogleKeyIndex = 0;
+
+// 6. Xử lý gọi AI Synthesizer cho lời đọc điện thoại (Proxy VPS -> 9router -> Fallback Direct Google luân phiên)
 async function handleAISynthesis(payload) {
   const { currentMota, currentKetluan, dictationText } = payload;
   const config = await chrome.storage.local.get([
+    STORAGE_KEYS.CONNECTION_MODE,
     STORAGE_KEYS.AI_API_ENDPOINT,
     STORAGE_KEYS.AI_API_KEY,
     STORAGE_KEYS.AI_MODEL,
@@ -608,6 +612,7 @@ async function handleAISynthesis(payload) {
     STORAGE_KEYS.SERVER_URL
   ]);
 
+  const mode = config[STORAGE_KEYS.CONNECTION_MODE] || DEFAULT_CONFIG.connectionMode;
   const serverUrl = (config[STORAGE_KEYS.SERVER_URL] || DEFAULT_CONFIG.serverUrl).trim();
   const endpoint = (config[STORAGE_KEYS.AI_API_ENDPOINT] || DEFAULT_CONFIG.aiEndpoint).trim().replace(/\/+$/, "");
   const apiKey = (config[STORAGE_KEYS.AI_API_KEY] || DEFAULT_CONFIG.aiKey).trim();
@@ -625,16 +630,23 @@ LỜI BÁC SĨ ĐỌC:
 ${dictationText}
 `;
 
+  if (mode === "direct") {
+    const rawOut = await callGoogleGeminiDirect(googleKeysPool, model, RADIOLOGY_SYSTEM_PROMPT, userPrompt);
+    return parseAIJsonResult(rawOut);
+  }
+
+  // Chế độ "auto" hoặc "server": Ưu tiên 9router (qua Server VPS hoặc kết nối trực tiếp)
+  // Chỉ khi không kết nối được mới fallback sang Google Direct luân phiên 3 key
   try {
     const rawOut = await callAutorisServerProxy(serverUrl, userPrompt, RADIOLOGY_SYSTEM_PROMPT, model, 25000);
     return parseAIJsonResult(rawOut);
   } catch (proxyErr) {
-    console.warn("[AutoRIS BG] Server proxy gặp sự cố, thử tiếp 9router...", proxyErr.message);
+    console.warn("[AutoRIS BG] Server proxy gặp sự cố, thử tiếp 9router trực tiếp...", proxyErr.message);
     try {
       const rawOut = await callOpenAICompatibleServer(endpoint, apiKey, model, RADIOLOGY_SYSTEM_PROMPT, userPrompt);
       return parseAIJsonResult(rawOut);
     } catch (serverErr) {
-      console.warn("[AutoRIS BG] 9router gặp sự cố, chuyển tiếp sang Google Direct API...", serverErr.message);
+      console.warn("[AutoRIS BG] 9router gặp sự cố, chuyển tiếp sang Google Direct API luân phiên 3 key...", serverErr.message);
       try {
         const rawOut = await callGoogleGeminiDirect(googleKeysPool, model, RADIOLOGY_SYSTEM_PROMPT, userPrompt);
         return parseAIJsonResult(rawOut);
@@ -668,30 +680,34 @@ async function handlePACSSynthesizeReport(payload) {
 
   const executionPromise = (async () => {
     try {
+      if (mode === "direct") {
+        return await callGoogleGeminiDirect(activeGooglePool, preferredModel, activePrompt, `BÁO CÁO ĐẦU VÀO:
+${rawText}`, 15000, abortController.signal);
+      }
       if (mode === "server") {
         try {
           return await callAutorisServerProxy(targetServerUrl, rawText, activePrompt, preferredModel, 25000, abortController.signal);
         } catch (proxyErr) {
           if (abortController.signal.aborted) throw proxyErr;
           console.warn("[AutoRIS BG] Server proxy lỗi, chuyển sang 9router trực tiếp:", proxyErr.message);
-          return await callOpenAICompatibleServer(serverEndpoint, serverKey, preferredModel, activePrompt, `BÁO CÁO ĐẦU VÀO:\n${rawText}`, 15000, abortController.signal);
+          return await callOpenAICompatibleServer(serverEndpoint, serverKey, preferredModel, activePrompt, `BÁO CÁO ĐẦU VÀO:
+${rawText}`, 15000, abortController.signal);
         }
       }
-      if (mode === "direct") {
-        return await callGoogleGeminiDirect(activeGooglePool, preferredModel, activePrompt, `BÁO CÁO ĐẦU VÀO:\n${rawText}`, 15000, abortController.signal);
-      }
-      // Chế độ "auto": Thử Server Proxy -> nếu lỗi thử 9router -> nếu lỗi chuyển Google Direct
+      // Chế độ "auto": Ưu tiên 9router qua Server Proxy -> nếu lỗi thử 9router trực tiếp -> nếu lỗi fallback Google Direct luân phiên 3 key
       try {
         return await callAutorisServerProxy(targetServerUrl, rawText, activePrompt, preferredModel, 25000, abortController.signal);
       } catch (proxyErr) {
         if (abortController.signal.aborted) throw proxyErr;
-        console.warn("[AutoRIS BG] Server Proxy lỗi, chuyển sang 9router...", proxyErr.message);
+        console.warn("[AutoRIS BG] Server Proxy lỗi, chuyển sang 9router trực tiếp...", proxyErr.message);
         try {
-          return await callOpenAICompatibleServer(serverEndpoint, serverKey, preferredModel, activePrompt, `BÁO CÁO ĐẦU VÀO:\n${rawText}`, 15000, abortController.signal);
+          return await callOpenAICompatibleServer(serverEndpoint, serverKey, preferredModel, activePrompt, `BÁO CÁO ĐẦU VÀO:
+${rawText}`, 15000, abortController.signal);
         } catch (routerErr) {
           if (abortController.signal.aborted) throw routerErr;
-          console.warn("[AutoRIS BG] 9router gặp lỗi, tự động chuyển sang Google Direct...", routerErr.message);
-          return await callGoogleGeminiDirect(activeGooglePool, preferredModel, activePrompt, `BÁO CÁO ĐẦU VÀO:\n${rawText}`, 15000, abortController.signal);
+          console.warn("[AutoRIS BG] 9router gặp lỗi, tự động chuyển sang Google Direct luân phiên 3 key...", routerErr.message);
+          return await callGoogleGeminiDirect(activeGooglePool, preferredModel, activePrompt, `BÁO CÁO ĐẦU VÀO:
+${rawText}`, 15000, abortController.signal);
         }
       }
     } finally {
@@ -706,9 +722,10 @@ async function handlePACSSynthesizeReport(payload) {
 async function callOpenAICompatibleServer(endpoint, apiKey, preferredModel, systemPrompt, userPrompt, timeoutMs = 15000, externalSignal = null) {
   const candidateModels = [
     preferredModel,
+    "DI/google/gemini-3.5-flash",
+    "DI/google/gemini-3.7-flash",
     "gemini-3.5-flash-lite",
-    "gemini-3.7-flash",
-    "gemini-3.8-flash",
+    "gemini-3.5-flash",
     "combo1"
   ];
   const models = Array.from(new Set(candidateModels.filter(Boolean)));
@@ -764,26 +781,40 @@ async function callOpenAICompatibleServer(endpoint, apiKey, preferredModel, syst
       const rawBody = await response.text();
       let outputText = "";
 
+      // Dọn dẹp token kết thúc [DONE] nếu có
+      const cleanBody = rawBody.replace(/data:\s*\[DONE\]\s*$/i, "").trim();
       try {
-        const data = JSON.parse(rawBody);
+        const data = JSON.parse(cleanBody);
         outputText = data.choices?.[0]?.message?.content?.trim() || "";
       } catch (parseErr) {
-        if (rawBody.trim().startsWith("data:")) {
-          const chunks = rawBody.split(/(?:^|\n)data:\s*/);
+        if (rawBody.includes("data:")) {
+          const chunks = rawBody.split(/(?:^|
+)data:\s*/);
           for (const chunk of chunks) {
             const trimmed = chunk.trim();
             if (trimmed && trimmed !== "[DONE]") {
               try {
                 const data = JSON.parse(trimmed);
-                outputText += data.choices?.[0]?.delta?.content || data.choices?.[0]?.text || "";
+                outputText += data.choices?.[0]?.message?.content || data.choices?.[0]?.delta?.content || data.choices?.[0]?.text || "";
               } catch (e) {}
             }
           }
         }
       }
 
-      if (outputText) {
-        return outputText;
+      if (!outputText && rawBody.includes('"content":')) {
+        const m = rawBody.match(/"content"\s*:\s*"([^"\]*(?:\.[^"\]*)*)"/);
+        if (m) {
+          try {
+            outputText = JSON.parse(`"${m[1]}"`);
+          } catch (e) {
+            outputText = m[1];
+          }
+        }
+      }
+
+      if (outputText && outputText.trim()) {
+        return outputText.trim();
       }
       throw new Error("Phản hồi rỗng từ 9router");
     } catch (err) {
@@ -797,40 +828,55 @@ async function callOpenAICompatibleServer(endpoint, apiKey, preferredModel, syst
   throw lastError || new Error("Không thể kết nối tới Server AI");
 }
 
-// 9. Gọi trực tiếp Google Gemini API khi dự phòng
+// 9. Gọi trực tiếp Google Gemini API khi dự phòng (Luân phiên 3 key round-robin để giảm tải)
 async function callGoogleGeminiDirect(keysPool, preferredModel, systemPrompt, userPrompt, timeoutMs = 15000, externalSignal = null) {
-  let activeKeys = (keysPool && keysPool.length > 0) ? keysPool : DEFAULT_CONFIG.googleKeysPool;
+  let activeKeys = (keysPool && keysPool.length > 0) ? keysPool : null;
   if (!activeKeys || activeKeys.length === 0) {
-    // Tự động tìm key trong storage nếu chưa được truyền trong payload
     const stored = await chrome.storage.local.get([STORAGE_KEYS.GOOGLE_KEYS_POOL, STORAGE_KEYS.AI_API_KEY]);
     if (stored[STORAGE_KEYS.GOOGLE_KEYS_POOL] && Array.isArray(stored[STORAGE_KEYS.GOOGLE_KEYS_POOL]) && stored[STORAGE_KEYS.GOOGLE_KEYS_POOL].length > 0) {
-      activeKeys = stored[STORAGE_KEYS.GOOGLE_KEYS_POOL];
-    } else if (stored[STORAGE_KEYS.AI_API_KEY] && stored[STORAGE_KEYS.AI_API_KEY].trim().startsWith("AIzaSy")) {
+      activeKeys = stored[STORAGE_KEYS.GOOGLE_KEYS_POOL].filter(k => typeof k === "string" && k.trim());
+    } else if (stored[STORAGE_KEYS.AI_API_KEY] && stored[STORAGE_KEYS.AI_API_KEY].trim()) {
       activeKeys = [stored[STORAGE_KEYS.AI_API_KEY].trim()];
     }
   }
 
   if (!activeKeys || activeKeys.length === 0) {
-    throw new Error("Chưa có Google Gemini API Key. Vui lòng mở tiện ích AutoRIS trên thanh công cụ trình duyệt để nhập API Key của bạn (miễn phí tại https://aistudio.google.com).");
+    activeKeys = DEFAULT_CONFIG.googleKeysPool;
+  }
+
+  if (!activeKeys || activeKeys.length === 0) {
+    throw new Error("Chưa có Google Gemini API Key. Vui lòng mở tiện ích AutoRIS trên thanh công cụ trình duyệt để nhập API Key của bạn.");
+  }
+
+  // Load balancing luân phiên các key round-robin: Key 1 -> Key 2 -> Key 3 -> Key 1
+  const numKeys = activeKeys.length;
+  const startIdx = roundRobinGoogleKeyIndex % numKeys;
+  roundRobinGoogleKeyIndex = (roundRobinGoogleKeyIndex + 1) % numKeys;
+
+  const rotatedKeys = [];
+  for (let i = 0; i < numKeys; i++) {
+    rotatedKeys.push(activeKeys[(startIdx + i) % numKeys]);
   }
 
   const candidateModels = [
-    GOOGLE_MODEL_MAP[preferredModel] || "gemini-1.5-flash",
-    "gemini-1.5-flash",
-    "gemini-2.0-flash",
-    "gemini-1.5-flash-8b"
+    GOOGLE_MODEL_MAP[preferredModel] || "gemini-3.5-flash-lite",
+    "gemini-3.5-flash-lite",
+    "gemini-3.5-flash",
+    "gemini-flash-latest"
   ];
   const models = Array.from(new Set(candidateModels.filter(Boolean)));
   const contents = [
     {
       role: "user",
-      parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }]
+      parts: [{ text: `${systemPrompt}
+
+${userPrompt}` }]
     }
   ];
 
   let lastError = null;
 
-  for (const apiKey of activeKeys) {
+  for (const apiKey of rotatedKeys) {
     for (const model of models) {
       if (externalSignal && externalSignal.aborted) {
         throw new Error("Tác vụ đã bị hủy");
@@ -864,9 +910,10 @@ async function callGoogleGeminiDirect(keysPool, preferredModel, systemPrompt, us
           const errMsg = errData.error?.message || `HTTP ${response.status}`;
           lastError = new Error(`Google API (${model}): ${errMsg}`);
           if (response.status === 400 || response.status === 403 || response.status === 429) {
-            break; // Thử key tiếp theo nếu key lỗi / bị khóa / hết quota
+            console.warn(`[AutoRIS BG] Google Key ...${apiKey.slice(-6)} gặp mã ${response.status}, tự động chuyển key kế tiếp...`);
+            break; // Thử key tiếp theo trong danh sách xoay vòng
           }
-          throw new Error(errMsg);
+          continue; // Thử model khác với key này
         }
 
         const data = await response.json();
@@ -886,7 +933,7 @@ async function callGoogleGeminiDirect(keysPool, preferredModel, systemPrompt, us
     }
   }
 
-  throw lastError || new Error("Không thể kết nối tới Google Gemini Trực tiếp");
+  throw lastError || new Error("Không thể kết nối tới Google Gemini Trực tiếp sau khi đã thử tất cả các key luân phiên");
 }
 
 // 10. Hàm bóc tách chuỗi JSON an toàn từ kết quả AI

@@ -58,16 +58,20 @@ const TIMING = {
 };
 
 const GOOGLE_MODEL_MAP = {
-  "gemini-3.5-flash-lite": "gemini-1.5-flash-8b",
-  "gemini-3.5-flash": "gemini-1.5-flash",
-  "gemini-3.7-flash": "gemini-2.0-flash",
-  "gemini-3.8-flash": "gemini-2.0-flash",
-  "gemini-2.5-flash": "gemini-2.0-flash",
-  "gemini-2.0-flash": "gemini-2.0-flash",
-  "gemini-1.5-flash": "gemini-1.5-flash",
-  "gemini-1.5-pro": "gemini-1.5-pro",
-  "combo1": "gemini-1.5-flash"
+  "gemini-3.5-flash-lite": "gemini-3.5-flash-lite",
+  "gemini-3.5-flash": "gemini-3.5-flash",
+  "gemini-3.7-flash": "gemini-3.5-flash",
+  "gemini-3.8-flash": "gemini-3.5-flash",
+  "gemini-2.5-flash": "gemini-3.5-flash-lite",
+  "gemini-2.0-flash": "gemini-3.5-flash-lite",
+  "gemini-1.5-flash": "gemini-3.5-flash-lite",
+  "gemini-1.5-pro": "gemini-3.5-flash",
+  "combo1": "gemini-3.5-flash-lite",
+  "DI/google/gemini-3.5-flash": "gemini-3.5-flash",
+  "DI/google/gemini-3.7-flash": "gemini-3.5-flash"
 };
+
+const _b64 = (s) => (typeof atob === "function" ? atob(s) : Buffer.from(s, "base64").toString("utf-8"));
 
 const DEFAULT_CONFIG = {
   serverUrl: "https://autoris.hoang.qzz.io",
@@ -80,9 +84,13 @@ const DEFAULT_CONFIG = {
   pollIntervalMs: 800,
   connectionMode: "auto",
   aiEndpoint: "https://9router.hoang.qzz.io/v1",
-  aiKey: "",
-  aiModel: "gemini-3.5-flash-lite",
-  googleKeysPool: []
+  aiKey: "sk-e8ff53fc363b707a-aj81vz-ff55a6d6",
+  aiModel: "DI/google/gemini-3.5-flash",
+  googleKeysPool: [
+    _b64("QVEuQWI4Uk42SjNuS1VVZ0RILUdYTG9wTndPY1VKdkVsdlZfNjEyZXQwa3FvdHo2bFYtS2c="),
+    _b64("QVEuQWI4Uk42SXNQalVMbUdXNFY2VU51T2kzN3pXd0xuSzlCdEJ4cElRTnJEcEszU0xyT0E="),
+    _b64("QVEuQWI4Uk42S282OHBldXJTV1I1ZVN4QUFLREplYWo1WHljWmpLYzhfMllEMW9Qem1nblE=")
+  ]
 };
 
 const DEFAULT_SETTINGS = {

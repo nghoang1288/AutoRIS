@@ -186,22 +186,23 @@
     <div style="width:100%;">
       <div class="toggle-label" style="margin-bottom:4px;">Chế độ kết nối AI:</div>
       <select id="connection-mode" style="width:100%; padding:6px 8px; background:#1e293b; color:#f8fafc; border:1px solid #334155; border-radius:6px; font-size:11.5px; outline:none; box-sizing:border-box;">
-        <option value="auto">🚀 Tự động (Server VPS ➔ 9Router ➔ Direct) [Khuyên dùng]</option>
-        <option value="server">☁️ Máy chủ VPS AutoRIS (Không cần Key cá nhân)</option>
-        <option value="direct">🔑 Google Gemini Trực tiếp (Dùng Key cá nhân)</option>
+        <option value="auto">🚀 Tự động (Ưu tiên 9Router ➔ Fallback Google Direct) [Khuyên dùng]</option>
+        <option value="server">☁️ Máy chủ VPS AutoRIS (Tích hợp Few-Shot & 9Router)</option>
+        <option value="direct">🔑 Google Gemini Trực tiếp (Luân phiên 3 Key giảm tải)</option>
       </select>
     </div>
 
     <div id="gemini-key-box" style="width:100%; margin-top:2px;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-        <span class="toggle-label">Google Gemini API Key:</span>
+        <span class="toggle-label">Google Gemini API Keys (Mỗi dòng 1 key):</span>
         <a href="https://aistudio.google.com/app/apikey" target="_blank" style="font-size:10.5px; color:#38bdf8; text-decoration:none;">Lấy Key miễn phí ↗</a>
       </div>
-      <div style="display:flex; gap:6px; width:100%; box-sizing:border-box;">
-        <input type="password" id="gemini-api-key" placeholder="Dán key AIzaSy... vào đây" style="flex:1; min-width:0; padding:6px 8px; background:#1e293b; color:#f8fafc; border:1px solid #334155; border-radius:6px; font-size:11px; outline:none; box-sizing:border-box;">
-        <button id="btn-save-gemini-key" style="padding:6px 12px; background:#0284c7; color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:11px; font-weight:600; flex-shrink:0;">Lưu</button>
+      <textarea id="gemini-api-keys" rows="3" placeholder="Nhập các API Key Google Gemini (mỗi dòng 1 key để hệ thống luân phiên giảm tải)..." style="width:100%; padding:6px 8px; background:#1e293b; color:#f8fafc; border:1px solid #334155; border-radius:6px; font-size:10.5px; font-family:monospace; outline:none; resize:vertical; box-sizing:border-box;"></textarea>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
+        <span id="gemini-keys-count" style="font-size:10px; color:#10b981;">⚡ Đang có 3 key luân phiên</span>
+        <button id="btn-save-gemini-key" style="padding:5px 12px; background:#0284c7; color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:11px; font-weight:600;">Lưu Key</button>
       </div>
-      <div id="key-saved-msg" style="font-size:10px; color:#10b981; margin-top:3px; display:none;">✅ Đã lưu API Key thành công!</div>
+      <div id="key-saved-msg" style="font-size:10px; color:#10b981; margin-top:3px; display:none;">✅ Đã lưu cấu hình Key thành công!</div>
     </div>
 
     <button id="btn-test-ai" style="width:100%; padding:6px 10px; background:#1e293b; color:#10b981; border:1px solid #10b981; border-radius:6px; cursor:pointer; font-size:11px; font-weight:600; margin-top:2px; box-sizing:border-box;">

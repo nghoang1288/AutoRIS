@@ -7,11 +7,26 @@ document.addEventListener("DOMContentLoaded", async () => {
   const statusBadge = document.getElementById("server-status-badge");
 
   const modeSelect = document.getElementById("connection-mode");
-  const geminiKeyInput = document.getElementById("gemini-api-key");
+  const geminiKeysTextarea = document.getElementById("gemini-api-keys");
+  const geminiKeysCount = document.getElementById("gemini-keys-count");
   const btnSaveKey = document.getElementById("btn-save-gemini-key");
   const keySavedMsg = document.getElementById("key-saved-msg");
   const btnTestAi = document.getElementById("btn-test-ai");
   const aiTestResult = document.getElementById("ai-test-result");
+
+  function updateKeyCountDisplay(count) {
+    if (!geminiKeysCount) return;
+    if (count > 1) {
+      geminiKeysCount.textContent = `⚡ Đang có ${count} key luân phiên giảm tải`;
+      geminiKeysCount.style.color = "#10b981";
+    } else if (count === 1) {
+      geminiKeysCount.textContent = "🔑 1 key hoạt động";
+      geminiKeysCount.style.color = "#38bdf8";
+    } else {
+      geminiKeysCount.textContent = "⚠️ Chưa có key cá nhân";
+      geminiKeysCount.style.color = "#f59e0b";
+    }
+  }
 
   // Load cấu hình đã lưu
   const stored = await chrome.storage.local.get([
@@ -36,21 +51,31 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  if (geminiKeyInput) {
-    const keys = stored[STORAGE_KEYS.GOOGLE_KEYS_POOL] || [];
-    const directKey = (keys && keys.length > 0) ? keys[0] : (stored[STORAGE_KEYS.AI_API_KEY] || "");
-    if (directKey) {
-      geminiKeyInput.value = directKey;
-    }
+  if (geminiKeysTextarea) {
+    const rawPool = stored[STORAGE_KEYS.GOOGLE_KEYS_POOL];
+    const pool = (Array.isArray(rawPool) && rawPool.length > 0)
+      ? rawPool
+      : (DEFAULT_CONFIG.googleKeysPool || []);
+    geminiKeysTextarea.value = pool.join("
+");
+    updateKeyCountDisplay(pool.length);
+
+    geminiKeysTextarea.addEventListener("input", () => {
+      const lines = geminiKeysTextarea.value.split("
+").map(s => s.trim()).filter(Boolean);
+      updateKeyCountDisplay(lines.length);
+    });
 
     if (btnSaveKey) {
       btnSaveKey.addEventListener("click", async () => {
-        const val = geminiKeyInput.value.trim();
-        const pool = val ? [val] : [];
+        const lines = geminiKeysTextarea.value.split("
+").map(s => s.trim()).filter(Boolean);
+        const poolToSave = lines.length > 0 ? lines : DEFAULT_CONFIG.googleKeysPool;
         await chrome.storage.local.set({
-          [STORAGE_KEYS.GOOGLE_KEYS_POOL]: pool,
-          [STORAGE_KEYS.AI_API_KEY]: val
+          [STORAGE_KEYS.GOOGLE_KEYS_POOL]: poolToSave,
+          [STORAGE_KEYS.AI_API_KEY]: poolToSave[0] || ""
         });
+        updateKeyCountDisplay(poolToSave.length);
         if (keySavedMsg) {
           keySavedMsg.style.display = "block";
           setTimeout(() => { keySavedMsg.style.display = "none"; }, 3000);

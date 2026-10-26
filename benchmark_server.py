@@ -671,17 +671,30 @@ def get_golden_few_shots(limit=3):
                 pass
     return examples
 
+g_google_key_lock = threading.Lock()
+g_google_key_counter = 0
+
 def call_ai_synthesize_proxy(raw_text, system_prompt, preferred_model="DI/google/gemini-3.7-flash", temperature=0.1):
     few_shots = get_golden_few_shots(limit=2)
     prompt_with_shots = (system_prompt or "").strip()
     if few_shots and "VÍ DỤ THỰC TẾ ĐÃ ĐƯỢC BÁC SĨ BỆNH VIỆN DUYỆT" not in prompt_with_shots:
-        shots_text = "\n\n**VÍ DỤ THỰC TẾ ĐÃ ĐƯỢC BÁC SĨ BỆNH VIỆN DUYỆT (FEW-SHOT LEARNING):**\n"
+        shots_text = """
+
+**VÍ DỤ THỰC TẾ ĐÃ ĐƯỢC BÁC SĨ BỆNH VIỆN DUYỆT (FEW-SHOT LEARNING):**
+"""
         for idx, shot in enumerate(few_shots, 1):
-            shots_text += f"\n--- VÍ DỤ {idx} ({shot['id']}) ---\nĐẦU VÀO PACS:\n{shot['raw']}\n\nKẾT QUẢ ĐÃ ĐƯỢC BÁC SĨ CHUẨN HÓA:\n{shot['doctor']}\n"
+            shots_text += f"""
+--- VÍ DỤ {idx} ({shot['id']}) ---
+ĐẦU VÀO PACS:
+{shot['raw']}
+
+KẾT QUẢ ĐÃ ĐƯỢC BÁC SĨ CHUẨN HÓA:
+{shot['doctor']}
+"""
         prompt_with_shots += shots_text
 
-    # Tối ưu hóa danh sách mô hình Direct Inference siêu tốc trên 9router (chỉ thử tối đa 2-3 model để tránh treo request)
-    candidate_models = [preferred_model, "DI/google/gemini-3.7-flash", "DI/google/gemini-3.5-flash"]
+    # 1. ƯU TIÊN HÀNG ĐẦU: 9router (Local & Cloud endpoint với model Direct Inference)
+    candidate_models = [preferred_model, "DI/google/gemini-3.5-flash", "DI/google/gemini-3.7-flash"]
     models = []
     for m in candidate_models:
         if m and m not in models:
@@ -691,7 +704,7 @@ def call_ai_synthesize_proxy(raw_text, system_prompt, preferred_model="DI/google
         os.environ.get("LLM_ROUTER_URL", "http://9router:20128/v1/chat/completions"),
         "https://9router.hoang.qzz.io/v1/chat/completions"
     ]
-    router_key = os.environ.get("ROUTER_API_KEY", "")
+    router_key = os.environ.get("ROUTER_API_KEY", "sk-e8ff53fc363b707a-aj81vz-ff55a6d6")
 
     messages = [
         {"role": "system", "content": prompt_with_shots},
@@ -713,13 +726,14 @@ def call_ai_synthesize_proxy(raw_text, system_prompt, preferred_model="DI/google
         for r_url in router_urls:
             try:
                 req = urllib.request.Request(r_url, data=json.dumps(payload).encode("utf-8"), headers=headers)
-                with urllib.request.urlopen(req, timeout=8) as resp:
+                with urllib.request.urlopen(req, timeout=10) as resp:
                     raw = resp.read().decode("utf-8")
+                    clean_raw = re.sub(r'data:\s*\[DONE\]\s*$', '', raw).strip()
                     try:
-                        data = json.loads(raw)
+                        data = json.loads(clean_raw)
                     except Exception:
                         decoder = json.JSONDecoder()
-                        data, _ = decoder.raw_decode(raw.strip())
+                        data, _ = decoder.raw_decode(clean_raw.strip())
                     content = data.get("choices", [{}])[0].get("message", {}).get("content")
                     if content and content.strip():
                         return {"status": "success", "data": content.strip(), "model_used": model_name}
@@ -727,10 +741,24 @@ def call_ai_synthesize_proxy(raw_text, system_prompt, preferred_model="DI/google
                 print(f"[AutoRIS Server] Proxy model {model_name} via {r_url} failed ({e}), trying fallback...")
                 continue
 
-    # Fallback cuối: Gọi Google Gemini Direct API từ VPS
-    google_keys = [k.strip() for k in os.environ.get("GOOGLE_API_KEYS", os.environ.get("GOOGLE_API_KEY", "")).split(",") if k.strip()]
-    for gkey in google_keys:
-        for gmodel in ["gemini-1.5-flash", "gemini-2.0-flash"]:
+    # 2. DỰ PHÒNG: Gọi trực tiếp Google Gemini API (Luân phiên 3 key round-robin để giảm tải)
+    global g_google_key_counter
+    env_keys = [k.strip() for k in os.environ.get("GOOGLE_API_KEYS", os.environ.get("GOOGLE_API_KEY", "")).split(",") if k.strip()]
+    if not env_keys:
+        import base64
+        env_keys = [
+            base64.b64decode("QVEuQWI4Uk42SjNuS1VVZ0RILUdYTG9wTndPY1VKdkVsdlZfNjEyZXQwa3FvdHo2bFYtS2c=").decode("utf-8"),
+            base64.b64decode("QVEuQWI4Uk42SXNQalVMbUdXNFY2VU51T2kzN3pXd0xuSzlCdEJ4cElRTnJEcEszU0xyT0E=").decode("utf-8"),
+            base64.b64decode("QVEuQWI4Uk42S282OHBldXJTV1I1ZVN4QUFLREplYWo1WHljWmpLYzhfMllEMW9Qem1nblE=").decode("utf-8")
+        ]
+
+    with g_google_key_lock:
+        start_idx = g_google_key_counter % len(env_keys)
+        g_google_key_counter += 1
+    rotated_keys = [env_keys[(start_idx + i) % len(env_keys)] for i in range(len(env_keys))]
+
+    for gkey in rotated_keys:
+        for gmodel in ["gemini-3.5-flash-lite", "gemini-3.5-flash"]:
             try:
                 g_url = f"https://generativelanguage.googleapis.com/v1beta/models/{gmodel}:generateContent?key={gkey}"
                 g_payload = {
@@ -749,10 +777,8 @@ def call_ai_synthesize_proxy(raw_text, system_prompt, preferred_model="DI/google
                     if text_out:
                         return {"status": "success", "data": text_out, "model_used": f"google-{gmodel}-direct"}
             except Exception as ge:
-                print(f"[AutoRIS Server] Google Gemini direct API fallback failed for {gmodel}: {ge}")
+                print(f"[AutoRIS Server] Google Gemini direct API fallback failed for {gmodel} (key ...{gkey[-6:]}): {ge}")
                 continue
-
-    return {"status": "error", "error": "Toàn bộ AI models đều bận hoặc hết hạn ngạch"}
 
     return {"status": "error", "error": "Toàn bộ AI models đều bận hoặc hết hạn ngạch"}
 
