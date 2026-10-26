@@ -1,30 +1,34 @@
 @echo off
-chcp 65001 >nul
-title AutoRIS Extension - Tự Động Cập Nhật 1-Click
+cd /d "%~dp0"
+title AutoRIS Extension - Tu Dong Cap Nhat
 cls
 echo ==========================================================
-echo        AUTORIS EXTENSION - TỰ ĐỘNG CẬP NHẬT 1-CLICK
+echo        AUTORIS EXTENSION - TU DONG CAP NHAT 1-CLICK
 echo ==========================================================
 echo.
-echo [*] Đang tải bản phát hành mới nhất từ máy chủ AutoRIS VPS...
-powershell -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $ProgressPreference = 'SilentlyContinue'; Invoke-WebRequest -Uri 'https://autoris.hoang.qzz.io/autoris-extension.zip' -OutFile 'update_temp.zip'"
-if not exist update_temp.zip (
-    echo [!] Không thể tải bản cập nhật từ máy chủ. Vui lòng kiểm tra kết nối mạng.
+echo [*] Dang tai ban cap nhat moi nhat tu may chu VPS...
+powershell -NoProfile -ExecutionPolicy Bypass -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12;  = 'SilentlyContinue'; Invoke-WebRequest -Uri 'https://autoris.hoang.qzz.io/autoris-extension.zip' -OutFile '%~dp0update_temp.zip'"
+
+if not exist "%~dp0update_temp.zip" (
+    echo.
+    echo [!] Khong the tai ban cap nhat tu may chu VPS.
+    echo [*] Vui long kiem tra ket noi Internet hoac lien he quan tri vien.
+    echo.
     pause
     exit /b 1
 )
 
-echo [*] Đang tự động giải nén và ghi đè vào thư mục hiện tại...
-powershell -Command "Expand-Archive -Path 'update_temp.zip' -DestinationPath '.' -Force"
-del /f /q update_temp.zip >nul 2>&1
+echo [*] Dang tu dong giai nen va cap nhat file...
+powershell -NoProfile -ExecutionPolicy Bypass -Command "Expand-Archive -Path '%~dp0update_temp.zip' -DestinationPath '%~dp0.' -Force"
+del /f /q "%~dp0update_temp.zip" >nul 2>&1
 
 echo.
 echo ==========================================================
-echo [OK] ĐÃ CẬP NHẬT EXTENSION LÊN PHIÊN BẢN MỚI NHẤT THÀNH CÔNG!
+echo [OK] DA CAP NHAT EXTENSION LEN BAN MOI NHAT THANH CONG!
 echo ==========================================================
 echo.
-echo Bác sĩ chỉ cần:
-echo  1. Mở trình duyệt Chrome vào trang: chrome://extensions
-echo  2. Bấm nút [Reload] (biểu tượng mũi tên xoay tròn 🔄) của AutoRIS.
+echo Bac si chi can:
+echo  1. Mo trinh duyet Chrome vao trang: chrome://extensions
+echo  2. Bam nut Reload (bieu tuong mui ten xoay tron) cua AutoRIS.
 echo.
 pause
