@@ -58,17 +58,17 @@ const TIMING = {
 };
 
 const GOOGLE_MODEL_MAP = {
+  "gemini-3.8-flash": "gemini-3.8-flash",
   "gemini-3.5-flash-lite": "gemini-3.5-flash-lite",
-  "gemini-3.5-flash": "gemini-3.5-flash",
-  "gemini-3.7-flash": "gemini-3.5-flash",
-  "gemini-3.8-flash": "gemini-3.5-flash",
+  "gemini-3.5-flash": "gemini-3.5-flash-lite",
+  "gemini-3.7-flash": "gemini-3.8-flash",
   "gemini-2.5-flash": "gemini-3.5-flash-lite",
   "gemini-2.0-flash": "gemini-3.5-flash-lite",
   "gemini-1.5-flash": "gemini-3.5-flash-lite",
-  "gemini-1.5-pro": "gemini-3.5-flash",
+  "gemini-1.5-pro": "gemini-3.8-flash",
   "combo1": "gemini-3.5-flash-lite",
-  "DI/google/gemini-3.5-flash": "gemini-3.5-flash",
-  "DI/google/gemini-3.7-flash": "gemini-3.5-flash"
+  "DI/google/gemini-3.5-flash": "gemini-3.5-flash-lite",
+  "DI/google/gemini-3.7-flash": "gemini-3.8-flash"
 };
 
 const _b64 = (s) => (typeof atob === "function" ? atob(s) : Buffer.from(s, "base64").toString("utf-8"));
@@ -85,7 +85,7 @@ const DEFAULT_CONFIG = {
   connectionMode: "auto",
   aiEndpoint: "https://9router.hoang.qzz.io/v1",
   aiKey: "sk-e8ff53fc363b707a-aj81vz-ff55a6d6",
-  aiModel: "DI/google/gemini-3.5-flash",
+  aiModel: "gemini-3.5-flash-lite",
   googleKeysPool: [
     _b64("QVEuQWI4Uk42SjNuS1VVZ0RILUdYTG9wTndPY1VKdkVsdlZfNjEyZXQwa3FvdHo2bFYtS2c="),
     _b64("QVEuQWI4Uk42SXNQalVMbUdXNFY2VU51T2kzN3pXd0xuSzlCdEJ4cElRTnJEcEszU0xyT0E="),

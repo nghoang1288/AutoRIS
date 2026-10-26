@@ -618,7 +618,7 @@ def call_qwen_secretary(current_mota: str, current_ketluan: str, command: str) -
         fallback_res = call_ai_synthesize_proxy(
             raw_text=prompt,
             system_prompt=system_instruction,
-            preferred_model="DI/google/gemini-3.7-flash",
+            preferred_model="gemini-3.5-flash-lite",
             temperature=0.1
         )
         if fallback_res.get("status") == "success" and fallback_res.get("data"):
@@ -674,7 +674,7 @@ def get_golden_few_shots(limit=3):
 g_google_key_lock = threading.Lock()
 g_google_key_counter = 0
 
-def call_ai_synthesize_proxy(raw_text, system_prompt, preferred_model="DI/google/gemini-3.7-flash", temperature=0.1):
+def call_ai_synthesize_proxy(raw_text, system_prompt, preferred_model="gemini-3.5-flash-lite", temperature=0.1):
     few_shots = get_golden_few_shots(limit=2)
     prompt_with_shots = (system_prompt or "").strip()
     if few_shots and "VÍ DỤ THỰC TẾ ĐÃ ĐƯỢC BÁC SĨ BỆNH VIỆN DUYỆT" not in prompt_with_shots:
@@ -694,7 +694,7 @@ KẾT QUẢ ĐÃ ĐƯỢC BÁC SĨ CHUẨN HÓA:
         prompt_with_shots += shots_text
 
     # 1. ƯU TIÊN HÀNG ĐẦU: 9router (Local & Cloud endpoint với model Direct Inference)
-    candidate_models = [preferred_model, "DI/google/gemini-3.5-flash", "DI/google/gemini-3.7-flash"]
+    candidate_models = [preferred_model, "gemini-3.5-flash-lite", "gemini-3.8-flash"]
     models = []
     for m in candidate_models:
         if m and m not in models:
@@ -758,7 +758,7 @@ KẾT QUẢ ĐÃ ĐƯỢC BÁC SĨ CHUẨN HÓA:
     rotated_keys = [env_keys[(start_idx + i) % len(env_keys)] for i in range(len(env_keys))]
 
     for gkey in rotated_keys:
-        for gmodel in ["gemini-3.5-flash-lite", "gemini-3.5-flash"]:
+        for gmodel in ["gemini-3.5-flash-lite", "gemini-3.8-flash"]:
             try:
                 g_url = f"https://generativelanguage.googleapis.com/v1beta/models/{gmodel}:generateContent?key={gkey}"
                 g_payload = {

@@ -722,10 +722,8 @@ ${rawText}`, 15000, abortController.signal);
 async function callOpenAICompatibleServer(endpoint, apiKey, preferredModel, systemPrompt, userPrompt, timeoutMs = 15000, externalSignal = null) {
   const candidateModels = [
     preferredModel,
-    "DI/google/gemini-3.5-flash",
-    "DI/google/gemini-3.7-flash",
     "gemini-3.5-flash-lite",
-    "gemini-3.5-flash",
+    "gemini-3.8-flash",
     "combo1"
   ];
   const models = Array.from(new Set(candidateModels.filter(Boolean)));
@@ -861,8 +859,7 @@ async function callGoogleGeminiDirect(keysPool, preferredModel, systemPrompt, us
   const candidateModels = [
     GOOGLE_MODEL_MAP[preferredModel] || "gemini-3.5-flash-lite",
     "gemini-3.5-flash-lite",
-    "gemini-3.5-flash",
-    "gemini-flash-latest"
+    "gemini-3.8-flash"
   ];
   const models = Array.from(new Set(candidateModels.filter(Boolean)));
   const contents = [
