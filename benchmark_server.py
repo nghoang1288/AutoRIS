@@ -726,7 +726,7 @@ KẾT QUẢ ĐÃ ĐƯỢC BÁC SĨ CHUẨN HÓA:
         for r_url in router_urls:
             try:
                 req = urllib.request.Request(r_url, data=json.dumps(payload).encode("utf-8"), headers=headers)
-                with urllib.request.urlopen(req, timeout=10) as resp:
+                with urllib.request.urlopen(req, timeout=25) as resp:
                     raw = resp.read().decode("utf-8")
                     clean_raw = re.sub(r'data:\s*\[DONE\]\s*$', '', raw).strip()
                     try:
@@ -762,7 +762,7 @@ KẾT QUẢ ĐÃ ĐƯỢC BÁC SĨ CHUẨN HÓA:
             try:
                 g_url = f"https://generativelanguage.googleapis.com/v1beta/models/{gmodel}:generateContent?key={gkey}"
                 g_payload = {
-                    "systemInstruction": {"parts": [{"text": prompt_with_shots}]},
+                    "systemInstruction": {"parts": [{"text": (system_prompt or "Bạn là trợ lý y khoa AutoRIS.").strip()}]},
                     "contents": [{"parts": [{"text": f"BÁO CÁO ĐẦU VÀO:\n{raw_text}"}]}],
                     "generationConfig": {"temperature": temperature}
                 }
@@ -773,9 +773,11 @@ KẾT QUẢ ĐÃ ĐƯỢC BÁC SĨ CHUẨN HÓA:
                 )
                 with urllib.request.urlopen(g_req, timeout=15) as resp:
                     g_data = json.loads(resp.read().decode("utf-8"))
-                    text_out = g_data["candidates"][0]["content"]["parts"][0]["text"].strip()
-                    if text_out:
-                        return {"status": "success", "data": text_out, "model_used": f"google-{gmodel}-direct"}
+                    for cand in (g_data.get("candidates") or []):
+                        for part in (cand.get("content", {}).get("parts") or []):
+                            text_val = (part.get("text") or "").strip()
+                            if text_val:
+                                return {"status": "success", "data": text_val, "model_used": f"google-{gmodel}-direct"}
             except Exception as ge:
                 print(f"[AutoRIS Server] Google Gemini direct API fallback failed for {gmodel} (key ...{gkey[-6:]}): {ge}")
                 continue
