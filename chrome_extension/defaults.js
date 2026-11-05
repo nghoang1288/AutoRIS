@@ -166,11 +166,15 @@ Mô tả trong mỗi phổi theo thứ tự: thuỳ trên, thuỳ giữa (chỉ 
   - CẤM DÙNG "kích thước lần lượt là": Khi có từ 2 nốt trở lên cùng loại trong một thuỳ, không liệt kê kích thước từng nốt mà bắt buộc gom lại theo kích thước lớn nhất.
 
 * **QUY TẮC GỘP NỐT CÙNG LOẠI TRONG CÙNG MỘT THUỲ (BẮT BUỘC GOM GỌN, TUYỆT ĐỐI CẤM LIỆT KÊ TÁCH RỜI)**:
-  - Khi trong CÙNG MỘT THUỲ có từ 2 nốt trở lên CÙNG LOẠI (cùng nốt đặc, cùng nốt kính mờ, hoặc cùng nốt vôi hoá) và CÙNG MỨC LUNG-RADS (ví dụ cùng Lung-RADS 2, hoặc cùng vôi hoá Lung-RADS 1):
+  - Khi trong CÙNG MỘT THUỲ (thuỳ trên, thuỳ giữa, hoặc thuỳ dưới) có từ 2 nốt trở lên CÙNG LOẠI (cùng nốt đặc, cùng nốt kính mờ, hoặc cùng nốt vôi hoá) và CÙNG MỨC LUNG-RADS (ví dụ cùng Lung-RADS 2, hoặc cùng vôi hoá Lung-RADS 1):
     + **BẮT BUỘC GỘP LẠI THÀNH 1 CÂU/CỤM DUY NHẤT**: Ghi rõ số lượng nốt + "nốt lớn kích thước [dài × ngắn] mm (đường kính trung bình [x] mm)" (hoặc "kích thước lớn nhất [dài × ngắn] mm (đường kính trung bình [x] mm)").
     + **TUYỆT ĐỐI CẤM LIỆT KÊ TÁCH RIÊNG TỪNG NỐT NỐI BẰNG CHỮ 'VÀ'**:
       * ĐÚNG: "Thuỳ trên có 2 nốt đặc, nốt lớn kích thước 4×4 mm (đường kính trung bình 4 mm)."
       * ĐÚNG: "Thuỳ trên có 2 nốt kính mờ, nốt lớn kích thước 6×5 mm (đường kính trung bình 5.5 mm)."
+    + **CÙNG 1 ĐỘ LUNG-RADS TRONG CÙNG MỘT THUỲ BẮT BUỘC CHO VÀO 1 CÂU DUY NHẤT**:
+      * Khi các nốt trong cùng một thuỳ có cùng độ Lung-RADS (ví dụ nốt đặc 6×5 mm và nốt đặc 4×3 mm đều có đường kính < 6 mm thuộc Lung-RADS 2):
+      * **BẮT BUỘC CHO VÀO 1 CÂU**: "Thuỳ trên có 2 nốt đặc, nốt lớn kích thước 6×5 mm (đường kính trung bình 5.5 mm)."
+      * **TUYỆT ĐỐI KHÔNG TÁCH THÀNH 2 CÂU**: CẤM dùng "Ngoài ra thuỳ [tên] có..." để tách các nốt cùng độ Lung-RADS trong cùng thùy! Cụm "Ngoài ra..." CHỈ DÙNG khi các nốt trong thùy khác độ Lung-RADS (ví dụ 1 nốt Lung-RADS 3/4 nguy cơ cao mô tả trước, sau đó mới dùng "Ngoài ra..." cho các nốt Lung-RADS 2).
     + **ĐỐI VỚI NỐT ĐẶC VÀ KÍNH MỜ (Lung-RADS 2)**:
       * Khi có đúng 2 nốt trong cùng thuỳ: BẮT BUỘC GHI: "Thuỳ [tên] có 2 nốt [đặc/kính mờ], nốt lớn kích thước [dài × ngắn] mm (đường kính trung bình [x] mm)."
       * Khi có từ 3 nốt trở lên hoặc vài nốt: "Thuỳ [tên] có [X] nốt [đặc/kính mờ], kích thước lớn nhất [dài × ngắn] mm (đường kính trung bình [x] mm)."
@@ -409,6 +413,75 @@ function sanitizeLungRADSConclusion(conclusionText) {
 }
 
 /**
+ * Tự động gộp các nốt trong cùng một thùy và cùng 1 mức Lung-RADS vào đúng 1 câu duy nhất
+ */
+function mergeSameLobeSameTierNodules(text) {
+  const lobeNames = ["trên", "giữa", "dưới"];
+  const types = ["đặc", "kính mờ", "bán đặc", "vôi hoá", "vôi hóa"];
+
+  function getSolidTier(mean) {
+    if (mean < 6.0) return 2;
+    if (mean < 8.0) return 3;
+    return 4;
+  }
+
+  let changed = true;
+  let iterations = 0;
+  while (changed && iterations < 5) {
+    changed = false;
+    iterations++;
+    for (const lobe of lobeNames) {
+      for (const type of types) {
+        const regex = new RegExp(
+          "(?:Th[uù][yỳ]\\s+" + lobe + "\\s+có\\s+(\\d+)\\s+nốt\\s+" + type + "[^.]*?kích\\s+thước(?:\\s+(?:lớn\\s+nhất|lớn))?\\s+(\\d+(?:[.,]\\d+)?)\\s*[×xX*]\\s*(\\d+(?:[.,]\\d+)?)\\s*mm(?:\\s*\\(\\s*đường\\s+kính\\s+trung\\s+bình\\s+([0-9.,]+)\\s*mm\\s*\\))?[^.]*?\\.)" +
+          "\\s*" +
+          "(?:(?:Ngoài\\s+ra\\s+)?th[uù][yỳ]\\s+" + lobe + "\\s+(?:còn\\s+)?có\\s+(\\d+)\\s+nốt\\s+" + type + "[^.]*?kích\\s+thước(?:\\s+(?:lớn\\s+nhất|lớn))?\\s+(\\d+(?:[.,]\\d+)?)\\s*[×xX*]\\s*(\\d+(?:[.,]\\d+)?)\\s*mm(?:\\s*\\(\\s*đường\\s+kính\\s+trung\\s+bình\\s+([0-9.,]+)\\s*mm\\s*\\))?[^.]*?\\.)",
+          "i"
+        );
+
+        if (regex.test(text)) {
+          text = text.replace(regex, (match, c1Str, d11Str, d12Str, m1Str, c2Str, d21Str, d22Str, m2Str) => {
+            if (/tua\\s*gai|co\\s*kéo|spiculat/i.test(match)) return match;
+
+            const c1 = parseInt(c1Str, 10) || 1;
+            const c2 = parseInt(c2Str, 10) || 1;
+            const totalCount = c1 + c2;
+
+            const d11 = parseFloat(d11Str.replace(",", "."));
+            const d12 = parseFloat(d12Str.replace(",", "."));
+            const mean1 = m1Str ? parseFloat(m1Str.replace(",", ".")) : (d11 + d12) / 2;
+
+            const d21 = parseFloat(d21Str.replace(",", "."));
+            const d22 = parseFloat(d22Str.replace(",", "."));
+            const mean2 = m2Str ? parseFloat(m2Str.replace(",", ".")) : (d21 + d22) / 2;
+
+            if (type === "đặc" && getSolidTier(mean1) !== getSolidTier(mean2)) {
+              return match;
+            }
+
+            let maxDimStr = `${d11Str}×${d12Str}`;
+            let maxMean = mean1;
+            if (mean2 > mean1) {
+              maxDimStr = `${d21Str}×${d22Str}`;
+              maxMean = mean2;
+            }
+
+            const isCalc = type.includes("vôi");
+            const formattedMean = (maxMean % 1 !== 0) ? maxMean.toFixed(1) : String(maxMean);
+            const meanPart = isCalc ? "" : ` (đường kính trung bình ${formattedMean} mm)`;
+
+            changed = true;
+            return `Thuỳ ${lobe} có ${totalCount} nốt ${type}, nốt lớn kích thước ${maxDimStr} mm${meanPart}.`;
+          });
+        }
+      }
+    }
+  }
+
+  return text;
+}
+
+/**
  * Chuẩn hoá toàn bộ báo cáo Lung-RADS (Mô tả + Kết luận)
  */
 function sanitizeLungRADSReport(reportText) {
@@ -424,6 +497,9 @@ function sanitizeLungRADSReport(reportText) {
     const formattedMean = (trueMean % 1 !== 0) ? trueMean.toFixed(1) : String(trueMean);
     return `${prefix}${d1Str}×${d2Str} mm (đường kính trung bình ${formattedMean} mm)`;
   });
+
+  // 1.5. Tự động gộp các nốt cùng thùy và cùng 1 độ Lung-RADS vào đúng 1 câu duy nhất (chống tách câu vụn)
+  text = mergeSameLobeSameTierNodules(text);
 
   // 2. Sắp xếp thứ tự nốt trong Mô tả: Nốt có mức Lung-RADS cao hơn / nguy cơ cao hơn BẮT BUỘC mô tả trước
   // Nếu có câu nốt lớn "Thuỳ [X] còn có 1 nốt..." nằm sau câu nốt nhỏ "Thuỳ [X] có [N] nốt..."

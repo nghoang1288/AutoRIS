@@ -1401,7 +1401,170 @@
     return (lastInputText || lastDictationText || "").trim();
   }
 
-  async function captureAndSubmitFeedback() {
+  function promptFeedbackNoteAndSubmit() {
+    if (!isExtensionValid()) {
+      showToast("⚠️ Tiện ích vừa tải lại. Vui lòng bấm F5 lại trang RIS!", true);
+      return;
+    }
+
+    const doctorFinal = extractCurrentDoctorReport();
+    let aiOutput = getLatestAIOutput();
+    let rawInput = getLatestRawInput();
+
+    // Fallback: Nếu aiOutput hoặc rawInput trống trong bộ nhớ trang RIS, đọc từ storage đã đồng bộ
+    if (!aiOutput || !rawInput) {
+      try {
+        chrome.storage.local.get([STORAGE_KEYS.LAST_REPORT, "lastRawInput"], (stored) => {
+          if (!aiOutput && stored && stored[STORAGE_KEYS.LAST_REPORT]) {
+            aiOutput = (stored[STORAGE_KEYS.LAST_REPORT] || "").trim();
+          }
+          if (!rawInput && stored && stored["lastRawInput"]) {
+            rawInput = (stored["lastRawInput"] || "").trim();
+          }
+          showModal();
+        });
+        return;
+      } catch (e) {}
+    }
+
+    showModal();
+
+    function showModal() {
+      if (!doctorFinal && !aiOutput && !rawInput) {
+        showToast("ℹ️ Chưa có nội dung báo cáo hoặc bản đọc nào để lưu!", true);
+        return;
+      }
+
+      // Kiểm tra xem đã có modal đang mở chưa
+      const existingModal = document.getElementById("autoris-feedback-modal-overlay");
+      if (existingModal) {
+        const ta = existingModal.querySelector("textarea");
+        if (ta) ta.focus();
+        return;
+      }
+
+      const overlay = document.createElement("div");
+      overlay.id = "autoris-feedback-modal-overlay";
+      overlay.style.cssText = `
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(15, 23, 42, 0.75);
+        backdrop-filter: blur(4px);
+        z-index: 9999999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      `;
+
+      const card = document.createElement("div");
+      card.style.cssText = `
+        background: #0b1120;
+        border: 1px solid #38bdf8;
+        border-radius: 12px;
+        width: 480px;
+        max-width: 90vw;
+        padding: 20px;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.6);
+        color: #f8fafc;
+        box-sizing: border-box;
+      `;
+
+      card.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid #1e293b; padding-bottom:10px;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:20px;">🚨</span>
+            <span style="font-size:15px; font-weight:700; color:#38bdf8;">Báo lỗi & Lưu ca sửa cho AI học lại</span>
+          </div>
+          <button id="autoris-fb-close" style="background:none; border:none; color:#94a3b8; font-size:18px; cursor:pointer; padding:0 4px; line-height:1;">✕</button>
+        </div>
+
+        <div style="font-size:12.5px; color:#cbd5e1; margin-bottom:8px; line-height:1.4;">
+          Bác sĩ có thể nhập thêm <b>ghi chú hoặc góp ý</b> cho AI về ca bệnh này (để tối nay AI học và tinh chỉnh luật):
+        </div>
+
+        <textarea id="autoris-fb-note-input" rows="3" placeholder="Ví dụ: Cùng thùy trên, cùng 1 độ Lung-RADS thì cho vào 1 câu... (Tùy chọn, có thể để trống)" style="
+          width: 100%;
+          background: #1e293b;
+          color: #f8fafc;
+          border: 1px solid #334155;
+          border-radius: 8px;
+          padding: 10px;
+          font-size: 13px;
+          outline: none;
+          resize: vertical;
+          box-sizing: border-box;
+          margin-bottom: 14px;
+          font-family: inherit;
+        "></textarea>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px;">
+          <button id="autoris-fb-btn-cancel" style="
+            padding: 8px 14px;
+            background: #334155;
+            color: #cbd5e1;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12.5px;
+            font-weight: 600;
+          ">Hủy bỏ</button>
+          <button id="autoris-fb-btn-submit" style="
+            padding: 8px 18px;
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+            color: #ffffff;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12.5px;
+            font-weight: 700;
+            box-shadow: 0 2px 4px rgba(2, 132, 199, 0.4);
+          ">🚀 Gửi lên Server (Ctrl+Enter)</button>
+        </div>
+      `;
+
+      overlay.appendChild(card);
+      document.body.appendChild(overlay);
+
+      const textarea = card.querySelector("#autoris-fb-note-input");
+      const btnSubmit = card.querySelector("#autoris-fb-btn-submit");
+      const btnCancel = card.querySelector("#autoris-fb-btn-cancel");
+      const btnClose = card.querySelector("#autoris-fb-close");
+
+      setTimeout(() => textarea.focus(), 50);
+
+      function cleanup() {
+        if (overlay.parentNode) {
+          overlay.parentNode.removeChild(overlay);
+        }
+      }
+
+      function doSubmit() {
+        const note = textarea.value.trim();
+        cleanup();
+        captureAndSubmitFeedback(note);
+      }
+
+      btnSubmit.addEventListener("click", doSubmit);
+      btnCancel.addEventListener("click", cleanup);
+      btnClose.addEventListener("click", cleanup);
+
+      overlay.addEventListener("click", (e) => {
+        if (e.target === overlay) cleanup();
+      });
+
+      textarea.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+          e.preventDefault();
+          doSubmit();
+        } else if (e.key === "Escape") {
+          cleanup();
+        }
+      });
+    }
+  }
+
+  async function captureAndSubmitFeedback(doctorNote = "") {
     if (!isExtensionValid()) {
       showToast("⚠️ Tiện ích vừa tải lại. Vui lòng bấm F5 lại trang RIS!", true);
       return;
@@ -1450,6 +1613,7 @@
       raw_input: rawInput,
       ai_output: aiOutput,
       doctor_final: doctorFinal,
+      doctor_note: doctorNote,
       page_url: window.location.href,
       timestamp: new Date().toISOString()
     };
@@ -1685,7 +1849,7 @@
 
     const feedbackBtn = document.getElementById("autoris-btn-feedback");
     if (feedbackBtn) {
-      feedbackBtn.addEventListener("click", captureAndSubmitFeedback);
+      feedbackBtn.addEventListener("click", promptFeedbackNoteAndSubmit);
     }
 
     // Phím tắt Ctrl+Shift+S hoặc Alt+S: Báo lỗi / Lưu ca sửa lên server
@@ -1694,7 +1858,7 @@
       if ((e.ctrlKey && e.shiftKey && (e.key === "S" || e.key === "s" || e.code === "KeyS")) ||
           (e.altKey && (e.key === "S" || e.key === "s" || e.code === "KeyS"))) {
         e.preventDefault();
-        captureAndSubmitFeedback();
+        promptFeedbackNoteAndSubmit();
       }
     });
   }
