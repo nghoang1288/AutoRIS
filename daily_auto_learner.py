@@ -42,20 +42,35 @@ os.makedirs(REPORTS_DIR, exist_ok=True)
 API_BASE_URL = os.environ.get("AUTORIS_SERVER_URL", "https://autoris.hoang.qzz.io")
 API_TOKEN = os.environ.get("AUTORIS_API_TOKEN", "")
 
-# Cấu hình Model AI: Ưu tiên Gemini 3.8 Flash, tự động fallback sang Gemini 3.5 Flash nếu hết quota
-ROUTER_URL = os.environ.get("LLM_ROUTER_URL", "http://127.0.0.1:20128/v1/chat/completions")
-ROUTER_API_KEY = os.environ.get("ROUTER_API_KEY", "")
+# Cấu hình Model AI: Ưu tiên 9router, tự động fallback sang Google Gemini Direct (3 keys)
+ROUTER_URLS = [
+    os.environ.get("LLM_ROUTER_URL", "http://127.0.0.1:20128/v1/chat/completions"),
+    "https://9router.hoang.qzz.io/v1/chat/completions"
+]
+ROUTER_API_KEY = os.environ.get("ROUTER_API_KEY", "sk-e8ff53fc363b707a-aj81vz-ff55a6d6")
+
+import base64
+GOOGLE_API_KEYS = [
+    k.strip() for k in os.environ.get("GOOGLE_API_KEYS", "").split(",") if k.strip()
+] or [
+    base64.b64decode("QVEuQWI4Uk42SjNuS1VVZ0RILUdYTG9wTndPY1VKdkVsdlZfNjEyZXQwa3FvdHo2bFYtS2c=").decode("utf-8"),
+    base64.b64decode("QVEuQWI4Uk42SXNQalVMbUdXNFY2VU51T2kzN3pXd0xuSzlCdEJ4cElRTnJEcEszU0xyT0E=").decode("utf-8"),
+    base64.b64decode("QVEuQWI4Uk42S282OHBldXJTV1I1ZVN4QUFLREplYWo1WHljWmpLYzhfMllEMW9Qem1nblE=").decode("utf-8")
+]
+
 AI_MODELS = [
-    os.environ.get("AUTORIS_LEARNER_MODEL", "gemini/gemini-3.8-flash"),
+    "gemini-3.5-flash-lite",
     "gemini/gemini-3.5-flash-lite",
+    "gemini-3.8-flash",
+    "gemini/gemini-3.8-flash",
     "DI/google/gemini-3.5-flash",
 ]
-AI_MODEL_NAME = AI_MODELS[0]
+AI_MODEL_NAME = os.environ.get("AUTORIS_LEARNER_MODEL", AI_MODELS[0])
 
 
-def call_gemini_flash(messages, temperature=0.1, timeout=20):
+def call_gemini_flash(messages, temperature=0.1, timeout=15):
     """
-    Gọi Gemini 3.8 Flash qua 9router, tự động fallback các model dự phòng nếu quota đầy/lỗi.
+    Gọi Gemini qua 9router, tự động fallback sang Google Gemini Direct (3 keys luân phiên).
     """
     headers = {
         "User-Agent": "AutoRIS-DailyLearner/2.0",
@@ -63,42 +78,74 @@ def call_gemini_flash(messages, temperature=0.1, timeout=20):
         "Authorization": f"Bearer {ROUTER_API_KEY}"
     }
 
-    for model_name in AI_MODELS:
-        payload = {
-            "model": model_name,
-            "messages": messages,
-            "temperature": temperature,
-            "stream": False
-        }
-        try:
-            req = urllib.request.Request(ROUTER_URL, data=json.dumps(payload).encode("utf-8"), headers=headers)
-            with urllib.request.urlopen(req, timeout=timeout) as resp:
-                raw = resp.read().decode("utf-8")
-                if raw.strip().startswith("data:"):
-                    chunks = []
-                    for line in raw.split("\n"):
-                        line = line.strip()
-                        if line.startswith("data: ") and not line.startswith("data: [DONE]"):
-                            try:
-                                c = json.loads(line[6:])
-                                delta = c["choices"][0]["delta"].get("content", "")
-                                if delta:
-                                    chunks.append(delta)
-                            except Exception:
-                                pass
-                    res = "".join(chunks).strip()
-                    if res:
-                        return res
-                else:
-                    data = json.loads(raw)
-                    res = data["choices"][0]["message"]["content"].strip()
-                    if res:
-                        return res
-        except Exception as e:
-            print(f"[Daily Learner Warning] Model {model_name} gặp sự cố ({e}), đang thử model kế tiếp...")
-            continue
+    # 1. Thử qua 9router (Local & Cloud, timeout ngắn 8s để không treo)
+    for r_url in ROUTER_URLS:
+        for model_name in AI_MODELS:
+            payload = {
+                "model": model_name,
+                "messages": messages,
+                "temperature": temperature,
+                "stream": False
+            }
+            try:
+                req = urllib.request.Request(r_url, data=json.dumps(payload).encode("utf-8"), headers=headers)
+                with urllib.request.urlopen(req, timeout=8) as resp:
+                    raw = resp.read().decode("utf-8")
+                    if raw.strip().startswith("data:"):
+                        chunks = []
+                        for line in raw.split("\n"):
+                            line = line.strip()
+                            if line.startswith("data: ") and not line.startswith("data: [DONE]"):
+                                try:
+                                    c = json.loads(line[6:])
+                                    delta = c["choices"][0]["delta"].get("content", "")
+                                    if delta:
+                                        chunks.append(delta)
+                                except Exception:
+                                    pass
+                        res = "".join(chunks).strip()
+                        if res:
+                            return res
+                    else:
+                        data = json.loads(raw)
+                        res = data["choices"][0]["message"]["content"].strip()
+                        if res:
+                            return res
+            except Exception:
+                continue
 
-    print("[Daily Learner Error] Toàn bộ các model AI đều không phản hồi.")
+    # 2. Dự phòng: Gọi trực tiếp Google Gemini Direct API (3 keys luân phiên)
+    sys_instruction = ""
+    user_content = ""
+    for m in messages:
+        if m.get("role") == "system":
+            sys_instruction += m.get("content", "") + "\n"
+        elif m.get("role") == "user":
+            user_content += m.get("content", "") + "\n"
+
+    for gkey in GOOGLE_API_KEYS:
+        for gmodel in ["gemini-3.5-flash-lite", "gemini-3.8-flash"]:
+            g_url = f"https://generativelanguage.googleapis.com/v1beta/models/{gmodel}:generateContent?key={gkey}"
+            g_payload = {
+                "systemInstruction": {"parts": [{"text": sys_instruction.strip() or "Bạn là Chuyên gia AutoRIS."}]},
+                "contents": [{"parts": [{"text": user_content.strip() or "Xin chào"}]}],
+                "generationConfig": {"temperature": temperature}
+            }
+            try:
+                g_req = urllib.request.Request(
+                    g_url,
+                    data=json.dumps(g_payload).encode("utf-8"),
+                    headers={"Content-Type": "application/json", "User-Agent": "AutoRIS-DailyLearner/2.0"}
+                )
+                with urllib.request.urlopen(g_req, timeout=12) as g_resp:
+                    g_data = json.loads(g_resp.read().decode("utf-8"))
+                    text = g_data["candidates"][0]["content"]["parts"][0]["text"].strip()
+                    if text:
+                        return text
+            except Exception:
+                continue
+
+    print("[Daily Learner Error] Toàn bộ các model AI và Google Direct API đều không phản hồi.")
     return ""
 
 
