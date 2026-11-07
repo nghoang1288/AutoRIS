@@ -12,7 +12,7 @@ chrome.runtime.onInstalled.addListener(() => {
     for (const [k, v] of Object.entries(DEFAULT_CONFIG)) {
       if (items[k] === undefined) toSet[k] = v;
     }
-    if (!items[STORAGE_KEYS.SYSTEM_PROMPT] || !items[STORAGE_KEYS.SYSTEM_PROMPT].includes("QUY TẮC BẮT BUỘC VỀ DÀY MÀNG PHỔI KHU TRÚ")) {
+    if (!items[STORAGE_KEYS.SYSTEM_PROMPT] || !items[STORAGE_KEYS.SYSTEM_PROMPT].includes("QUY TẮC BẮT BUỘC VỀ NỐT Ở RÃNH LIÊN THUỲ")) {
       toSet[STORAGE_KEYS.SYSTEM_PROMPT] = LUNG_RADS_SYSTEM_PROMPT;
     }
     toSet[STORAGE_KEYS.INSTALLED_VERSION] = chrome.runtime.getManifest().version;
@@ -425,7 +425,7 @@ chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
     const rawInputText = req.payload?.rawText || "";
     handlePACSSynthesizeReport(req.payload || {})
       .then((rawResult) => {
-        const result = typeof sanitizeLungRADSReport === "function" ? sanitizeLungRADSReport(rawResult) : rawResult;
+        const result = typeof sanitizeLungRADSReport === "function" ? sanitizeLungRADSReport(rawResult, rawInputText) : rawResult;
         const now = Date.now();
         chrome.storage.local.set({
           [STORAGE_KEYS.LAST_REPORT]: result,

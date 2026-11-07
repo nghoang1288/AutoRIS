@@ -1291,8 +1291,9 @@
      * Chuẩn hoá toàn bộ báo cáo Lung-RADS (Mô tả + Kết luận)
      * - Tự động tính và chuẩn hóa đường kính trung bình ra 1 số sau dấu phẩy (.5)
      * - Không kết luận nếu không mô tả: dày màng phổi khu trú
+     * - Đồng bộ nốt vôi hoá và nốt ở rãnh liên thuỳ (oblique fissure, horizontal fissure)
      */
-    sanitizeLungRADSReport(reportText) {
+    sanitizeLungRADSReport(reportText, rawText = "") {
       if (!reportText) return "";
       let text = reportText.normalize("NFC");
 
@@ -1334,6 +1335,7 @@
       if (parts.length >= 2) {
         let motaPart = parts[0];
         let klBody = parts[1];
+        const suffix = "Không thấy dày tổ chức kẽ, không thấy giãn phế quản, phế nang.";
 
         // A. NÚT NHẦY PHẾ QUẢN (Bronchial mucus plug):
         // Nếu Kết luận có câu nút nhầy mà Mô tả chưa có -> Bắt buộc chèn vào Mô tả của phổi tương ứng
@@ -1344,7 +1346,6 @@
             const isBoth = /hai\s+phổi|2\s+phổi|hai\s+bên/i.test(mucusSentence);
             const isRight = /phổi\s+phải/i.test(mucusSentence) || isBoth;
             const isLeft = /phổi\s+trái/i.test(mucusSentence) || isBoth;
-            const suffix = "Không thấy dày tổ chức kẽ, không thấy giãn phế quản, phế nang.";
             const lines = motaPart.split("\n");
             for (let i = 0; i < lines.length; i++) {
               if (isRight && lines[i].toLowerCase().includes("phổi phải")) {
@@ -1368,7 +1369,118 @@
           }
         }
 
-        // B. DÀY MÀNG PHỔI KHU TRÚ & CÁC BIẾN THỂ DÀY DÍNH:
+        // B. NỐT Ở RÃNH LIÊN THUỲ VÀ NỐT VÔI HOÁ (Interlobar Fissure & Calcified Nodules):
+        function checkKlVoiHoa(kl, side) {
+          if (!kl) return false;
+          const sentences = kl.split(/(?<=[.!?])\s+/);
+          for (const s of sentences) {
+            if (!/(?:vôi\s*ho[áa]|Lung-RADS\s*1)/i.test(s)) continue;
+            if (side === "right") {
+              if (/phổi\s*phải|hai\s*phổi|2\s*phổi/i.test(s)) return true;
+            } else if (side === "left") {
+              if (/phổi\s*trái|hai\s*phổi|2\s*phổi/i.test(s)) return true;
+            }
+          }
+          return false;
+        }
+
+        const mLines = motaPart.split("\n");
+        for (let i = 0; i < mLines.length; i++) {
+          const line = mLines[i];
+          const isRight = line.toLowerCase().includes("phổi phải");
+          const isLeft = line.toLowerCase().includes("phổi trái");
+          if (!isRight && !isLeft) continue;
+
+          const side = isRight ? "right" : "left";
+          const toInject = [];
+
+          // 1. Quét nốt ở rãnh liên thuỳ (oblique fissure, horizontal fissure) từ rawText nếu chưa được mô tả
+          if (rawText) {
+            const rawLines = rawText.split("\n");
+            for (const rawLine of rawLines) {
+              if (!/(?:oblique\s+fissure|horizontal\s+fissure|rãnh\s+liên\s+thu[ỳy])/i.test(rawLine)) continue;
+              let isTarget = false;
+              if (side === "right" && (/horizontal\s+fissure|rãnh\s+liên\s+thu[ỳy]\s+ngang|right|phổi\s+phải/i.test(rawLine))) isTarget = true;
+              if (side === "left" && (/left|phổi\s+trái/i.test(rawLine) && !/horizontal/i.test(rawLine))) isTarget = true;
+              if (!isTarget) continue;
+
+              const mDim = rawLine.match(/(\d+(?:[.,]\d+)?\s*[×xX*]\s*\d+(?:[.,]\d+)?)\s*mm/i);
+              const dim = mDim ? mDim[1].replace(/[xX*]/, "×") : "";
+              if (dim && line.includes(dim)) continue;
+
+              let fissureName = "Rãnh liên thuỳ chếch";
+              if (/horizontal\s+fissure|rãnh\s+liên\s+thu[ỳy]\s+ngang/i.test(rawLine)) fissureName = "Rãnh liên thuỳ ngang";
+
+              let type = "đặc";
+              let isCalc = false;
+              if (/calcif|vôi/i.test(rawLine)) {
+                type = "vôi hoá";
+                isCalc = true;
+              } else if (/ground\s*glass|kính\s*mờ/i.test(rawLine)) {
+                type = "kính mờ";
+              } else if (/part[- ]solid|bán\s*đặc/i.test(rawLine)) {
+                type = "bán đặc";
+              }
+
+              if (isCalc) {
+                toInject.push(`${fissureName} có 1 nốt vôi hoá${dim ? " kích thước " + dim + " mm" : ""}.`);
+              } else if (dim) {
+                const parts = dim.split("×").map(s => parseFloat(s.trim().replace(",", ".")));
+                const mean = (parts[0] + parts[1]) / 2;
+                const formattedMean = (mean % 1 !== 0) ? mean.toFixed(1) : String(mean);
+                toInject.push(`${fissureName} có 1 nốt ${type} kích thước ${dim} mm (đường kính trung bình ${formattedMean} mm).`);
+              }
+            }
+          }
+
+          // 2. Đồng bộ nốt vôi hoá nếu Kết luận có mà Mô tả chưa có
+          const hasKlVoi = checkKlVoiHoa(klBody, side);
+          const hasMotaVoi = /(?:vôi\s*ho[áa])/i.test(line) || toInject.some(s => /vôi\s*ho[áa]/i.test(s));
+
+          if (hasKlVoi && !hasMotaVoi) {
+            let added = false;
+            if (rawText) {
+              const rawLines = rawText.split("\n");
+              for (const rawLine of rawLines) {
+                if (!/(?:calcif|vôi\s*ho[áa])/i.test(rawLine)) continue;
+                let isTarget = false;
+                if (side === "right" && (/horizontal|right|phổi\s+phải|thu[ỳy]\s+giữa/i.test(rawLine))) isTarget = true;
+                if (side === "left" && (/left|phổi\s+trái/i.test(rawLine))) isTarget = true;
+                if (!isTarget) continue;
+
+                const mDim = rawLine.match(/(\d+(?:[.,]\d+)?\s*[×xX*]\s*\d+(?:[.,]\d+)?)\s*mm/i);
+                const dim = mDim ? mDim[1].replace(/[xX*]/, "×") + " mm" : "";
+                let loc = "";
+                if (/oblique\s+fissure|rãnh\s+liên\s+thu[ỳy]\s+chếch/i.test(rawLine)) loc = "Rãnh liên thuỳ chếch";
+                else if (/horizontal\s+fissure|rãnh\s+liên\s+thu[ỳy]\s+ngang/i.test(rawLine)) loc = "Rãnh liên thuỳ ngang";
+                else if (/upper\s+lobe|thu[ỳy]\s+trên/i.test(rawLine)) loc = "Thuỳ trên";
+                else if (/middle\s+lobe|thu[ỳy]\s+giữa/i.test(rawLine)) loc = "Thuỳ giữa";
+                else if (/lower\s+lobe|thu[ỳy]\s+dưới/i.test(rawLine)) loc = "Thuỳ dưới";
+
+                if (loc && dim) toInject.push(`${loc} có 1 nốt vôi hoá kích thước ${dim}.`);
+                else if (dim) toInject.push(`Có 1 nốt vôi hoá kích thước ${dim}.`);
+                else toInject.push("Có 1 nốt vôi hoá.");
+                added = true;
+                break;
+              }
+            }
+            if (!added) {
+              toInject.push("Có 1 nốt vôi hoá.");
+            }
+          }
+
+          if (toInject.length > 0) {
+            const injectStr = toInject.join(" ");
+            if (mLines[i].includes(suffix)) {
+              mLines[i] = mLines[i].replace(suffix, injectStr + " " + suffix);
+            } else {
+              mLines[i] += " " + injectStr;
+            }
+          }
+        }
+        motaPart = mLines.join("\n");
+
+        // C. DÀY MÀNG PHỔI KHU TRÚ & CÁC BIẾN THỂ DÀY DÍNH:
         // Nếu Kết luận có mà Mô tả KHÔNG CÓ -> Bắt buộc xóa khỏi Kết luận
         const hasMotaDayMangPhoi = /(?:dày|day|vôi\s+hóa|vôi\s+hoá|dính|mảng\s+dày)[^.\n]*màng\s+phổi|màng\s+phổi[^.\n]*(?:dày|day|vôi|dính)/i.test(motaPart) && !/(?:không|chưa)\s+thấy\s+(?:dày|bất\s+thường)/i.test(motaPart);
         if (!hasMotaDayMangPhoi) {
@@ -1391,7 +1503,7 @@
       return text;
     },
 
-    version: 1792820000
+    version: 1792830000
   };
 
   const ModalityDetector = {

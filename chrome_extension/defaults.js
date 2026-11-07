@@ -154,7 +154,17 @@ Luôn gồm đúng cấu trúc:
 Kết luận: 
 ...
 
-Mô tả trong mỗi phổi theo thứ tự: thuỳ trên, thuỳ giữa (chỉ phổi phải), thuỳ dưới. Không nhắc đến thuỳ không có nốt. Không xuống dòng trong cùng một phổi.
+Mô tả trong mỗi phổi theo thứ tự: thuỳ trên, thuỳ giữa (chỉ phổi phải), thuỳ dưới, rãnh liên thuỳ (nếu có tổn thương ở rãnh liên thuỳ). Không nhắc đến thuỳ không có nốt. Không xuống dòng trong cùng một phổi.
+
+* **QUY TẮC BẮT BUỘC VỀ NỐT Ở RÃNH LIÊN THUỲ (FISSURE NODULES / PERIFISSURAL NODULES)**:
+  - Nếu bản gốc tiếng Anh / PACS có nốt nằm ở rãnh liên thuỳ (oblique fissure, horizontal fissure, hoặc perifissural nodule):
+    + **BẮT BUỘC MÔ TẢ ĐẦY ĐỦ TRONG DÒNG CỦA PHỔI TƯƠNG ỨNG! TUYỆT ĐỐI KHÔNG ĐƯỢC BỎ SÓT!**
+    + Cách gọi tên vị trí chuẩn theo giải phẫu:
+      * Với "oblique fissure of right lung" -> Ghi vào dòng "-- Phổi phải:": "Rãnh liên thuỳ chếch có [số lượng] nốt [loại] kích thước [dài × ngắn] mm..." (hoặc nếu là nốt vôi hoá: "Rãnh liên thuỳ chếch có 1 nốt vôi hoá kích thước [dài × ngắn] mm.").
+      * Với "horizontal fissure of right lung" -> Ghi vào dòng "-- Phổi phải:": "Rãnh liên thuỳ ngang có [số lượng] nốt [loại] kích thước [dài × ngắn] mm...".
+      * Với "oblique fissure of left lung" -> Ghi vào dòng "-- Phổi trái:": "Rãnh liên thuỳ chếch có [số lượng] nốt [loại] kích thước [dài × ngắn] mm...".
+    + TUYỆT ĐỐI CẤM: Có nốt ở rãnh liên thuỳ trong bản đọc gốc mà lại bỏ qua không mô tả vào kết quả!
+    + Nhất quán với Kết luận: Khi có nốt vôi hoá ở rãnh liên thuỳ, Kết luận ghi nhận "Nốt vôi hoá phổi phải (Lung-RADS 1)." thì phần MÔ TẢ ở "-- Phổi phải:" BẮT BUỘC PHẢI CÓ câu mô tả nốt vôi hoá đó (ví dụ: "Rãnh liên thuỳ chếch có 1 nốt vôi hoá kích thước 4×4 mm.").
 
 * **QUY TẮC MÔ TẢ KÍCH THƯỚC VÀ ĐƯỜNG KÍNH TRUNG BÌNH (BẮT BUỘC)**:
   - ĐỊNH DẠNG CHUẨN: "kích thước [dài × ngắn] mm (đường kính trung bình [x] mm)".
@@ -191,8 +201,12 @@ Mô tả trong mỗi phổi theo thứ tự: thuỳ trên, thuỳ giữa (chỉ 
   - VÍ DỤ SAI (CẤM):
     "Thuỳ trên có 3 nốt đặc, nốt lớn kích thước 3×2 mm... Thuỳ giữa có 1 nốt vôi hoá... Thuỳ dưới có 8 nốt đặc... Thuỳ trên còn có 1 nốt đặc kích thước 7×5 mm, co kéo màng phổi." (SAI vì nốt 7x5 mm Lung-RADS 3 lại bị ném xuống sau các nốt nhỏ).
 
-* **QUY TẮC NHẤT QUÁN TUYỆT ĐỐI: CHỈ KẾT LUẬN NHỮNG GÌ ĐÃ ĐƯỢC MÔ TẢ (ĐẶC BIỆT LÀ NÚT NHẦY PHẾ QUẢN)**:
+* **QUY TẮC NHẤT QUÁN TUYỆT ĐỐI: CHỈ KẾT LUẬN NHỮNG GÌ ĐÃ ĐƯỢC MÔ TẢ (ĐẶC BIỆT LÀ NÚT NHẦY PHẾ QUẢN VÀ NỐT VÔI HOÁ)**:
   - Mọi tổn thương có trong KẾT LUẬN bắt buộc PHẢI ĐƯỢC MÔ TẢ CHI TIẾT TRONG PHẦN MÔ TẢ TRƯỚC!
+  - **ĐẶC BIỆT - NỐT VÔI HOÁ VÀ NỐT RÃNH LIÊN THUỲ**:
+    - Khi Kết luận có nốt vôi hoá ("Nốt vôi hoá phổi [phải/trái] (Lung-RADS 1)" hoặc "Vài nốt vôi hoá hai phổi (Lung-RADS 1)"):
+      + Ở phần MÔ TẢ của phổi tương ứng, BẮT BUỘC PHẢI CÓ câu mô tả nốt vôi hoá (ví dụ ở thuỳ hoặc ở rãnh liên thuỳ).
+      + TUYỆT ĐỐI CẤM: Có câu nốt vôi hoá ở Kết luận mà trong phần Mô tả lại bỏ sót không mô tả!
   - **ĐẶC BIỆT - NÚT NHẦY PHẾ QUẢN (Bronchial mucus plug)**:
     - Khi bản đọc gốc có nút nhầy phế quản (ví dụ "Bronchial mucus plug is found in Right lower lobe"):
       + Ở phần MÔ TẢ của phổi tương ứng (ở đây là Phổi phải), BẮT BUỘC PHẢI GHI CÂU MÔ TẢ: "Nút nhầy phế quản thùy dưới phổi phải." (đặt ngay trước câu kết "Không thấy dày tổ chức kẽ, không thấy giãn phế quản, phế nang.").
@@ -484,7 +498,7 @@ function mergeSameLobeSameTierNodules(text) {
 /**
  * Chuẩn hoá toàn bộ báo cáo Lung-RADS (Mô tả + Kết luận)
  */
-function sanitizeLungRADSReport(reportText) {
+function sanitizeLungRADSReport(reportText, rawText = "") {
   if (!reportText) return "";
   let text = reportText.normalize("NFC");
 
@@ -526,6 +540,7 @@ function sanitizeLungRADSReport(reportText) {
   if (parts.length >= 2) {
     let motaPart = parts[0];
     let klBody = parts[1];
+    const suffix = "Không thấy dày tổ chức kẽ, không thấy giãn phế quản, phế nang.";
 
     // A. NÚT NHẦY PHẾ QUẢN (Bronchial mucus plug):
     // Nếu Kết luận có câu nút nhầy mà Mô tả chưa có -> Bắt buộc chèn vào Mô tả của phổi tương ứng
@@ -536,7 +551,6 @@ function sanitizeLungRADSReport(reportText) {
         const isBoth = /hai\s+phổi|2\s+phổi|hai\s+bên/i.test(mucusSentence);
         const isRight = /phổi\s+phải/i.test(mucusSentence) || isBoth;
         const isLeft = /phổi\s+trái/i.test(mucusSentence) || isBoth;
-        const suffix = "Không thấy dày tổ chức kẽ, không thấy giãn phế quản, phế nang.";
         const lines = motaPart.split("\n");
         for (let i = 0; i < lines.length; i++) {
           if (isRight && lines[i].toLowerCase().includes("phổi phải")) {
@@ -560,7 +574,119 @@ function sanitizeLungRADSReport(reportText) {
       }
     }
 
-    // B. DÀY MÀNG PHỔI KHU TRÚ & CÁC BIẾN THỂ DÀY DÍNH:
+    // B. NỐT Ở RÃNH LIÊN THUỲ VÀ NỐT VÔI HOÁ (Interlobar Fissure & Calcified Nodules):
+    // Đảm bảo không bao giờ bỏ sót nốt ở rãnh liên thuỳ hoặc nốt vôi hoá có trong raw input / kết luận
+    function checkKlVoiHoa(kl, side) {
+      if (!kl) return false;
+      const sentences = kl.split(/(?<=[.!?])\s+/);
+      for (const s of sentences) {
+        if (!/(?:vôi\s*ho[áa]|Lung-RADS\s*1)/i.test(s)) continue;
+        if (side === "right") {
+          if (/phổi\s*phải|hai\s*phổi|2\s*phổi/i.test(s)) return true;
+        } else if (side === "left") {
+          if (/phổi\s*trái|hai\s*phổi|2\s*phổi/i.test(s)) return true;
+        }
+      }
+      return false;
+    }
+
+    const mLines = motaPart.split("\n");
+    for (let i = 0; i < mLines.length; i++) {
+      const line = mLines[i];
+      const isRight = line.toLowerCase().includes("phổi phải");
+      const isLeft = line.toLowerCase().includes("phổi trái");
+      if (!isRight && !isLeft) continue;
+
+      const side = isRight ? "right" : "left";
+      const toInject = [];
+
+      // 1. Quét nốt ở rãnh liên thuỳ (oblique fissure, horizontal fissure) từ rawText nếu chưa được mô tả
+      if (rawText) {
+        const rawLines = rawText.split("\n");
+        for (const rawLine of rawLines) {
+          if (!/(?:oblique\s+fissure|horizontal\s+fissure|rãnh\s+liên\s+thu[ỳy])/i.test(rawLine)) continue;
+          let isTarget = false;
+          if (side === "right" && (/horizontal\s+fissure|rãnh\s+liên\s+thu[ỳy]\s+ngang|right|phổi\s+phải/i.test(rawLine))) isTarget = true;
+          if (side === "left" && (/left|phổi\s+trái/i.test(rawLine) && !/horizontal/i.test(rawLine))) isTarget = true;
+          if (!isTarget) continue;
+
+          const mDim = rawLine.match(/(\d+(?:[.,]\d+)?\s*[×xX*]\s*\d+(?:[.,]\d+)?)\s*mm/i);
+          const dim = mDim ? mDim[1].replace(/[xX*]/, "×") : "";
+          if (dim && line.includes(dim)) continue;
+
+          let fissureName = "Rãnh liên thuỳ chếch";
+          if (/horizontal\s+fissure|rãnh\s+liên\s+thu[ỳy]\s+ngang/i.test(rawLine)) fissureName = "Rãnh liên thuỳ ngang";
+
+          let type = "đặc";
+          let isCalc = false;
+          if (/calcif|vôi/i.test(rawLine)) {
+            type = "vôi hoá";
+            isCalc = true;
+          } else if (/ground\s*glass|kính\s*mờ/i.test(rawLine)) {
+            type = "kính mờ";
+          } else if (/part[- ]solid|bán\s*đặc/i.test(rawLine)) {
+            type = "bán đặc";
+          }
+
+          if (isCalc) {
+            toInject.push(`${fissureName} có 1 nốt vôi hoá${dim ? " kích thước " + dim + " mm" : ""}.`);
+          } else if (dim) {
+            const parts = dim.split("×").map(s => parseFloat(s.trim().replace(",", ".")));
+            const mean = (parts[0] + parts[1]) / 2;
+            const formattedMean = (mean % 1 !== 0) ? mean.toFixed(1) : String(mean);
+            toInject.push(`${fissureName} có 1 nốt ${type} kích thước ${dim} mm (đường kính trung bình ${formattedMean} mm).`);
+          }
+        }
+      }
+
+      // 2. Đồng bộ nốt vôi hoá nếu Kết luận có mà Mô tả chưa có
+      const hasKlVoi = checkKlVoiHoa(klBody, side);
+      const hasMotaVoi = /(?:vôi\s*ho[áa])/i.test(line) || toInject.some(s => /vôi\s*ho[áa]/i.test(s));
+
+      if (hasKlVoi && !hasMotaVoi) {
+        let added = false;
+        if (rawText) {
+          const rawLines = rawText.split("\n");
+          for (const rawLine of rawLines) {
+            if (!/(?:calcif|vôi\s*ho[áa])/i.test(rawLine)) continue;
+            let isTarget = false;
+            if (side === "right" && (/horizontal|right|phổi\s+phải|thu[ỳy]\s+giữa/i.test(rawLine))) isTarget = true;
+            if (side === "left" && (/left|phổi\s+trái/i.test(rawLine))) isTarget = true;
+            if (!isTarget) continue;
+
+            const mDim = rawLine.match(/(\d+(?:[.,]\d+)?\s*[×xX*]\s*\d+(?:[.,]\d+)?)\s*mm/i);
+            const dim = mDim ? mDim[1].replace(/[xX*]/, "×") + " mm" : "";
+            let loc = "";
+            if (/oblique\s+fissure|rãnh\s+liên\s+thu[ỳy]\s+chếch/i.test(rawLine)) loc = "Rãnh liên thuỳ chếch";
+            else if (/horizontal\s+fissure|rãnh\s+liên\s+thu[ỳy]\s+ngang/i.test(rawLine)) loc = "Rãnh liên thuỳ ngang";
+            else if (/upper\s+lobe|thu[ỳy]\s+trên/i.test(rawLine)) loc = "Thuỳ trên";
+            else if (/middle\s+lobe|thu[ỳy]\s+giữa/i.test(rawLine)) loc = "Thuỳ giữa";
+            else if (/lower\s+lobe|thu[ỳy]\s+dưới/i.test(rawLine)) loc = "Thuỳ dưới";
+
+            if (loc && dim) toInject.push(`${loc} có 1 nốt vôi hoá kích thước ${dim}.`);
+            else if (dim) toInject.push(`Có 1 nốt vôi hoá kích thước ${dim}.`);
+            else toInject.push("Có 1 nốt vôi hoá.");
+            added = true;
+            break;
+          }
+        }
+        if (!added) {
+          toInject.push("Có 1 nốt vôi hoá.");
+        }
+      }
+
+      if (toInject.length > 0) {
+        const injectStr = toInject.join(" ");
+        if (mLines[i].includes(suffix)) {
+          mLines[i] = mLines[i].replace(suffix, injectStr + " " + suffix);
+        } else {
+          mLines[i] += " " + injectStr;
+        }
+      }
+    }
+    motaPart = mLines.join("\n");
+
+    // C. DÀY MÀNG PHỔI KHU TRÚ & CÁC BIẾN THỂ DÀY DÍNH:
     // Nếu Kết luận có mà Mô tả KHÔNG CÓ -> Bắt buộc xóa khỏi Kết luận
     const hasMotaDayMangPhoi = /(?:dày|day|vôi\s+hóa|vôi\s+hoá|dính|mảng\s+dày)[^.\n]*màng\s+phổi|màng\s+phổi[^.\n]*(?:dày|day|vôi|dính)/i.test(motaPart) && !/(?:không|chưa)\s+thấy\s+(?:dày|bất\s+thường)/i.test(motaPart);
     if (!hasMotaDayMangPhoi) {

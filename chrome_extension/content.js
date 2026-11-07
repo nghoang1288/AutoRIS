@@ -2012,7 +2012,7 @@
             apiKey: config[STORAGE_KEYS.AI_API_KEY] || DEFAULT_CONFIG.aiKey,
             googleKeysPool: config[STORAGE_KEYS.GOOGLE_KEYS_POOL] || DEFAULT_CONFIG.googleKeysPool,
             preferredModel: config[STORAGE_KEYS.AI_MODEL] || DEFAULT_CONFIG.aiModel,
-            systemPrompt: (config[STORAGE_KEYS.SYSTEM_PROMPT] && config[STORAGE_KEYS.SYSTEM_PROMPT].includes("QUY TẮC BẮT BUỘC VỀ THỨ TỰ MÔ TẢ"))
+            systemPrompt: (config[STORAGE_KEYS.SYSTEM_PROMPT] && config[STORAGE_KEYS.SYSTEM_PROMPT].includes("QUY TẮC BẮT BUỘC VỀ NỐT Ở RÃNH LIÊN THUỲ"))
               ? config[STORAGE_KEYS.SYSTEM_PROMPT]
               : LUNG_RADS_SYSTEM_PROMPT,
             rawText: currentText
@@ -2027,7 +2027,7 @@
 
       clearInterval(countInterval);
       const cleanSynthesized = (typeof sanitizeLungRADSReport === "function")
-        ? sanitizeLungRADSReport(synthesized)
+        ? sanitizeLungRADSReport(synthesized, currentText)
         : synthesized;
       await copyToClipboard(cleanSynthesized);
       lastInputText = currentText;
@@ -2272,7 +2272,9 @@
 
         (async () => {
           try {
-            const report = msg.report;
+            const report = (typeof sanitizeLungRADSReport === "function")
+              ? sanitizeLungRADSReport(msg.report, msg.rawText || "")
+              : msg.report;
             const reportTime = msg.timestamp || Date.now();
             if (!report || reportTime < lastAppliedReportTime) {
               sendResponse({ received: false, reason: "stale_report" });
