@@ -209,6 +209,7 @@
         : reportText;
     }
   };
+  const SandboxBridge = SynthesizerBridge;
 
   // =========================================================================
   // 1. NHẬN DIỆN TRANG WEB & BẢO VỆ PHẠM VI (GATE CHECKS)
@@ -2037,7 +2038,7 @@
       });
 
       clearInterval(countInterval);
-      const cleanSynthesized = await SandboxBridge.sanitizeLungRADSReport(synthesized, currentText);
+      const cleanSynthesized = await SynthesizerBridge.sanitizeLungRADSReport(synthesized, currentText);
       await copyToClipboard(cleanSynthesized);
       lastInputText = currentText;
       lastSynthesizedReport = cleanSynthesized;
@@ -2281,7 +2282,7 @@
 
         (async () => {
           try {
-            const report = await SandboxBridge.sanitizeLungRADSReport(msg.report, msg.rawText || "");
+            const report = await SynthesizerBridge.sanitizeLungRADSReport(msg.report, msg.rawText || "");
             const reportTime = msg.timestamp || Date.now();
             if (!report || reportTime < lastAppliedReportTime) {
               sendResponse({ received: false, reason: "stale_report" });
@@ -2378,6 +2379,7 @@
   // 10. KHỞI TẠO MUTATION OBSERVER TRÊN TRANG PACS
   // =========================================================================
   if (isPACSPage()) {
+    SynthesizerBridge.init();
     function startPACSObserver() {
       if (!document.body) {
         window.addEventListener("DOMContentLoaded", startPACSObserver, { once: true });
