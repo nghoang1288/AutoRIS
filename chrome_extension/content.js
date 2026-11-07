@@ -196,6 +196,17 @@
     },
     localDeterministicFallback(currentMota, currentKetluan, cleanDictation) {
       return this.invoke("localDeterministicFallback", [currentMota, currentKetluan, cleanDictation]);
+    },
+    async sanitizeLungRADSReport(reportText, rawText = "") {
+      try {
+        const res = await this.invoke("sanitizeLungRADSReport", [reportText, rawText]);
+        if (res && typeof res === "string") return res;
+      } catch (e) {
+        // Fallback local
+      }
+      return (typeof sanitizeLungRADSReport === "function")
+        ? sanitizeLungRADSReport(reportText, rawText)
+        : reportText;
     }
   };
 
@@ -2026,9 +2037,7 @@
       });
 
       clearInterval(countInterval);
-      const cleanSynthesized = (typeof sanitizeLungRADSReport === "function")
-        ? sanitizeLungRADSReport(synthesized, currentText)
-        : synthesized;
+      const cleanSynthesized = await SandboxBridge.sanitizeLungRADSReport(synthesized, currentText);
       await copyToClipboard(cleanSynthesized);
       lastInputText = currentText;
       lastSynthesizedReport = cleanSynthesized;
@@ -2272,9 +2281,7 @@
 
         (async () => {
           try {
-            const report = (typeof sanitizeLungRADSReport === "function")
-              ? sanitizeLungRADSReport(msg.report, msg.rawText || "")
-              : msg.report;
+            const report = await SandboxBridge.sanitizeLungRADSReport(msg.report, msg.rawText || "");
             const reportTime = msg.timestamp || Date.now();
             if (!report || reportTime < lastAppliedReportTime) {
               sendResponse({ received: false, reason: "stale_report" });

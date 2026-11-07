@@ -1219,10 +1219,113 @@
     },
 
     /**
-     * Tự động gộp các nốt trong cùng một thùy và cùng 1 mức Lung-RADS vào đúng 1 câu duy nhất
+     * Chuẩn hoá câu Kết luận theo chuẩn Lung-RADS v2022
+     */
+    sanitizeLungRADSConclusion(conclusionText) {
+      if (!conclusionText || !conclusionText.trim()) return conclusionText;
+      let text = conclusionText.trim();
+
+      // 1. Chuẩn hoá chữ hoa cho mức Lung-RADS (4a -> 4A, 4b -> 4B, 4x -> 4X)
+      text = text.replace(/Lung-RADS\s+([0-9])([a-z])\b/gi, function(_, num, letter) {
+        return "Lung-RADS " + num + letter.toUpperCase();
+      });
+
+      // 2. Loại bỏ các mở ngoặc liệt kê tên thuỳ sau "hai phổi"
+      text = text.replace(/hai\s+phổi\s*\([^)]*(?:thuỳ|thùy)[^)]*\)/gi, "hai phổi");
+
+      // 3. Chuyển đổi "nốt/các nốt ... hai phổi" hoặc "các nốt ... phổi phải/trái" thành "vài nốt ..."
+      text = text.replace(/(^|[.\n]\s*)(Hình\s+ảnh\s+)?(?:nốt|các\s+nốt)\s+((?:đặc|kính\s+mờ|vôi\s+hoá|vôi\s+hóa|bán\s+đặc|bán-đặc)(?:\s+và\s+(?:vài\s+|các\s+)?(?:nốt\s+)?(?:đặc|kính\s+mờ|vôi\s+hoá|vôi\s+hóa|bán\s+đặc|bán-đặc))?)\s+hai\s+phổi/gi, function(match, punct, prefix, type) {
+        const cleanType = type.replace(/\b(?:vài|các)\s+nốt\s+/gi, "").replace(/\bnốt\s+/gi, "");
+        if (prefix) {
+          return (punct || "") + prefix + "vài nốt " + cleanType + " hai phổi";
+        }
+        const cap = (!punct || punct.includes("\n") || punct.includes(".")) ? "Vài nốt " : "vài nốt ";
+        return (punct || "") + cap + cleanType + " hai phổi";
+      });
+      text = text.replace(/(^|[.\n]\s*)(Hình\s+ảnh\s+)?(?:các\s+nốt)\s+((?:đặc|kính\s+mờ|vôi\s+hoá|vôi\s+hóa|bán\s+đặc|bán-đặc)(?:\s+và\s+(?:vài\s+|các\s+)?(?:nốt\s+)?(?:đặc|kính\s+mờ|vôi\s+hoá|vôi\s+hóa|bán\s+đặc|bán-đặc))?)\s+phổi\s+(phải|trái)/gi, function(match, punct, prefix, type, side) {
+        const cleanType = type.replace(/\b(?:vài|các)\s+nốt\s+/gi, "").replace(/\bnốt\s+/gi, "");
+        if (prefix) {
+          return (punct || "") + prefix + "vài nốt " + cleanType + " phổi " + side;
+        }
+        const cap = (!punct || punct.includes("\n") || punct.includes(".")) ? "Vài nốt " : "vài nốt ";
+        return (punct || "") + cap + cleanType + " phổi " + side;
+      });
+
+      // 3.5. Sửa lỗi giải phẫu sai "thuỳ phải / thuỳ trái" -> "phổi phải / phổi trái"
+      text = text.replace(/\bth[uù][yỳ]\s+(phải|trái)\b/gi, "phổi $1");
+
+      // 4. Chuẩn hoá định dạng Lung-RADS:
+      text = text.replace(/\s*[-–—]\s*(Lung-RADS\s+[0-9][A-Za-z]?)\.?/gi, function(_, lr) {
+        const stdLr = lr.replace(/lung-rads/i, "Lung-RADS");
+        return " (" + stdLr + ").";
+      });
+      text = text.replace(/\(\s*lung-rads\b/gi, "(Lung-RADS");
+
+      // 5. GỘP CÁC TỔN THƯƠNG CÙNG MỨC LUNG-RADS TRONG CÂU:
+      const sameTierRegex = /\((Lung-RADS\s+[0-9][A-Za-z]?)\)[.,;\s]+(?:và\s+)?([^().]+?)\s*\(\1\)/i;
+      while (sameTierRegex.test(text)) {
+        text = text.replace(sameTierRegex, function(match, lr, secondPart) {
+          let cleanPart = secondPart.trim().replace(/^và\s+/i, "");
+          if (cleanPart) {
+            cleanPart = cleanPart.charAt(0).toLowerCase() + cleanPart.slice(1);
+          }
+          return " __JOIN__ " + cleanPart + " (" + lr + ")";
+        });
+      }
+
+      if (text.includes("__JOIN__")) {
+        const parts = text.split("__JOIN__");
+        let joined = parts[0].trim();
+        for (let i = 1; i < parts.length; i++) {
+          if (i === parts.length - 1) {
+            joined += " và " + parts[i].trim();
+          } else {
+            joined += ", " + parts[i].trim();
+          }
+        }
+        text = joined;
+      }
+
+      // 6. TÁCH CÁC CÂU KHÁC MỨC LUNG-RADS:
+      text = text.replace(/(\(Lung-RADS\s+[0-9][A-Za-z]?\))[.,;\s]+(?:và\s+)?([a-zà-ỹ\p{L}])/gui, function(_, lr, nextChar) {
+        return lr + ". " + nextChar.toUpperCase();
+      });
+
+      text = text.replace(/(\(Lung-RADS\s+[0-9][A-Za-z]?\))(?!\.)/gi, function(_, lr) {
+        return lr + ".";
+      });
+
+      // 7. Xoá từ 'Hình ảnh' lặp lại ở các câu phía sau
+      text = text.replace(/(?:^|[.!?\n]\s+)Hình\s+ảnh\s+/gui, function(match, offset) {
+        if (offset === 0) return match;
+        return ". ";
+      });
+
+      // 8. Dọn dẹp khoảng trắng trước dấu câu
+      text = text.replace(/\s+([.,;:!?])/g, "$1");
+
+      text = text.replace(/\.\s+([a-zà-ỹ\p{L}])/gui, function(_, c) {
+        return ". " + c.toUpperCase();
+      });
+
+      text = text.replace(/[.,;]{2,}/g, ".").replace(/\s{2,}/g, " ").trim();
+      text = text.replace(/\.\s*\./g, ".");
+      text = text.replace(/[.,;\s]+$/, "") + ".";
+
+      return text;
+    },
+
+    /**
+     * Tự động gộp các nốt trong cùng một thùy (hoặc cùng rãnh liên thuỳ) và cùng 1 mức Lung-RADS vào đúng 1 câu duy nhất
      */
     mergeSameLobeSameTierNodules(text) {
-      const lobeNames = ["trên", "giữa", "dưới"];
+      const locations = [
+        { pattern: "Th[uù][yỳ]\\s+trên", label: "Thuỳ trên" },
+        { pattern: "Th[uù][yỳ]\\s+giữa", label: "Thuỳ giữa" },
+        { pattern: "Th[uù][yỳ]\\s+dưới", label: "Thuỳ dưới" },
+        { pattern: "Rãnh\\s+liên\\s+th[uù][yỳ]\\s+chếch", label: "Rãnh liên thuỳ chếch" },
+        { pattern: "Rãnh\\s+liên\\s+th[uù][yỳ]\\s+ngang", label: "Rãnh liên thuỳ ngang" }
+      ];
       const types = ["đặc", "kính mờ", "bán đặc", "vôi hoá", "vôi hóa"];
 
       function getSolidTier(mean) {
@@ -1236,18 +1339,18 @@
       while (changed && iterations < 5) {
         changed = false;
         iterations++;
-        for (const lobe of lobeNames) {
+        for (const loc of locations) {
           for (const type of types) {
             const regex = new RegExp(
-              "(?:Th[uù][yỳ]\\s+" + lobe + "\\s+có\\s+(\\d+)\\s+nốt\\s+" + type + "[^.]*?kích\\s+thước(?:\\s+(?:lớn\\s+nhất|lớn))?\\s+(\\d+(?:[.,]\\d+)?)\\s*[×xX*]\\s*(\\d+(?:[.,]\\d+)?)\\s*mm(?:\\s*\\(\\s*đường\\s+kính\\s+trung\\s+bình\\s+([0-9.,]+)\\s*mm\\s*\\))?[^.]*?\\.)" +
+              "(?:" + loc.pattern + "\\s+có\\s+(\\d+)\\s+nốt\\s+" + type + "[^.]*?kích\\s+thước(?:\\s+(?:lớn\\s+nhất|lớn))?\\s+(\\d+(?:[.,]\\d+)?)\\s*[×xX*]\\s*(\\d+(?:[.,]\\d+)?)\\s*mm(?:\\s*\\(\\s*đường\\s+kính\\s+trung\\s+bình\\s+([0-9.,]+)\\s*mm\\s*\\))?[^.]*?\\.)" +
               "\\s*" +
-              "(?:(?:Ngoài\\s+ra\\s+)?th[uù][yỳ]\\s+" + lobe + "\\s+(?:còn\\s+)?có\\s+(\\d+)\\s+nốt\\s+" + type + "[^.]*?kích\\s+thước(?:\\s+(?:lớn\\s+nhất|lớn))?\\s+(\\d+(?:[.,]\\d+)?)\\s*[×xX*]\\s*(\\d+(?:[.,]\\d+)?)\\s*mm(?:\\s*\\(\\s*đường\\s+kính\\s+trung\\s+bình\\s+([0-9.,]+)\\s*mm\\s*\\))?[^.]*?\\.)",
+              "(?:(?:Ngoài\\s+ra\\s+)?" + loc.pattern + "\\s+(?:còn\\s+)?có\\s+(\\d+)\\s+nốt\\s+" + type + "[^.]*?kích\\s+thước(?:\\s+(?:lớn\\s+nhất|lớn))?\\s+(\\d+(?:[.,]\\d+)?)\\s*[×xX*]\\s*(\\d+(?:[.,]\\d+)?)\\s*mm(?:\\s*\\(\\s*đường\\s+kính\\s+trung\\s+bình\\s+([0-9.,]+)\\s*mm\\s*\\))?[^.]*?\\.)",
               "i"
             );
 
             if (regex.test(text)) {
               text = text.replace(regex, (match, c1Str, d11Str, d12Str, m1Str, c2Str, d21Str, d22Str, m2Str) => {
-                if (/tua\\s*gai|co\\s*kéo|spiculat/i.test(match)) return match;
+                if (/tua\s*gai|co\s*kéo|spiculat/i.test(match)) return match;
 
                 const c1 = parseInt(c1Str, 10) || 1;
                 const c2 = parseInt(c2Str, 10) || 1;
@@ -1277,7 +1380,7 @@
                 const meanPart = isCalc ? "" : ` (đường kính trung bình ${formattedMean} mm)`;
 
                 changed = true;
-                return `Thuỳ ${lobe} có ${totalCount} nốt ${type}, nốt lớn kích thước ${maxDimStr} mm${meanPart}.`;
+                return `${loc.label} có ${totalCount} nốt ${type}, nốt lớn kích thước ${maxDimStr} mm${meanPart}.`;
               });
             }
           }
@@ -1291,7 +1394,7 @@
      * Chuẩn hoá toàn bộ báo cáo Lung-RADS (Mô tả + Kết luận)
      * - Tự động tính và chuẩn hóa đường kính trung bình ra 1 số sau dấu phẩy (.5)
      * - Không kết luận nếu không mô tả: dày màng phổi khu trú
-     * - Đồng bộ nốt vôi hoá và nốt ở rãnh liên thuỳ (oblique fissure, horizontal fissure)
+     * - Đồng bộ 2 chiều nốt vôi hoá và nốt ở rãnh liên thuỳ (oblique fissure, horizontal fissure)
      */
     sanitizeLungRADSReport(reportText, rawText = "") {
       if (!reportText) return "";
@@ -1307,18 +1410,20 @@
         return `${prefix}${d1Str}×${d2Str} mm (đường kính trung bình ${formattedMean} mm)`;
       });
 
-      // 1.5. Tự động gộp các nốt cùng thùy và cùng 1 độ Lung-RADS vào đúng 1 câu duy nhất (chống tách câu vụn)
+      // 1.2. Xoá "(đường kính trung bình ... mm)" ở nốt vôi hoá (quy tắc: nốt vôi hoá chỉ ghi kích thước, không ghi đường kính trung bình)
+      text = text.replace(/(nốt\s+vôi\s+ho[áa][,;\s]+(?:nốt\s+lớn\s+)?kích\s+thước(?:\s+(?:lớn\s+nhất|lớn))?\s+\d+(?:[.,]\d+)?\s*[×xX*]\s*\d+(?:[.,]\d+)?\s*mm)\s*\(\s*đường\s+kính\s+trung\s+bình\s+[0-9.,]+\s*mm\s*\)/gi, "$1");
+
+      // 1.5. Tự động gộp các nốt cùng thùy/rãnh và cùng 1 độ Lung-RADS vào đúng 1 câu duy nhất (chống tách câu vụn)
       text = this.mergeSameLobeSameTierNodules(text);
 
       // 2. Sắp xếp thứ tự nốt trong Mô tả: Nốt có mức Lung-RADS cao hơn / nguy cơ cao hơn BẮT BUỘC mô tả trước
-      // Nếu có câu nốt lớn "Thuỳ [X] còn có 1 nốt..." nằm sau câu nốt nhỏ "Thuỳ [X] có [N] nốt..."
       const lobeNames = ["trên", "giữa", "dưới"];
       lobeNames.forEach(lobe => {
-        const bigRegex = new RegExp("(Th[uù][yỳ]\\s+" + lobe + "\\s+còn\\s+có[\\s\\S]+?\\.\\s*(?=(?:Th[uù][yỳ]|Không|Động|Trung|$)))", "i");
+        const bigRegex = new RegExp("(Th[uù][yỳ]\\s+" + lobe + "\\s+còn\\s+có[\\s\\S]+?\\.\\s*(?=(?:Th[uù][yỳ]|Rãnh|Không|Động|Trung|$)))", "i");
         const mBig = text.match(bigRegex);
         if (mBig) {
           const bigSentence = mBig[1].trim();
-          const earlyRegex = new RegExp("(Th[uù][yỳ]\\s+" + lobe + "\\s+có[\\s\\S]+?\\.\\s*(?=(?:Th[uù][yỳ]|Không|Động|Trung|$)))", "i");
+          const earlyRegex = new RegExp("(Th[uù][yỳ]\\s+" + lobe + "\\s+có[\\s\\S]+?\\.\\s*(?=(?:Th[uù][yỳ]|Rãnh|Không|Động|Trung|$)))", "i");
           const mEarly = text.match(earlyRegex);
           if (mEarly && text.indexOf(mEarly[1]) < text.indexOf(bigSentence)) {
             const earlySentence = mEarly[1].trim();
@@ -1329,6 +1434,7 @@
           }
         }
       });
+      text = text.replace(/(Phổi\s+(?:phải|trái)\s*:\s*Th[uù][yỳ]\s+(?:trên|giữa|dưới)\s+)còn\s+có\b/gi, "$1có");
 
       // 3. Đảm bảo tính nhất quán giữa MÔ TẢ và KẾT LUẬN (Cái gì mô tả mới được ghi kết luận)
       const parts = text.split(/(?:^|\n)\s*(?:--|—|-)?\s*(?:KẾT\s*LUẬN|Kết\s*luận)\s*[:：]?\s*/i);
@@ -1338,7 +1444,6 @@
         const suffix = "Không thấy dày tổ chức kẽ, không thấy giãn phế quản, phế nang.";
 
         // A. NÚT NHẦY PHẾ QUẢN (Bronchial mucus plug):
-        // Nếu Kết luận có câu nút nhầy mà Mô tả chưa có -> Bắt buộc chèn vào Mô tả của phổi tương ứng
         const mucusMatch = klBody.match(/(Nút\s+nhầy\s+phế\s+quản[^.\n]+)/i);
         if (mucusMatch) {
           const mucusSentence = mucusMatch[1].trim().replace(/\.?$/, ".");
@@ -1369,7 +1474,7 @@
           }
         }
 
-        // B. NỐT Ở RÃNH LIÊN THUỲ VÀ NỐT VÔI HOÁ (Interlobar Fissure & Calcified Nodules):
+        // B. NỐT Ở RÃNH LIÊN THUỲ VÀ NỐT VÔI HOÁ (Interlobar Fissure & Calcified Nodules - Bidirectional Guard):
         function checkKlVoiHoa(kl, side) {
           if (!kl) return false;
           const sentences = kl.split(/(?<=[.!?])\s+/);
@@ -1396,7 +1501,7 @@
 
           // 1. Quét nốt ở rãnh liên thuỳ (oblique fissure, horizontal fissure) từ rawText nếu chưa được mô tả
           if (rawText) {
-            const rawLines = rawText.split("\n");
+            const rawLines = rawText.split(/[\n。]+/);
             for (const rawLine of rawLines) {
               if (!/(?:oblique\s+fissure|horizontal\s+fissure|rãnh\s+liên\s+thu[ỳy])/i.test(rawLine)) continue;
               let isTarget = false;
@@ -1404,9 +1509,8 @@
               if (side === "left" && (/left|phổi\s+trái/i.test(rawLine) && !/horizontal/i.test(rawLine))) isTarget = true;
               if (!isTarget) continue;
 
-              const mDim = rawLine.match(/(\d+(?:[.,]\d+)?\s*[×xX*]\s*\d+(?:[.,]\d+)?)\s*mm/i);
-              const dim = mDim ? mDim[1].replace(/[xX*]/, "×") : "";
-              if (dim && line.includes(dim)) continue;
+              const mDim = rawLine.match(/(\d+(?:[.,]\d+)?)\s*(?:mm)?\s*[×xX*]\s*(\d+(?:[.,]\d+)?)\s*mm/i);
+              const dim = mDim ? `${mDim[1]}×${mDim[2]}` : "";
 
               let fissureName = "Rãnh liên thuỳ chếch";
               if (/horizontal\s+fissure|rãnh\s+liên\s+thu[ỳy]\s+ngang/i.test(rawLine)) fissureName = "Rãnh liên thuỳ ngang";
@@ -1422,6 +1526,17 @@
                 type = "bán đặc";
               }
 
+              // Kiểm tra chính xác xem nốt rãnh liên thuỳ này đã có trong dòng mô tả chưa (tránh trùng kích thước với nốt khác loại ở thuỳ khác)
+              if (isCalc) {
+                const alreadyHasCalc = new RegExp("vôi\\s*ho[áa][^.]*" + (dim ? dim.replace("×", "[×xX*]") : ""), "i").test(line);
+                if (alreadyHasCalc) continue;
+              } else {
+                const alreadyHasFissureOrSameTypeDim =
+                  new RegExp(fissureName + "[^.]*" + (dim ? dim.replace("×", "[×xX*]") : ""), "i").test(line) ||
+                  (dim && new RegExp("nốt\\s+" + type + "[^.]*" + dim.replace("×", "[×xX*]"), "i").test(line));
+                if (alreadyHasFissureOrSameTypeDim) continue;
+              }
+
               if (isCalc) {
                 toInject.push(`${fissureName} có 1 nốt vôi hoá${dim ? " kích thước " + dim + " mm" : ""}.`);
               } else if (dim) {
@@ -1433,23 +1548,28 @@
             }
           }
 
-          // 2. Đồng bộ nốt vôi hoá nếu Kết luận có mà Mô tả chưa có
+          // 2. Đồng bộ nốt vôi hoá nếu Kết luận hoặc rawText có mà Mô tả chưa có
           const hasKlVoi = checkKlVoiHoa(klBody, side);
+          const hasRawVoi = rawText && rawText.split(/[\n。]+/).some(rl => {
+            if (!/(?:calcif|vôi\s*ho[áa])/i.test(rl)) return false;
+            if (side === "right") return /horizontal|right|phổi\s+phải|thu[ỳy]\s+giữa/i.test(rl);
+            return /left|phổi\s+trái/i.test(rl) && !/horizontal/i.test(rl);
+          });
           const hasMotaVoi = /(?:vôi\s*ho[áa])/i.test(line) || toInject.some(s => /vôi\s*ho[áa]/i.test(s));
 
-          if (hasKlVoi && !hasMotaVoi) {
+          if ((hasKlVoi || hasRawVoi) && !hasMotaVoi) {
             let added = false;
             if (rawText) {
-              const rawLines = rawText.split("\n");
+              const rawLines = rawText.split(/[\n。]+/);
               for (const rawLine of rawLines) {
                 if (!/(?:calcif|vôi\s*ho[áa])/i.test(rawLine)) continue;
                 let isTarget = false;
                 if (side === "right" && (/horizontal|right|phổi\s+phải|thu[ỳy]\s+giữa/i.test(rawLine))) isTarget = true;
-                if (side === "left" && (/left|phổi\s+trái/i.test(rawLine))) isTarget = true;
+                if (side === "left" && (/left|phổi\s+trái/i.test(rawLine) && !/horizontal/i.test(rawLine))) isTarget = true;
                 if (!isTarget) continue;
 
-                const mDim = rawLine.match(/(\d+(?:[.,]\d+)?\s*[×xX*]\s*\d+(?:[.,]\d+)?)\s*mm/i);
-                const dim = mDim ? mDim[1].replace(/[xX*]/, "×") + " mm" : "";
+                const mDim = rawLine.match(/(\d+(?:[.,]\d+)?)\s*(?:mm)?\s*[×xX*]\s*(\d+(?:[.,]\d+)?)\s*mm/i);
+                const dim = mDim ? `${mDim[1]}×${mDim[2]} mm` : "";
                 let loc = "";
                 if (/oblique\s+fissure|rãnh\s+liên\s+thu[ỳy]\s+chếch/i.test(rawLine)) loc = "Rãnh liên thuỳ chếch";
                 else if (/horizontal\s+fissure|rãnh\s+liên\s+thu[ỳy]\s+ngang/i.test(rawLine)) loc = "Rãnh liên thuỳ ngang";
@@ -1461,27 +1581,74 @@
                 else if (dim) toInject.push(`Có 1 nốt vôi hoá kích thước ${dim}.`);
                 else toInject.push("Có 1 nốt vôi hoá.");
                 added = true;
-                break;
               }
             }
-            if (!added) {
+            if (!added && hasKlVoi) {
               toInject.push("Có 1 nốt vôi hoá.");
             }
           }
 
           if (toInject.length > 0) {
-            const injectStr = toInject.join(" ");
+            const injectStr = this.mergeSameLobeSameTierNodules(toInject.join(" "));
+            mLines[i] = mLines[i].replace(/trường\s+phổi\s+sáng\s+đều(?:\s*,\s*không\s+thấy\s+tổn\s+thương\s+dạng\s+nốt\s+hoặc\s+dạng\s+khối)?\s*\.?\s*/gi, "");
             if (mLines[i].includes(suffix)) {
               mLines[i] = mLines[i].replace(suffix, injectStr + " " + suffix);
             } else {
               mLines[i] += " " + injectStr;
             }
+            mLines[i] = mLines[i].replace(/\s{2,}/g, " ");
           }
         }
-        motaPart = mLines.join("\n");
+        motaPart = this.mergeSameLobeSameTierNodules(mLines.join("\n"));
 
-        // C. DÀY MÀNG PHỔI KHU TRÚ & CÁC BIẾN THỂ DÀY DÍNH:
-        // Nếu Kết luận có mà Mô tả KHÔNG CÓ -> Bắt buộc xóa khỏi Kết luận
+        // 3. Chiều ngược lại: Nếu Mô tả phổi có nốt vôi hoá mà Kết luận chưa có câu vôi hoá (Lung-RADS 1) -> Tự động bổ sung vào Kết luận
+        const rightLine = mLines.find(l => l.toLowerCase().includes("phổi phải")) || "";
+        const leftLine = mLines.find(l => l.toLowerCase().includes("phổi trái")) || "";
+        const rightHasVoi = /nốt\s+vôi\s*ho[áa]/i.test(rightLine);
+        const leftHasVoi = /nốt\s+vôi\s*ho[áa]/i.test(leftLine);
+        if ((rightHasVoi || leftHasVoi) && !/(?:vôi\s*ho[áa]|Lung-RADS\s*1)/i.test(klBody)) {
+          let voiKl = "";
+          if (rightHasVoi && leftHasVoi) {
+            voiKl = "Vài nốt vôi hoá hai phổi (Lung-RADS 1).";
+          } else {
+            const targetLine = rightHasVoi ? rightLine : leftLine;
+            const sideLabel = rightHasVoi ? "phổi phải" : "phổi trái";
+            const calcMatches = targetLine.match(/(\d+)\s+nốt\s+vôi\s*ho[áa]/gi) || [];
+            let totalCalc = 0;
+            calcMatches.forEach(m => {
+              const n = parseInt(m, 10);
+              totalCalc += isNaN(n) ? 1 : n;
+            });
+            const lobeMatch = targetLine.match(/(thu[ỳy]\s+(?:trên|giữa|dưới))\s+(?:còn\s+)?có\s+1\s+nốt\s+vôi\s*ho[áa]/i);
+            if (totalCalc > 1) {
+              voiKl = `Vài nốt vôi hoá ${sideLabel} (Lung-RADS 1).`;
+            } else if (lobeMatch && calcMatches.length === 1) {
+              voiKl = `Nốt vôi hoá ${lobeMatch[1].toLowerCase()} ${sideLabel} (Lung-RADS 1).`;
+            } else {
+              voiKl = `Nốt vôi hoá ${sideLabel} (Lung-RADS 1).`;
+            }
+          }
+          if (voiKl) {
+            if (/(?:Nút\s+nhầy\s+phế\s+quản)/i.test(klBody)) {
+              klBody = klBody.replace(/(Nút\s+nhầy\s+phế\s+quản)/i, voiKl + " $1");
+            } else {
+              klBody = klBody.trim().replace(/\.?$/, ".") + " " + voiKl;
+            }
+          }
+        }
+
+        // C. CHỐNG LỖI ĐẢO BÊN / GHI "HAI PHỔI" KHI 1 BÊN PHỔI BÌNH THƯỜNG (Ca fb_20261026_045433):
+        const rightNormal = /trường\s+phổi\s+sáng\s+đều|không\s+thấy\s+tổn\s+thương\s+dạng\s+nốt/i.test(rightLine) && !/\bnốt\s+(?:đặc|kính\s+mờ|bán\s+đặc|vôi\s+ho[áa])/i.test(rightLine);
+        const leftNormal = /trường\s+phổi\s+sáng\s+đều|không\s+thấy\s+tổn\s+thương\s+dạng\s+nốt/i.test(leftLine) && !/\bnốt\s+(?:đặc|kính\s+mờ|bán\s+đặc|vôi\s+ho[áa])/i.test(leftLine);
+        if (rightLine && leftLine) {
+          if (leftNormal && !rightNormal) {
+            klBody = klBody.replace(/\bhai\s+phổi\b/gi, "phổi phải");
+          } else if (rightNormal && !leftNormal) {
+            klBody = klBody.replace(/\bhai\s+phổi\b/gi, "phổi trái");
+          }
+        }
+
+        // D. DÀY MÀNG PHỔI KHU TRÚ & CÁC BIẾN THỂ DÀY DÍNH:
         const hasMotaDayMangPhoi = /(?:dày|day|vôi\s+hóa|vôi\s+hoá|dính|mảng\s+dày)[^.\n]*màng\s+phổi|màng\s+phổi[^.\n]*(?:dày|day|vôi|dính)/i.test(motaPart) && !/(?:không|chưa)\s+thấy\s+(?:dày|bất\s+thường)/i.test(motaPart);
         if (!hasMotaDayMangPhoi) {
           klBody = klBody.replace(/(?:^|[.!?\n]\s*)(?:Hình\s+ảnh\s+)?(?:dày|dày\s+dính|dày\s+vôi\s+hóa|dày\s+vôi\s+hoá)\s+màng\s+phổi(?:\s+khu\s+trú)?(?:\s+bên\s+(?:phải|trái|hai\s+bên))?[.,;]?/gi, "");
@@ -1494,16 +1661,19 @@
         text = motaPart.trim() + "\nKết luận:\n" + klBody.trim();
       }
 
-      if (typeof sanitizeLungRADSConclusion === "function") {
+      const conclusionSanitizer = (typeof this.sanitizeLungRADSConclusion === "function")
+        ? this.sanitizeLungRADSConclusion.bind(this)
+        : (typeof sanitizeLungRADSConclusion === "function" ? sanitizeLungRADSConclusion : null);
+      if (conclusionSanitizer) {
         text = text.replace(/((?:Kết\s*luận\s*:?\s*))([\s\S]*)/i, function(_, label, klBody) {
-          return label.trim() + "\n" + sanitizeLungRADSConclusion(klBody);
+          return label.trim() + "\n" + conclusionSanitizer(klBody);
         });
       }
 
       return text;
     },
 
-    version: 1792830000
+    version: 1792840000
   };
 
   const ModalityDetector = {

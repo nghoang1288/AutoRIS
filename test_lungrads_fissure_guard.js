@@ -160,10 +160,107 @@ runTest("LUNG_RADS_SYSTEM_PROMPT chứa đầy đủ quy tắc rãnh liên thu�
   assert(/rãnh liên thuỳ chếch/i.test(defaultsCode), "Phải có thuật ngữ tiếng Việt rãnh liên thuỳ chếch");
 });
 
+// Case 11: Audit #1 - Dimension Collision (4x4mm solid in upper lobe + 4x4mm calcified in oblique fissure)
+runTest("Audit #1: Không bỏ sót nốt rãnh liên thuỳ khi trùng kích thước (4x4mm) với nốt ở thuỳ khác", () => {
+  const rawInput = `Solid nodule measuring 4×4mm, right upper lobe/apical segment (SE3, IM50).
+Calcified nodule measuring 4×4mm, oblique fissure of right lung (SE3, IM269).`;
+  const aiReport = `-- Phổi phải: Thuỳ trên có 1 nốt đặc kích thước 4×4 mm (đường kính trung bình 4 mm). Không thấy dày tổ chức kẽ, không thấy giãn phế quản, phế nang.
+-- Phổi trái: trường phổi sáng đều, không thấy tổn thương dạng nốt hoặc dạng khối. Không thấy dày tổ chức kẽ, không thấy giãn phế quản, phế nang.
+Kết luận:
+Hình ảnh nốt đặc thuỳ trên phổi phải (Lung-RADS 2). Nốt vôi hoá phổi phải (Lung-RADS 1).`;
+
+  const fixed = sanitizeLungRADSReport(aiReport, rawInput);
+  assert(fixed.includes("Rãnh liên thuỳ chếch có 1 nốt vôi hoá kích thước 4×4 mm."), "Phải bổ sung nốt vôi hoá 4x4mm dù thuỳ trên đã có nốt đặc 4x4mm");
+});
+
+// Case 12: Audit #2 - Same-Fissure Nodule Merging
+runTest("Audit #2: Gộp nhiều nốt cùng loại cùng độ Lung-RADS trong cùng rãnh liên thuỳ chếch thành 1 câu", () => {
+  const aiReport = `-- Phổi phải: Rãnh liên thuỳ chếch có 1 nốt đặc kích thước 3×2 mm (đường kính trung bình 2.5 mm). Rãnh liên thuỳ chếch có 1 nốt đặc kích thước 4×3 mm (đường kính trung bình 3.5 mm). Không thấy dày tổ chức kẽ, không thấy giãn phế quản, phế nang.
+-- Phổi trái: trường phổi sáng đều. Không thấy dày tổ chức kẽ, không thấy giãn phế quản, phế nang.
+Kết luận:
+Hình ảnh vài nốt đặc phổi phải (Lung-RADS 2).`;
+
+  const fixed = sanitizeLungRADSReport(aiReport, "");
+  assert(fixed.includes("Rãnh liên thuỳ chếch có 2 nốt đặc, nốt lớn kích thước 4×3 mm (đường kính trung bình 3.5 mm)."), "Phải gộp 2 nốt đặc ở rãnh liên thuỳ chếch thành 1 câu");
+});
+
+// Case 13: Audit #3 - Contradictory Normal Text Cleanup
+runTest("Audit #3: Tự động xoá câu 'trường phổi sáng đều, không thấy tổn thương...' khi chèn nốt bị sót", () => {
+  const rawInput = `Calcified nodule measuring 4×4mm, oblique fissure of right lung (SE3, IM269).`;
+  const aiReport = `-- Phổi phải: trường phổi sáng đều, không thấy tổn thương dạng nốt hoặc dạng khối. Không thấy dày tổ chức kẽ, không thấy giãn phế quản, phế nang.
+-- Phổi trái: trường phổi sáng đều, không thấy tổn thương dạng nốt hoặc dạng khối. Không thấy dày tổ chức kẽ, không thấy giãn phế quản, phế nang.
+Kết luận:
+Nốt vôi hoá phổi phải (Lung-RADS 1).`;
+
+  const fixed = sanitizeLungRADSReport(aiReport, rawInput);
+  const pPhai = fixed.split("\n")[0];
+  assert(!pPhai.includes("không thấy tổn thương dạng nốt"), "Phải xoá câu bình thường mâu thuẫn ở phổi phải");
+  assert(pPhai.includes("-- Phổi phải: Rãnh liên thuỳ chếch có 1 nốt vôi hoá kích thước 4×4 mm."), "Câu mô tả phổi phải phải bắt đầu mạch lạc");
+});
+
+// Case 14: Audit #4a - Reverse Conclusion Guard (Description has calcified nodule, Conclusion forgot Lung-RADS 1)
+runTest("Audit #4a: Tự động bổ sung 'Nốt vôi hoá ... (Lung-RADS 1).' vào Kết luận nếu Mô tả có nốt vôi hoá", () => {
+  const aiReport = `-- Phổi phải: Thuỳ trên có 1 nốt đặc kích thước 4×3 mm (đường kính trung bình 3.5 mm). Rãnh liên thuỳ chếch có 1 nốt vôi hoá kích thước 4×4 mm. Không thấy dày tổ chức kẽ, không thấy giãn phế quản, phế nang.
+-- Phổi trái: trường phổi sáng đều. Không thấy dày tổ chức kẽ, không thấy giãn phế quản, phế nang.
+Kết luận:
+Hình ảnh nốt đặc thuỳ trên phổi phải (Lung-RADS 2).`;
+
+  const fixed = sanitizeLungRADSReport(aiReport, "");
+  assert(fixed.includes("Nốt vôi hoá phổi phải (Lung-RADS 1)."), "Kết luận phải tự động được thêm Nốt vôi hoá phổi phải (Lung-RADS 1)");
+});
+
+// Case 15: Audit #4b - Strip erroneous mean diameter from calcified nodule
+runTest("Audit #4b: Tự động xoá '(đường kính trung bình ... mm)' nếu AI ghi thừa cho nốt vôi hoá", () => {
+  const aiReport = `-- Phổi phải: Thuỳ dưới có 1 nốt vôi hoá kích thước 4×4 mm (đường kính trung bình 4 mm). Không thấy dày tổ chức kẽ, không thấy giãn phế quản, phế nang.
+-- Phổi trái: trường phổi sáng đều. Không thấy dày tổ chức kẽ, không thấy giãn phế quản, phế nang.
+Kết luận:
+Nốt vôi hoá thuỳ dưới phổi phải (Lung-RADS 1).`;
+
+  const fixed = sanitizeLungRADSReport(aiReport, "");
+  assert(fixed.includes("Thuỳ dưới có 1 nốt vôi hoá kích thước 4×4 mm."), "Phải giữ kích thước nốt vôi hoá");
+  assert(!fixed.includes("đường kính trung bình"), "Phải xoá đường kính trung bình khỏi nốt vôi hoá");
+});
+
+// Case 16: Audit #5a - Laterality Hallucination Guard (fb_20261026_045433_473648)
+runTest("Audit #5a (fb_20261026_045433): Sửa 'hai phổi' thành 'phổi phải' khi phổi trái hoàn toàn bình thường", () => {
+  const aiReport = `-- Phổi phải: Thuỳ trên có 1 nốt kính mờ kích thước 3×2 mm (đường kính trung bình 2.5 mm). Thuỳ giữa có 2 nốt đặc, nốt lớn kích thước 5×4 mm (đường kính trung bình 4.5 mm). Thuỳ dưới có 1 nốt đặc kích thước 3×3 mm (đường kính trung bình 3 mm). Không thấy dày tổ chức kẽ, không thấy giãn phế quản, phế nang.
+-- Phổi trái: trường phổi sáng đều, không thấy tổn thương dạng nốt hoặc dạng khối. Không thấy dày tổ chức kẽ, không thấy giãn phế quản, phế nang.
+Kết luận:
+Hình ảnh vài nốt đặc và kính mờ hai phổi (Lung-RADS 2).`;
+
+  const fixed = sanitizeLungRADSReport(aiReport, "");
+  assert(fixed.includes("Hình ảnh vài nốt đặc và kính mờ phổi phải (Lung-RADS 2)."), "Phải sửa 'hai phổi' thành 'phổi phải'");
+  assert(!fixed.includes("hai phổi"), "Không được còn chữ 'hai phổi'");
+});
+
+// Case 17: Audit #5b - Wording Guard (fb_20261105_040355_435995 & fb_20261026_072537_537189)
+runTest("Audit #5b (fb_20261105_040355 & fb_20261026_072537): Chuẩn hoá 'vài nốt đặc và kính mờ' & sửa 'thuỳ trái/phải'", () => {
+  const aiReport = `-- Phổi phải: Thuỳ trên có 1 nốt đặc kích thước 4×2 mm (đường kính trung bình 3 mm). Không thấy dày tổ chức kẽ, không thấy giãn phế quản, phế nang.
+-- Phổi trái: Thuỳ trên có 1 nốt kính mờ kích thước 6×5 mm (đường kính trung bình 5.5 mm). Không thấy dày tổ chức kẽ, không thấy giãn phế quản, phế nang.
+Kết luận:
+Hình ảnh nốt đặc và kính mờ hai phổi (Lung-RADS 2). Nốt vôi hoá thuỳ trái (Lung-RADS 1).`;
+
+  const fixed = sanitizeLungRADSReport(aiReport, "");
+  assert(fixed.includes("Hình ảnh vài nốt đặc và kính mờ hai phổi (Lung-RADS 2)."), "Phải chuẩn hoá thành 'Hình ảnh vài nốt đặc và kính mờ hai phổi'");
+  assert(fixed.includes("Nốt vôi hoá phổi trái (Lung-RADS 1)."), "Phải sửa 'thuỳ trái' thành 'phổi trái'");
+});
+
+// Case 18: Audit #5c - Bilingual Chinese/English PACS separator & 3mmx2mm format
+runTest("Audit #5c: Hỗ trợ báo cáo PACS song ngữ Trung-Anh (dấu 。 và định dạng 3mm×2mm)", () => {
+  const rawInput = `双肺多发结节。Calcified nodule measuring 3mm×2mm, oblique fissure of right lung (SE2, IM125)。`;
+  const aiReport = `-- Phổi phải: trường phổi sáng đều, không thấy tổn thương dạng nốt hoặc dạng khối. Không thấy dày tổ chức kẽ, không thấy giãn phế quản, phế nang.
+-- Phổi trái: trường phổi sáng đều, không thấy tổn thương dạng nốt hoặc dạng khối. Không thấy dày tổ chức kẽ, không thấy giãn phế quản, phế nang.
+Kết luận:
+Nốt vôi hoá phổi phải (Lung-RADS 1).`;
+
+  const fixed = sanitizeLungRADSReport(aiReport, rawInput);
+  assert(fixed.includes("Rãnh liên thuỳ chếch có 1 nốt vôi hoá kích thước 3×2 mm."), "Phải tách được câu bằng dấu chấm câu tiếng Trung (。) và chuẩn hoá 3mm×2mm -> 3×2 mm");
+});
+
 console.log("======================================================");
 console.log(`KẾT QUẢ KIỂM THỬ: ${passed}/${total} test cases passed.`);
 if (passed === total) {
-  console.log("🎉 TOÀN BỘ 10/10 BÀI TEST RÃNH LIÊN THUỲ & VÔI HOÁ ĐÃ VƯỢT QUA 100%!");
+  console.log(`🎉 TOÀN BỘ ${total}/${total} BÀI TEST AUDIT RÃNH LIÊN THUỲ & LUNGRADS ĐÃ VƯỢT QUA 100%!`);
 } else {
   process.exit(1);
 }
